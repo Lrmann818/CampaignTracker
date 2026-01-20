@@ -535,16 +535,17 @@ body {
 
 /* Clock matches the same border/surface language as .tab/buttons */
 .clockChip{
-  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   border: 1px solid var(--border);
   background: var(--surface-3);
   color: var(--text);
   border-radius: 10px;
-  padding: 6px 10px;
-
-  font-size: 12px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-weight: 500;
   line-height: 1;
-  white-space: nowrap;
   font-variant-numeric: tabular-nums; /* stable-width digits */
 }
 
@@ -555,6 +556,12 @@ body {
 /* Optional: hide clock on *very* small widths if it ever crowds */
 @media (max-width: 420px){
   .clockChip{ display:none; }
+}
+
+.topbarCenter{
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .muted {
