@@ -50,6 +50,7 @@
 
   /* unchanging variables can go here */
   --portrait-ratio: 3 / 4; /* width / height   matches character portrait */
+  --tracker-list-max: 720px;
 }
 
 /* Light theme */
@@ -1493,6 +1494,23 @@ select.npcField:focus {
   color: var(--text);
   padding: 10px;
   resize: vertical;
+}
+
+#npcCards, #partyCards, #locCards{
+  max-height: var(--tracker-list-max);
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* prevents weird “stretching/squishing” behavior in some layouts */
+  align-content: start;
+  grid-auto-rows: max-content;
+
+  padding-right: 4px; /* small gutter so scrollbar isn't tight to the edge */
+}
+
+/* mobile: use a viewport-based cap */
+@media (max-width: 600px){
+  :root{ --tracker-list-max: 78vh; }
 }
 
 /* ======================
