@@ -1225,6 +1225,29 @@ function setupTabs() {
   });
 }
 
+function setupTopbarClock() {
+  const el = document.getElementById("topbarClock");
+  if (!el) return;
+
+  const fmt = new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit"
+  });
+
+  const tick = () => {
+    el.textContent = fmt.format(new Date());
+    el.title = new Date().toLocaleString(); // nice tooltip
+  };
+
+  tick();
+  // align updates to the minute boundary
+  const msToNextMinute = 60000 - (Date.now() % 60000);
+  setTimeout(() => {
+    tick();
+    setInterval(tick, 60000);
+  }, msToNextMinute);
+}
+
 // Theme application
 
 let _systemThemeMql = null;
