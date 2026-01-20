@@ -1816,7 +1816,7 @@ function initNpcsUI() {
     toggle.textContent = isCollapsed ? "▼" : "▲";
     toggle.addEventListener("click", (e) => {
       e.preventDefault();
-      e.stopPropagation();
+      ();
       updateNpc(npc.id, { collapsed: !isCollapsed }, true);
     });
 
@@ -2185,7 +2185,7 @@ function initPartyUI() {
     toggle.textContent = isCollapsed ? "▼" : "▲";
     toggle.addEventListener("click", (e) => {
       e.preventDefault();
-      e.stopPropagation();
+      ();
       updateParty(m.id, { collapsed: !isCollapsed }, true);
     });
 
@@ -2760,7 +2760,7 @@ function setupCharacterSectionReorder() {
     b.title = title;
     b.addEventListener("click", (e) => {
       e.preventDefault();
-      e.stopPropagation();
+      ();
       onClick();
     });
     return b;
@@ -2869,7 +2869,7 @@ function setupAbilityBlockReorder() {
     b.title = title;
     b.addEventListener("click", (e) => {
       e.preventDefault();
-      e.stopPropagation();
+      ();
       onClick();
     });
     return b;
@@ -2953,7 +2953,7 @@ function setupVitalsTileReorder() {
     b.title = title;
     b.addEventListener("click", (e) => {
       e.preventDefault();
-      e.stopPropagation();
+      ();
       onClick();
     });
     return b;
@@ -3118,8 +3118,11 @@ function initCharacterUI() {
         del.disabled = (state.character.resources.length <= 1);
         del.addEventListener("click", (e) => {
           e.preventDefault();
-          e.stopPropagation();
+          ();
           if (state.character.resources.length <= 1) return;
+          const name = (r.name || "").trim();
+          const label = name ? `"${name}"` : "this resource tracker";
+          if (!confirm(`Delete ${label}?`)) return;
           state.character.resources.splice(idx, 1);
           setAndSave();
           render();
