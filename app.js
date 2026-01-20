@@ -3118,7 +3118,7 @@ function initCharacterUI() {
         del.disabled = (state.character.resources.length <= 1);
         del.addEventListener("click", (e) => {
           e.preventDefault();
-          ();
+          e.stopPropagation();
           if (state.character.resources.length <= 1) return;
           const name = (r.name || "").trim();
           const label = name ? `"${name}"` : "this resource tracker";
