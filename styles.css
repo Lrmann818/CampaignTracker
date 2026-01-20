@@ -521,6 +521,42 @@ body {
   text-overflow: ellipsis;
 }
 
+.titleRow{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0; /* allows ellipsis to work */
+}
+
+#campaignTitle{
+  min-width: 0;
+  flex: 1 1 auto; /* title shrinks first, clock stays visible */
+}
+
+/* Clock matches the same border/surface language as .tab/buttons */
+.clockChip{
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 10px;
+
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums; /* stable-width digits */
+}
+
+.clockChip:hover{
+  background: var(--surface-3-hover);
+}
+
+/* Optional: hide clock on *very* small widths if it ever crowds */
+@media (max-width: 420px){
+  .clockChip{ display:none; }
+}
+
 .muted {
   color: var(--muted);
 }
