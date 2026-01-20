@@ -1262,7 +1262,7 @@ function startSystemThemeListener() {
 }
 
 function applyTheme(theme) {
-  const allowed = new Set(["system", "dark", "light", "purple", "teal", "green", "blue", "red", "rose", "beige", "slate", "forest", "ember", "sepia", "arcane", "arcane-gold"]); // add more here later
+  const allowed = new Set(["system", "dark", "light", "purple", "teal", "green", "blue", "red", "red-gold", "rose", "beige", "slate", "forest", "ember", "sepia", "arcane", "arcane-gold"]); // add more here later
   const t = allowed.has(theme) ? theme : "system";
 
   if (!state.ui) state.ui = {};
