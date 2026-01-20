@@ -236,6 +236,26 @@
   --map-empty: #160708;
 }
 
+/* Royal Red theme */
+:root[data-theme="red-gold"] {
+  --bg: #2a0f12;
+  --panel: #3a1519;
+  --text: #ffecec;
+  --muted: #e0b3b3;
+  --border: #7a6738;
+
+  --surface-2: #451a1f;
+  --surface-3: #4f2026;
+  --surface-3-hover: #612a31;
+
+  --ring: rgba(255, 205, 120, 0.55);
+  --hairline: rgba(255, 200, 95, 0.35);
+  --shadow-inset: rgba(0, 0, 0, 0.45);
+  --shadow-drop: rgba(0, 0, 0, 0.7);
+
+  --map-empty: #160708;
+}
+
 /* Rose theme */
 :root[data-theme="rose"] {
   --bg: #f2d6df;
