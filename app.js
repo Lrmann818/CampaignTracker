@@ -4351,6 +4351,7 @@ async function removeMapImage() {
   applyTheme(state.ui?.theme || "system");
   setupTabs();
   setupSettings();
+  setupTopbarClock();
   setupTracker();
   setupTextareaResizePersistence();
   setupMap();
