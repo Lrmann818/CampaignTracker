@@ -1108,6 +1108,38 @@ button.warn:hover {
   /* ← this is the main knob to tweak */
 }
 
+/* ===== Topbar: mobile polish ===== */
+@media (max-width: 600px) {
+  /* Clock: never wrap "8:23 PM" into two lines */
+  .clockChip {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    gap: 0;            /* you don't need gap for a single text node */
+    padding: 6px 8px;  /* tighter; reduces that “extra space” feel */
+    font-size: 13px;
+  }
+
+  /* Clock container shouldn't steal space from the tabs on small screens */
+  .topbarCenter {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .tabs {
+    flex-wrap: nowrap;     /* keep Tracker/Character/Map on one row */
+    white-space: nowrap;
+    overflow-x: auto;      /* if it *still* can't fit, it scrolls instead of wrapping */
+    -webkit-overflow-scrolling: touch;
+    gap: 6px;              /* slightly tighter */
+  }
+
+  .tab {
+    padding: 6px 8px;      /* smaller buttons on mobile */
+    font-size: 13px;
+  }
+}
+
 /* ======================
    Map Page
    ====================== */
