@@ -1140,6 +1140,41 @@ button.warn:hover {
   }
 }
 
+@media (max-width: 600px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* Title (and status) get the full first row */
+  .titlewrap {
+    grid-row: 1;
+  }
+
+  /* Controls sit on row 2 */
+  .topbarCenter,
+  .topbarRight {
+    grid-row: 2;
+  }
+
+  /* Give the title a bit more breathing room on mobile */
+  #campaignTitle {
+    font-size: 18px;
+  }
+
+  /* Keep row-2 controls aligned nicely */
+  .topbarRight {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar { padding: 10px 12px; }
+}
+
 /* ======================
    Map Page
    ====================== */
