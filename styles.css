@@ -2954,12 +2954,12 @@ select.npcField:focus {
 }
 
 .spellToggle.on {
-  border-color: var(--spell-toggle-on-border);
+  border: 2px solid var(--spell-toggle-on-border);
   box-shadow: 0 0 0 1px var(--shadow-inset) inset;
 }
 
 .spellToggle.warn.on {
-  border-color: var(--spell-toggle-warn-on-border);
+  border: 2px solid var(--spell-toggle-warn-on-border);
 }
 
 .spellMiniBtns {
