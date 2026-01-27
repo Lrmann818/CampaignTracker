@@ -2097,11 +2097,23 @@ select.npcField:focus {
   }
 }
 
-.charTiles {
-  display: grid;
-  gap: 4px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: start;
+/* Vitals tiles: pack tightly, no grid stretching */
+.charTiles{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  /* pack from the left; leftover space stays on the right */
+  justify-content: flex-start;
+  align-content: flex-start;
+
+  /* optional: prevents weird stretching in some cases */
+  align-items: flex-start;
+}
+
+/* keep tiles at their natural size (don’t stretch) */
+.charTiles > .charTile{
+  flex: 0 0 auto;
 }
 
 @media (max-width: 600px) {
