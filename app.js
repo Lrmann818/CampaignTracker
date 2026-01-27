@@ -1874,6 +1874,56 @@ function setupCalculator() {
     // no autosave needed; only save on successful equals / history change
   });
 
+  // Make keyboard/numpad behave like clicking the on-screen keys
+  display.addEventListener("keydown", (e) => {
+    if (menu.hidden) return; // only when calculator is open
+
+    const k = e.key;
+
+    // Enter already handled globally, but this keeps behavior consistent if focus is here
+    if (k === "Enter") {
+      e.preventDefault();
+      doKey("=");
+      return;
+    }
+
+    if (k === "Escape") {
+      e.preventDefault();
+      closeMenu();
+      btn.focus();
+      return;
+    }
+
+    if (k === "Backspace") {
+      e.preventDefault();
+      doKey("⌫");
+      return;
+    }
+
+    // Digits + decimal
+    if (/^[0-9]$/.test(k) || k === ".") {
+      e.preventDefault();
+      doKey(k);
+      return;
+    }
+
+    // Operators (numpad + normal keys)
+    if (k === "+" || k === "-" || k === "*" || k === "/") {
+      e.preventDefault();
+      doKey(k);
+      return;
+    }
+
+    // Optional: clear with Delete key
+    if (k === "Delete") {
+      e.preventDefault();
+      doKey("C");
+      return;
+    }
+
+    // Otherwise let normal typing happen (arrows, home/end, etc.)
+  });
+
   renderHistory();
 }
 
