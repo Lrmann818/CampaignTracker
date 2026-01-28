@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  base-uri 'self';
+  object-src 'none';
+  form-action 'self';
+  script-src 'self';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: blob:;
+  font-src 'self';
+  connect-src 'self';
+  media-src 'self' blob:;
+  worker-src 'self' blob:;
+">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Campaign Tracker</title>
+
+  <script src="boot.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Favicons -->
+  <link rel="icon" href="icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+  <!-- Optional: Android / PWA icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="titlewrap">
+      <h1 id="campaignTitle" contenteditable="true" spellcheck="false">My Campaign</h1>
+      <div class="muted" id="statusText"></div>
+    </div>
+
+    <div class="topbarCenter">
+      <div id="topbarClock" class="clockChip" aria-label="Current time"></div>
+    </div>
+
+    <div class="topbarRight">
+      <nav class="tabs" role="tablist" aria-label="Pages">
+        <button class="tab active" data-tab="tracker" role="tab" aria-selected="true">Tracker</button>
+        <button class="tab" data-tab="character" role="tab" aria-selected="false">Character</button>
+        <button class="tab" data-tab="map" role="tab" aria-selected="false">Map</button>
+      </nav>
+
+      <!-- Calculator dropdown -->
+      <div class="calcDropdown" id="calcDropdown">
+        <button id="calcBtn" class="tab calcBtn" type="button" aria-haspopup="true" aria-expanded="false"
+          title="Calculator">
+          <svg class="btnIcon btnIcon--calc" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+
+            <!-- + (top-left) -->
+            <path d="M9 4.5v9M4.5 9h9" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" />
+
+            <!-- − (top-right) -->
+            <path d="M19.5 9h9" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" />
+
+            <!-- × (bottom-left) -->
+            <path d="M5 19.5l8 8M13 19.5l-8 8" fill="none" stroke="currentColor" stroke-width="3.6"
+              stroke-linecap="round" />
+
+            <!-- ÷ (bottom-right) -->
+            <path d="M19.5 24h9" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" />
+            <circle cx="24" cy="20" r="2.1" fill="currentColor" />
+            <circle cx="24" cy="28" r="2.1" fill="currentColor" />
+          </svg>
+        </button>
+
+        <div class="calcMenu" id="calcMenu" hidden>
+          <div class="calcTop">
+            <div class="calcTitle">Calculator</div>
+            <button id="calcCloseBtn" type="button" class="calcClose" title="Close">X</button>
+          </div>
+
+          <input id="calcDisplay" class="calcDisplay" inputmode="decimal" autocomplete="off" placeholder="0"
+            aria-label="Calculator input" />
+
+          <div class="calcKeys" aria-label="Calculator keys">
+            <button type="button" data-k="7">7</button>
+            <button type="button" data-k="8">8</button>
+            <button type="button" data-k="9">9</button>
+            <button type="button" data-k="/">÷</button>
+
+            <button type="button" data-k="4">4</button>
+            <button type="button" data-k="5">5</button>
+            <button type="button" data-k="6">6</button>
+            <button type="button" data-k="*">×</button>
+
+            <button type="button" data-k="1">1</button>
+            <button type="button" data-k="2">2</button>
+            <button type="button" data-k="3">3</button>
+            <button type="button" data-k="-">−</button>
+
+            <button type="button" data-k="0" class="wide">0</button>
+            <button type="button" data-k=".">.</button>
+            <button type="button" data-k="+">+</button>
+
+            <button type="button" data-k="C" class="danger">C</button>
+            <button type="button" data-k="⌫">⌫</button>
+            <button type="button" data-k="=" class="equals">=</button>
+          </div>
+
+          <div class="calcHistoryWrap">
+            <div class="calcHistoryTitle">History</div>
+            <div id="calcHistory" class="calcHistory"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dice Roller dropdown -->
+      <div class="diceDropdown" id="diceDropdown">
+        <button id="diceBtn" class="tab diceBtn" type="button" aria-haspopup="true" aria-expanded="false"
+          title="Dice Roller">
+          <img id="diceBtnIcon" src="icons/dice/d20.svg" alt="Dice roller" class="diceIconImg" />
+        </button>
+        <div class="diceMenu" id="diceMenu" hidden>
+          <div class="diceTop">
+            <div class="diceTitle">Dice Roller</div>
+            <button id="diceCloseBtn" type="button" class="diceClose" title="Close">X</button>
+          </div>
+
+          <div class="diceTopRow" aria-label="Dice inputs">
+            <label class="diceField">
+              <div class="mutedSmall">#</div>
+              <input id="diceCount" type="number" min="1" max="100" step="1" value="1" inputmode="numeric" />
+            </label>
+
+            <!-- NEW: big active die icon -->
+            <div class="diceHero" aria-hidden="true">
+              <img id="diceActiveIcon" class="diceActiveIcon" src="icons/dice/d20.svg" alt="" />
+            </div>
+
+            <label class="diceField">
+              <div class="mutedSmall">Mod</div>
+              <div class="modWrap">
+                <span id="diceModPlus" class="modPlus" aria-hidden="true">+</span>
+                <input id="diceMod" type="number" step="1" inputmode="numeric" />
+              </div>
+            </label>
+          </div>
+
+          <!-- NEW: 3-button roll row (even spacing) -->
+          <div class="diceRollRow" aria-label="Roll controls">
+            <button id="diceDisBtn" type="button" class="diceAltBtn">Dis</button>
+            <button id="diceRollBtn" type="button" class="diceRollBtn">Roll</button>
+            <button id="diceAdvBtn" type="button" class="diceAltBtn">Adv</button>
+          </div>
+
+          <!-- Clear sits under, like your sketch -->
+          <div class="diceActions">
+            <button id="diceClearBtn" type="button" class="diceClearBtn danger" title="Clear history">Clear</button>
+          </div>
+
+          <!-- NEW: icon presets (select die, do NOT roll) -->
+          <div class="dicePresets" aria-label="Choose die">
+            <button type="button" class="dicePreset" data-sides="4" aria-label="d4">
+              <img class="dicePresetIcon" src="icons/dice/d4.svg" alt="" />
+            </button>
+            <button type="button" class="dicePreset" data-sides="6" aria-label="d6">
+              <img class="dicePresetIcon" src="icons/dice/d6.svg" alt="" />
+            </button>
+            <button type="button" class="dicePreset" data-sides="8" aria-label="d8">
+              <img class="dicePresetIcon" src="icons/dice/d8.svg" alt="" />
+            </button>
+            <button type="button" class="dicePreset" data-sides="10" aria-label="d10">
+              <img class="dicePresetIcon" src="icons/dice/d10.svg" alt="" />
+            </button>
+            <button type="button" class="dicePreset" data-sides="12" aria-label="d12">
+              <img class="dicePresetIcon" src="icons/dice/d12.svg" alt="" />
+            </button>
+            <button type="button" class="dicePreset" data-sides="20" aria-label="d20">
+              <img class="dicePresetIcon" src="icons/dice/d20.svg" alt="" />
+            </button>
+            <button type="button" class="dicePreset" data-sides="100" aria-label="d100">
+              <img class="dicePresetIcon" src="icons/dice/d100.svg" alt="" />
+            </button>
+          </div>
+
+          <div class="diceHistoryWrap">
+            <div class="diceHistoryTitle">History</div>
+            <div id="diceHistory" class="diceHistory"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings dropdown -->
+      <div class="settingsDropdown" id="settingsDropdown">
+        <button id="settingsBtn" class="tab settingsBtn" type="button" aria-haspopup="true" aria-expanded="false"
+          title="Settings">
+          ⚙
+        </button>
+
+        <div class="settingsMenu" id="settingsMenu" hidden>
+          <div class="settingsSection">
+            <div class="settingsLabel">Theme</div>
+            <select id="themeSelect" class="settingsSelect" title="Theme">
+              <!-- Unlabeled: System sits above groups -->
+              <option value="system">Default</option>
+
+              <optgroup label="☀︎  Light Themes">
+                <option value="light">Light</option>
+                <option value="beige">Parchment</option>
+                <option value="rose">Blush</option>
+                <option value="teal">Teal</option>
+                <option value="blue">Blue</option>
+              </optgroup>
+
+              <optgroup label="⏾  Dark Themes">
+                <option value="dark">Dark</option>
+                <option value="purple">Purple</option>
+                <option value="red">Crimson</option>
+                <option value="red-gold">Royal Red</option>
+                <option value="arcane">Arcane</option>
+                <option value="arcane-gold">Arcane Gold</option>
+                <option value="green">Toxic Core</option>
+                <option value="slate">Stone</option>
+                <option value="forest">Forest</option>
+                <option value="ember">Dark Copper</option>
+                <option value="sepia">Sepia</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="settingsDivider"></div>
+
+          <button id="exportBtn" class="settingsItem" type="button">Export Backup (.json)</button>
+
+          <label class="settingsItem settingsFileItem" title="Import a previously exported backup">
+            Import Backup
+            <input id="importFile" type="file" accept="application/json" />
+          </label>
+
+          <div class="settingsDivider"></div>
+
+          <button class="settingsItem danger" id="resetBtn" type="button">Reset Everything</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- TRACKER PAGE -->
+    <section class="page active" id="page-tracker">
+      <div class="grid2">
+        <section class="panel" id="sessionPanel">
+          <div class="sessionHeader">
+            <h2 class="m0">Sessions</h2>
+
+            <div class="sessionControls">
+              <button id="addSessionBtn" title="Add a new session">+ Session</button>
+              <button id="renameSessionBtn" title="Rename current session">Rename</button>
+              <button id="deleteSessionBtn" class="danger" title="Delete current session">Delete</button>
+              <input id="sessionSearch" class="sessionSearch" placeholder="Search sessions..." />
+            </div>
+          </div>
+
+          <div class="sessionTabsWrap" role="tablist" aria-label="Sessions">
+            <div id="sessionTabs" class="sessionTabs"></div>
+          </div>
+
+          <textarea id="sessionNotesBox" data-persist-size placeholder="Notes for this session..."></textarea>
+        </section>
+
+        <section class="panel" id="npcPanel">
+          <div class="npcHeader">
+            <h2 class="m0">NPCs</h2>
+
+            <div class="npcControls">
+              <button id="addNpcBtn" title="Add NPC">+ Add NPC</button>
+              <input id="npcSearch" class="npcSearch" placeholder="Search NPCs..." />
+            </div>
+          </div>
+
+          <div class="npcTabsWrap" role="tablist" aria-label="NPC Groups">
+            <button class="npcTab active" data-group="friendly" role="tab" aria-selected="true">Friendly</button>
+            <button class="npcTab" data-group="undecided" role="tab" aria-selected="false">Undecided</button>
+            <button class="npcTab" data-group="foe" role="tab" aria-selected="false">Foe</button>
+          </div>
+
+          <div id="npcCards" class="npcCards"></div>
+        </section>
+
+        <section class="panel" id="partyPanel">
+          <div class="partyHeader">
+            <h2 class="m0">Party</h2>
+
+            <div class="partyControls">
+              <button id="addPartyBtn" title="Add Party Member">+ Add Member</button>
+
+              <button id="addPartySectionBtn" title="Add Party Section">+ Section</button>
+              <button id="renamePartySectionBtn" title="Rename Selected Section">Rename</button>
+              <button id="deletePartySectionBtn" class="danger" title="Delete Selected Section">Delete</button>
+
+              <input id="partySearch" class="partySearch" placeholder="Search party..." />
+            </div>
+          </div>
+
+          <!-- ✅ Party Sections (NPC-style tabs) -->
+          <div class="npcTabsWrap" role="tablist" aria-label="Party Sections">
+            <div id="partyTabs" class="sessionTabs"></div>
+          </div>
+
+          <div id="partyCards" class="partyCards"></div>
+        </section>
+
+        <section class="panel" id="locationsPanel">
+          <div class="locHeader">
+            <h2 class="m0">Locations</h2>
+
+            <div class="locControls">
+              <button id="addLocBtn" title="Add Location">+ Add Location</button>
+
+              <select id="locFilter" class="locFilter" title="Filter by type">
+                <option value="all">All</option>
+                <option value="town">Town</option>
+                <option value="dungeon">Dungeon</option>
+                <option value="region">Region</option>
+                <option value="other">Other</option>
+              </select>
+
+              <input id="locSearch" class="locSearch" placeholder="Search locations..." />
+            </div>
+          </div>
+
+          <div id="locCards" class="locCards"></div>
+        </section>
+
+        <section class="panel" id="miscPanel">
+          <div class="panelHeader">
+            <h2 class="m0">Loose Notes</h2>
+          </div>
+          <textarea id="misc" data-persist-size placeholder="Anything else..."></textarea>
+        </section>
+      </div>
+    </section>
+
+    <!-- CHARACTER PAGE -->
+    <section class="page" id="page-character">
+      <div class="grid2">
+        <section class="panel" id="charBasicsPanel">
+          <div class="row between items-end">
+            <h2 class="m0">Character</h2>
+          </div>
+          <div class="charBasicsLayout">
+            <!-- portrait column -->
+            <div class="npcCard charPortraitCard" id="charPortraitCard">
+              <div class="npcPortraitTop charPortraitTop" id="charPortraitTop"></div>
+            </div>
+
+            <!-- fields column -->
+            <div class="charBasicsGrid">
+              <input id="charName" placeholder="Name" />
+              <input id="charClassLevel" placeholder="Class & Level (e.g., Sorcerer 5)" />
+
+              <div class="charTwo">
+                <input id="charRace" placeholder="Race" />
+                <input id="charBackground" placeholder="Background" />
+              </div>
+
+              <div class="charTwo">
+                <input id="charAlignment" placeholder="Alignment" />
+                <input id="charExperience" type="number" placeholder="Experience" />
+              </div>
+
+              <div class="fieldLabelRow">
+                <div class="fieldLabel">Features / Traits</div>
+                <button type="button" class="collapseMini" data-collapse-target="charFeatures" aria-expanded="true"
+                  title="Collapse/Expand">▾</button>
+              </div>
+
+              <textarea id="charFeatures" data-persist-size placeholder="Features / Traits..."></textarea>
+            </div>
+        </section>
+
+        <section class="panel" id="charVitalsPanel">
+          <div class="panelHeader between items-center">
+            <h2 class="m0">Vitals</h2>
+            <button id="addResourceBtn" type="button" title="Add another resource tracker">+ Resource</button>
+          </div>
+
+          <div class="charTiles" id="charVitalsTiles">
+            <div class="charTile" data-vital-key="hp">
+              <div class="charTileLabel">HP</div>
+              <div class="charHpRow">
+                <input id="charHpCur" type="number" placeholder="Cur" />
+                <span class="muted">/</span>
+                <input id="charHpMax" type="number" placeholder="Max" />
+              </div>
+            </div>
+
+            <div class="charTile" data-vital-key="ac">
+              <div class="charTileLabel">Armor Class</div>
+              <input id="charAC" type="number" placeholder="AC" />
+            </div>
+
+            <div class="charTile" data-vital-key="init">
+              <div class="charTileLabel">Initiative</div>
+              <input id="charInit" type="number" placeholder="Init" />
+            </div>
+
+            <div class="charTile" data-vital-key="speed">
+              <div class="charTileLabel">Speed</div>
+              <input id="charSpeed" type="number" placeholder="Speed" />
+            </div>
+
+            <div class="charTile" data-vital-key="prof">
+              <div class="charTileLabel">Proficiency</div>
+              <input id="charProf" type="number" placeholder="+X" />
+            </div>
+
+            <div class="charTile" data-vital-key="spellAtk">
+              <div class="charTileLabel">Spell Attack</div>
+              <input id="charSpellAtk" type="number" placeholder="+X" />
+            </div>
+
+            <div class="charTile" data-vital-key="spellDC">
+              <div class="charTileLabel">Spell DC</div>
+              <input id="charSpellDC" type="number" placeholder="DC" />
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="charAbilitiesPanel">
+          <div class="panelHeader items-center abilitiesHeader">
+            <h2 class="m0">Abilities & Skills</h2>
+
+            <div class="saveOptionsDropdown" id="saveOptionsDropdown">
+              <button id="saveOptionsBtn" type="button" class="moveBtn" aria-haspopup="true" aria-expanded="false"
+                title="Save options">⋯</button>
+
+              <div class="saveOptionsMenu" id="saveOptionsMenu" hidden>
+                <div class="saveOptionsTitle">Misc Save Bonus</div>
+
+                <div class="saveOptionsGrid">
+                  <div class="saveOpt">
+                    <div class="saveOptTop"><input id="miscSave_str" type="number" /></div>
+                    <div class="saveOptLabel">Str Save</div>
+                  </div>
+                  <div class="saveOpt">
+                    <div class="saveOptTop"><input id="miscSave_dex" type="number" /></div>
+                    <div class="saveOptLabel">Dex Save</div>
+                  </div>
+                  <div class="saveOpt">
+                    <div class="saveOptTop"><input id="miscSave_con" type="number" /></div>
+                    <div class="saveOptLabel">Con Save</div>
+                  </div>
+
+                  <div class="saveOpt">
+                    <div class="saveOptTop"><input id="miscSave_int" type="number" /></div>
+                    <div class="saveOptLabel">Int Save</div>
+                  </div>
+                  <div class="saveOpt">
+                    <div class="saveOptTop"><input id="miscSave_wis" type="number" /></div>
+                    <div class="saveOptLabel">Wis Save</div>
+                  </div>
+                  <div class="saveOpt">
+                    <div class="saveOptTop"><input id="miscSave_cha" type="number" /></div>
+                    <div class="saveOptLabel">Cha Save</div>
+                  </div>
+                </div>
+
+                <div class="settingsDivider"></div>
+
+                <div class="saveOptionsRow">
+                  <div class="saveOptionsRowLabel">Ability Mod To All Saves</div>
+                  <select id="saveModToAllSelect" class="settingsSelect" title="Ability Mod To All Saves">
+                    <option value="">None</option>
+                    <option value="str">Str</option>
+                    <option value="dex">Dex</option>
+                    <option value="con">Con</option>
+                    <option value="int">Int</option>
+                    <option value="wis">Wis</option>
+                    <option value="cha">Cha</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="abilityGrid">
+
+            <!-- STRENGTH -->
+            <div class="abilityBlock" data-ability="str">
+              <div class="abilityHeader">
+                <div class="abilityTitle">Strength</div>
+
+                <div class="abilityStats">
+                  <input type="number" class="abilityScore" data-stat="score" />
+                  <div class="abilityStat">Mod <span data-stat="mod">+0</span></div>
+                  <div class="abilityStat">Save <span data-stat="save">+0</span>
+                    <input type="checkbox" data-stat="saveProf" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="abilitySkills">
+                <div class="skillRow">
+                  <input type="checkbox" data-skill-prof="athletics" />
+                  <span>Athletics</span>
+                  <span data-skill-value="athletics">+0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- DEXTERITY -->
+            <div class="abilityBlock" data-ability="dex">
+              <div class="abilityHeader">
+                <div class="abilityTitle">Dexterity</div>
+
+                <div class="abilityStats">
+                  <input type="number" class="abilityScore" data-stat="score" />
+                  <div class="abilityStat">Mod <span data-stat="mod">+0</span></div>
+                  <div class="abilityStat">
+                    Save <span data-stat="save">+0</span>
+                    <input type="checkbox" data-stat="saveProf" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="abilitySkills">
+                <div class="skillRow"><input type="checkbox" data-skill-prof="acrobatics" /><span>Acrobatics</span><span
+                    data-skill-value="acrobatics">+0</span></div>
+                <div class="skillRow"><input type="checkbox" data-skill-prof="sleight" /><span>Sleight of
+                    Hand</span><span data-skill-value="sleight">+0</span></div>
+                <div class="skillRow"><input type="checkbox" data-skill-prof="stealth" /><span>Stealth</span><span
+                    data-skill-value="stealth">+0</span></div>
+              </div>
+            </div>
+
+            <!-- CONSTITUTION -->
+            <div class="abilityBlock" data-ability="con">
+              <div class="abilityHeader">
+                <div class="abilityTitle">Constitution</div>
+                <div class="abilityStats">
+                  <input type="number" class="abilityScore" data-stat="score" />
+                  <div class="abilityStat">Mod <span data-stat="mod">+0</span></div>
+                  <div class="abilityStat">
+                    Save <span data-stat="save">+0</span>
+                    <input type="checkbox" data-stat="saveProf" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="abilitySkills">
+                <div class="mutedSmall">No skills use Constitution</div>
+              </div>
+            </div>
+
+            <!-- INTELLIGENCE -->
+            <div class="abilityBlock" data-ability="int">
+              <div class="abilityHeader">
+                <div class="abilityTitle">Intelligence</div>
+                <div class="abilityStats">
+                  <input type="number" class="abilityScore" data-stat="score" />
+                  <div class="abilityStat">Mod <span data-stat="mod">+0</span></div>
+                  <div class="abilityStat">
+                    Save <span data-stat="save">+0</span>
+                    <input type="checkbox" data-stat="saveProf" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="abilitySkills">
+                <div class="skillRow"><input type="checkbox" data-skill-prof="arcana" /><span>Arcana</span><span
+                    data-skill-value="arcana">+0</span></div>
+                <div class="skillRow"><input type="checkbox" data-skill-prof="history" /><span>History</span><span
+                    data-skill-value="history">+0</span></div>
+                <div class="skillRow"><input type="checkbox"
+                    data-skill-prof="investigation" /><span>Investigation</span><span
+                    data-skill-value="investigation">+0</span></div>
+                <div class="skillRow"><input type="checkbox" data-skill-prof="nature" /><span>Nature</span><span
+                    data-skill-value="nature">+0</span></div>
+                <div class="skillRow"><input type="checkbox" data-skill-prof="religion" /><span>Religion</span><span
+                    data-skill-value="religion">+0</span></div>
+              </div>
+            </div>
+
+            <!-- WISDOM -->
+            <div class="abilityBlock" data-ability="wis">
+              <div class="abilityHeader">
+                <div class="abilityTitle">Wisdom</div>
+                <div class="abilityStats">
+                  <input type="number" class="abilityScore" data-stat="score" />
+                  <div class="abilityStat">Mod <span data-stat="mod">+0</span></div>
+                  <div class="abilityStat">
+                    Save <span data-stat="save">+0</span>
+                    <input type="checkbox" data-stat="saveProf" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="abilitySkills">
+                <div class="skillRow"><input type="checkbox" data-skill-prof="animal" /><span>Animal
+                    Handling</span><span data-skill-value="animal">+0</span></div>
+                <div class="skillRow"><input type="checkbox" data-skill-prof="insight" /><span>Insight</span><span
+                    data-skill-value="insight">+0</span></div>
+                <div class="skillRow"><input type="checkbox" data-skill-prof="medicine" /><span>Medicine</span><span
+                    data-skill-value="medicine">+0</span></div>
+                <div class="skillRow"><input type="checkbox" data-skill-prof="perception" /><span>Perception</span><span
+                    data-skill-value="perception">+0</span></div>
+                <div class="skillRow"><input type="checkbox" data-skill-prof="survival" /><span>Survival</span><span
+                    data-skill-value="survival">+0</span></div>
+              </div>
+            </div>
+
+            <!-- CHARISMA -->
+            <div class="abilityBlock" data-ability="cha">
+              <div class="abilityHeader">
+                <div class="abilityTitle">Charisma</div>
+                <div class="abilityStats">
+                  <input type="number" class="abilityScore" data-stat="score" />
+                  <div class="abilityStat">Mod <span data-stat="mod">+0</span></div>
+                  <div class="abilityStat">
+                    Save <span data-stat="save">+0</span>
+                    <input type="checkbox" data-stat="saveProf" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="abilitySkills">
+                <div class="skillRow"><input type="checkbox" data-skill-prof="deception" /><span>Deception</span><span
+                    data-skill-value="deception">+0</span></div>
+                <div class="skillRow"><input type="checkbox"
+                    data-skill-prof="intimidation" /><span>Intimidation</span><span
+                    data-skill-value="intimidation">+0</span></div>
+                <div class="skillRow"><input type="checkbox"
+                    data-skill-prof="performance" /><span>Performance</span><span
+                    data-skill-value="performance">+0</span></div>
+                <div class="skillRow"><input type="checkbox" data-skill-prof="persuasion" /><span>Persuasion</span><span
+                    data-skill-value="persuasion">+0</span></div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <section class="panel" id="charProfPanel">
+          <h2 class="m0">Proficiencies & Languages</h2>
+          <div class="fieldLabelRow">
+            <div class="fieldLabel">Armor Proficiencies</div>
+            <button type="button" class="collapseMini" data-collapse-target="charArmorProf" aria-expanded="true"
+              title="Collapse/Expand">▾</button>
+          </div>
+          <textarea id="charArmorProf" data-persist-size placeholder="Armor proficiencies..."></textarea>
+
+          <div class="fieldLabelRow">
+            <div class="fieldLabel">Weapon Proficiencies</div>
+            <button type="button" class="collapseMini" data-collapse-target="charWeaponProf" aria-expanded="true"
+              title="Collapse/Expand">▾</button>
+          </div>
+          <textarea id="charWeaponProf" data-persist-size placeholder="Weapon proficiencies..."></textarea>
+
+          <div class="fieldLabelRow">
+            <div class="fieldLabel">Tool Proficiencies</div>
+            <button type="button" class="collapseMini" data-collapse-target="charToolProf" aria-expanded="true"
+              title="Collapse/Expand">▾</button>
+          </div>
+          <textarea id="charToolProf" data-persist-size placeholder="Tool proficiencies..."></textarea>
+
+          <div class="fieldLabelRow">
+            <div class="fieldLabel">Languages</div>
+            <button type="button" class="collapseMini" data-collapse-target="charLanguages" aria-expanded="true"
+              title="Collapse/Expand">▾</button>
+          </div>
+          <textarea id="charLanguages" data-persist-size placeholder="Languages known..."></textarea>
+        </section>
+
+        <section class="panel" id="charAttacksPanel">
+          <div class="row between items-center">
+            <h2 class="m0">Weapons</h2>
+            <button id="addAttackBtn" type="button" title="Add a new weapon">+ Weapon</button>
+          </div>
+          <div id="attackList" class="attackList"></div>
+        </section>
+
+        <section class="panel" id="charSpellsPanel">
+          <div class="row between items-center">
+            <h2 class="m0">Spells</h2>
+            <button id="addSpellLevelBtn" type="button">+ Level</button>
+          </div>
+
+          <div id="spellLevels" class="spellLevels"></div>
+
+          <div class="mutedSmall">Tip: each spell has its own notes box. Use the arrow on a
+            spell to show/hide notes.</div>
+        </section>
+
+        <section class="panel" id="charEquipmentPanel">
+          <h2 class="m0">Equipment</h2>
+          <div class="fieldLabelRow">
+            <div class="fieldLabel">Inventory</div>
+            <button type="button" class="collapseMini" data-collapse-target="charEquipment" aria-expanded="true"
+              title="Collapse/Expand">▾</button>
+          </div>
+          <textarea id="charEquipment" data-persist-size placeholder="Equipment, items, treasures..."></textarea>
+
+          <div class="moneyRow">
+            <div class="moneyTile">
+              <div class="moneyLabel">GP</div><input id="moneyGP" type="number" placeholder="0" />
+            </div>
+            <div class="moneyTile">
+              <div class="moneyLabel">SP</div><input id="moneySP" type="number" placeholder="0" />
+            </div>
+            <div class="moneyTile">
+              <div class="moneyLabel">CP</div><input id="moneyCP" type="number" placeholder="0" />
+            </div>
+            <div class="moneyTile">
+              <div class="moneyLabel">PP</div><input id="moneyPP" type="number" placeholder="0" />
+            </div>
+            <div class="moneyTile">
+              <div class="moneyLabel">EP</div><input id="moneyEP" type="number" placeholder="0" />
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="charPersonalityPanel">
+          <h2 class="m0">Personality</h2>
+          <div class="fieldLabelRow">
+            <div class="fieldLabel">Traits</div>
+            <button type="button" class="collapseMini" data-collapse-target="charTraits" aria-expanded="true"
+              title="Collapse/Expand">▾</button>
+          </div>
+          <textarea id="charTraits" data-persist-size placeholder="Personality traits..."></textarea>
+
+          <div class="fieldLabelRow">
+            <div class="fieldLabel">Ideals</div>
+            <button type="button" class="collapseMini" data-collapse-target="charIdeals" aria-expanded="true"
+              title="Collapse/Expand">▾</button>
+          </div>
+          <textarea id="charIdeals" data-persist-size placeholder="Ideals..."></textarea>
+
+          <div class="fieldLabelRow">
+            <div class="fieldLabel">Bonds</div>
+            <button type="button" class="collapseMini" data-collapse-target="charBonds" aria-expanded="true"
+              title="Collapse/Expand">▾</button>
+          </div>
+          <textarea id="charBonds" data-persist-size placeholder="Bonds..."></textarea>
+
+          <div class="fieldLabelRow">
+            <div class="fieldLabel">Flaws</div>
+            <button type="button" class="collapseMini" data-collapse-target="charFlaws" aria-expanded="true"
+              title="Collapse/Expand">▾</button>
+          </div>
+          <textarea id="charFlaws" data-persist-size placeholder="Flaws..."></textarea>
+
+          <div class="fieldLabelRow">
+            <div class="fieldLabel">Notes</div>
+            <button type="button" class="collapseMini" data-collapse-target="charCharNotes" aria-expanded="true"
+              title="Collapse/Expand">▾</button>
+          </div>
+          <textarea id="charCharNotes" data-persist-size placeholder="Anything else..."></textarea>
+        </section>
+      </div>
+    </section>
+
+
+    <!-- MAP PAGE -->
+    <section class="page" id="page-map">
+      <section class="mapPanel">
+        <div class="mapbar">
+          <div class="maptools">
+            <label class="mapSelectLabel">Map
+              <select id="mapSelect" class="mapSelect" title="Choose a map"></select>
+            </label>
+            <button id="addMapBtn" title="Add a new map">+ Map</button>
+            <button id="renameMapBtn" title="Rename selected map">Rename</button>
+            <button id="deleteMapBtn" class="danger" title="Delete selected map">Delete</button>
+
+          </div>
+          <div class="maptools">
+            <label class="brushSizeLabel">Size
+              <input id="brushSize" type="range" min="1" max="32" value="6" />
+            </label>
+
+            <div class="dropdown" id="toolDropdown">
+              <button type="button" class="chip dropdownBtn" id="toolDropdownBtn" aria-haspopup="true"
+                aria-expanded="false" title="Choose a tool">
+                <span data-tool-label>Brush</span>
+                <span class="caret" aria-hidden="true">▾</span>
+              </button>
+              <div class="dropdownMenu" id="toolDropdownMenu" hidden>
+                <button type="button" class="swatchOption" data-tool="brush">Brush</button>
+                <button type="button" class="swatchOption" data-tool="eraser">Eraser</button>
+              </div>
+            </div>
+
+            <div class="dropdown" id="colorDropdown">
+              <button type="button" class="dropdownBtn" id="colorBtn" title="Brush color" aria-haspopup="true"
+                aria-expanded="false">
+                <span class="colorPreview" id="activeColorPreview"></span>
+                <span class="caret">▾</span>
+              </button>
+
+              <div class="dropdownMenu colorGrid" id="colorDropdownMenu" hidden>
+                <button class="colorSwatch" data-color="teal"></button>
+                <button class="colorSwatch" data-color="red"></button>
+                <button class="colorSwatch" data-color="blue"></button>
+
+                <button class="colorSwatch" data-color="green"></button>
+                <button class="colorSwatch" data-color="black"></button>
+                <button class="colorSwatch" data-color="white"></button>
+
+                <button class="colorSwatch" data-color="yellow"></button>
+                <button class="colorSwatch" data-color="purple"></button>
+                <button class="colorSwatch" data-color="grey"></button>
+              </div>
+            </div>
+
+            <button id="undoBtn" class="warn">Undo</button>
+            <button id="redoBtn" class="warn">Redo</button>
+            <button id="clearMapBtn" class="danger">Clear Map</button>
+          </div>
+
+          <div class="maptools">
+            <label class="filebtn">
+              Set Map Image
+              <input id="mapImageInput" type="file" accept="image/*" />
+            </label>
+            <button id="removeMapImageBtn">Remove Image</button>
+          </div>
+        </div>
+
+        <div class="canvasWrap">
+          <canvas id="mapCanvas" width="1200" height="800"></canvas>
+        </div>
+
+        <div class="mutedSmall">
+          Tip: Draw with mouse/finger. Everything saves locally. (Undo/Redo are local too.)
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
