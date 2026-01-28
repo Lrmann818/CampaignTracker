@@ -48,8 +48,8 @@
   --spell-toggle-warn-on-border: #ff8c0099;
   --skill-prof-dot: #3aa6ff;
   --calculatorBg: linear-gradient(to bottom,
-      color-mix(in srgb, var(--bg) 70%, transparent),
-      color-mix(in srgb, var(--bg) 50%, transparent));
+      color-mix(in srgb, var(--bg) 90%, transparent),
+      color-mix(in srgb, var(--bg) 70%, transparent));
 
   /* unchanging variables can go here */
   --portrait-ratio: 3 / 4;  /* width / height   matches character portrait */
