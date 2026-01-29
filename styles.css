@@ -2400,7 +2400,8 @@ select.npcField:focus {
 
 .moneyTile input.autosize {
   text-align: left;
-  padding: 5px 6px;
+  padding: 5px;
+  padding-right: var(--numWrapPadRight);
 }
 
 .abilityGrid {
