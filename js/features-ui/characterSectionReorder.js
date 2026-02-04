@@ -40,6 +40,80 @@ export function setupCharacterSectionReorder({ state, SaveManager }) {
     while (col.firstChild) col.removeChild(col.firstChild);
   }
 
+  function moveSection(id, dir) {
+    const order = state.character.ui.sectionOrder;
+    const i = order.indexOf(id);
+    if (i === -1) return;
+    const j = i + dir;
+    if (j < 0 || j >= order.length) return;
+    [order[i], order[j]] = [order[j], order[i]];
+    SaveManager?.markDirty?.();
+    applyOrder();
+    document.getElementById(id)?.scrollIntoView({ block: "nearest" });
+  }
+
+  function makeMoveBtn(label, title, onClick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "moveBtn";
+    b.textContent = label;
+    b.title = title;
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onClick();
+    });
+    return b;
+  }
+
+  // Some Character panels are just <section><h2>...</h2>...</section>.
+  // To host reorder controls (and work with click-to-collapse), normalize to a header row.
+  function ensureHeaderRow(panelEl) {
+    if (!panelEl) return null;
+
+    const existing =
+      panelEl.querySelector(":scope > .panelHeader") ||
+      panelEl.querySelector(":scope > .row") ||
+      panelEl.querySelector(":scope > .panelTop") ||
+      panelEl.querySelector(":scope > .sessionHeader") ||
+      panelEl.querySelector(":scope > .npcHeader") ||
+      panelEl.querySelector(":scope > .partyHeader") ||
+      panelEl.querySelector(":scope > .locHeader");
+
+    if (existing) return existing;
+
+    const h2 = panelEl.querySelector(":scope > h2");
+    if (h2) {
+      const wrap = document.createElement("div");
+      wrap.className = "panelHeader";
+      panelEl.insertBefore(wrap, h2);
+      wrap.appendChild(h2);
+      return wrap;
+    }
+
+    return null;
+  }
+
+  function attachMoves(panelId) {
+    const panelEl = document.getElementById(panelId);
+    if (!panelEl) return;
+
+    const headerEl = ensureHeaderRow(panelEl);
+    if (!headerEl) return;
+
+    // Avoid duplicates if setup runs twice
+    if (headerEl.querySelector(`[data-section-moves="${panelId}"]`)) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "sectionMoves";
+    wrap.dataset.sectionMoves = panelId;
+
+    wrap.appendChild(makeMoveBtn("↑", "Move section up", () => moveSection(panelId, -1)));
+    wrap.appendChild(makeMoveBtn("↓", "Move section down", () => moveSection(panelId, +1)));
+
+    headerEl.appendChild(wrap);
+  }
+
   function applyOrder() {
     const order = state.character.ui.sectionOrder || defaultOrder;
     const map = new Map(panels.map(p => [p.id, p]));
@@ -62,6 +136,9 @@ export function setupCharacterSectionReorder({ state, SaveManager }) {
 
   // Initial apply
   applyOrder();
+
+  // Insert reorder buttons into panel headers
+  (state.character.ui.sectionOrder || defaultOrder).forEach(attachMoves);
 
   // Re-apply on resize breakpoint changes
   let t = null;
