@@ -936,8 +936,41 @@ main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+
+.charColumns {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.charCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.trackerColumns {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.trackerCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0; /* allow children to shrink */
+}
+
 @media (max-width: 600px) {
-  .grid2 {
+    .charColumns {
+    grid-template-columns: 1fr;
+  }
+.grid2 {
+    grid-template-columns: 1fr;
+  }
+  .trackerColumns {
     grid-template-columns: 1fr;
   }
 }

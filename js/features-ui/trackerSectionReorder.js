@@ -4,12 +4,19 @@ export function setupTrackerSectionReorder({ state, SaveManager }) {
   const trackerPage = document.getElementById("page-tracker");
   if (!trackerPage) return;
 
-  const grid = trackerPage.querySelector(".grid2");
-  if (!grid) return;
+  const columnsWrap =
+    trackerPage.querySelector("#trackerColumns") ||
+    trackerPage.querySelector(".trackerColumns");
+  if (!columnsWrap) return;
+
+  const col0 = columnsWrap.querySelector("#trackerCol0");
+  const col1 = columnsWrap.querySelector("#trackerCol1");
+  if (!col0 || !col1) return;
 
   if (!state || !state.tracker) return;
 
-  const panels = Array.from(grid.children).filter(el => el.classList && el.classList.contains("panel"));
+  // Collect panels wherever they currently live (col0/col1 or legacy layout)
+  const panels = Array.from(columnsWrap.querySelectorAll(".panel"));
 
   // Build default order from current DOM
   const defaultOrder = panels
@@ -29,12 +36,29 @@ export function setupTrackerSectionReorder({ state, SaveManager }) {
     state.tracker.ui.sectionOrder = cleaned;
   }
 
+  function clearColumn(col) {
+    while (col.firstChild) col.removeChild(col.firstChild);
+  }
+
   function applyOrder() {
     const order = state.tracker.ui.sectionOrder || defaultOrder;
+
+    // Map id -> element (pull from DOM if needed)
     const map = new Map(panels.map(p => [p.id, p]));
-    order.forEach(id => {
+
+    clearColumn(col0);
+    clearColumn(col1);
+
+    const single = window.matchMedia && window.matchMedia("(max-width: 600px)").matches;
+
+    order.forEach((id, idx) => {
       const el = map.get(id);
-      if (el) grid.appendChild(el);
+      if (!el) return;
+      if (single) {
+        col0.appendChild(el);
+      } else {
+        (idx % 2 === 0 ? col0 : col1).appendChild(el);
+      }
     });
   }
 
@@ -92,4 +116,11 @@ export function setupTrackerSectionReorder({ state, SaveManager }) {
 
   // Apply initial ordering
   applyOrder();
+
+  // Re-apply when responsive breakpoint flips (so order stays correct on resize)
+  let t = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(t);
+    t = setTimeout(applyOrder, 120);
+  });
 }

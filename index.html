@@ -186,7 +186,9 @@
   <main>
     <!-- TRACKER PAGE -->
     <section class="page active" id="page-tracker">
-      <div class="grid2">
+      <div class="trackerColumns" id="trackerColumns">
+        <div class="trackerCol" id="trackerCol0">
+
         <section class="panel" id="sessionPanel">
           <div class="sessionHeader">
             <h2 class="m0">Sessions</h2>
@@ -290,12 +292,16 @@
           </div>
           <textarea id="misc" data-persist-size placeholder="Anything else..."></textarea>
         </section>
+      
+        </div>
+        <div class="trackerCol" id="trackerCol1"></div>
       </div>
     </section>
 
     <!-- CHARACTER PAGE -->
     <section class="page" id="page-character">
-      <div class="grid2">
+      <div class="charColumns" id="charColumns">
+        <div class="charCol" id="charCol0">
         <section class="panel" id="charBasicsPanel">
           <div class="row between items-end">
             <h2 class="m0">Character</h2>
@@ -709,6 +715,8 @@
           </div>
           <textarea id="charCharNotes" data-persist-size placeholder="Anything else..."></textarea>
         </section>
+        </div>
+        <div class="charCol" id="charCol1"></div>
       </div>
     </section>
 

@@ -5,6 +5,7 @@
 // (title, misc textarea, section reorder, sessions/npcs/party/locations sheets).
 
 import { setupTrackerSectionReorder } from "./trackerSectionReorder.js";
+import { setupCharacterSectionReorder } from "./characterSectionReorder.js";
 import { initSessionsUI } from "./sessions.js";
 import { initNpcsUI } from "./npcCards.js";
 import { initPartyUI, renderPartyCards as renderPartyCardsUI } from "./partyCards.js";
@@ -174,6 +175,9 @@ export function initTrackerPage(deps) {
   });
 
   // ----- Panel header click-to-collapse (header stays visible) -----
+
+  // ----- Character section two-column stacking (like Tracker) -----
+  setupCharacterSectionReorder({ state, SaveManager });
   // Runs after the Tracker + Character DOM is present.
   initPanelHeaderCollapse({ state, SaveManager });
 
