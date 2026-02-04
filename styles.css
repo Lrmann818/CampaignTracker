@@ -3159,10 +3159,17 @@ input[type="range"] {
 
 /* Enhanced <select> wrappers that should NOT shrink to content.
    (Used for settings rows, card footers, and panel header selects.) */
+/* Enhanced <select> wrappers that should fill their container.
+   (Cards, card footers, settings rows, and other block-style selects.) */
 .selectDropdown.selectDropdownBlock {
   display: block;
-  width: auto;
+  width: 100%;
   min-width: 61.5px;
+}
+
+/* Optional: clamp some block-style selects (toolbar filters, settings rows)
+   so they don't become comically wide on large screens. */
+.selectDropdown.selectDropdownClamp {
   max-width: 200px;
 }
 

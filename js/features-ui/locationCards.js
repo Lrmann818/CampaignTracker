@@ -224,7 +224,11 @@ export function renderLocationCard(loc) {
   typeSelect.value = loc.type || "other";
   typeSelect.addEventListener("change", () => _updateLoc(loc.id, { type: typeSelect.value }));
 
+  typeBlock.appendChild(typeLabel);
+  typeBlock.appendChild(typeSelect);
+
   // Enhance the OPEN menu styling (closed look stays the same size as .cardSelect).
+  // Must be called AFTER the select is attached to a parent element.
   if (_Popovers && !typeSelect.dataset.dropdownEnhanced) {
     enhanceSelectDropdown({
       select: typeSelect,
@@ -235,9 +239,6 @@ export function renderLocationCard(loc) {
       preferRight: true
     });
   }
-
-  typeBlock.appendChild(typeLabel);
-  typeBlock.appendChild(typeSelect);
 
   const notesBlock = document.createElement("div");
   notesBlock.className = "npcBlock";

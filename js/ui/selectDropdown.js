@@ -59,6 +59,16 @@ export function enhanceSelectDropdown(args) {
     /\b(settingsSelectBtn|cardSelectBtn|panelSelectBtn|settingsDropDownBtn)\b/.test(buttonClassRaw);
   if (wantsBlock) wrap.classList.add("selectDropdownBlock");
 
+  // Some block-style selects (toolbar filters, settings rows) should not expand to fill
+  // very wide containers. Apply an optional clamp class ONLY for those cases.
+  // Card selects should be allowed to stretch to the full card width.
+  const wantsClamp =
+    select.classList.contains("settingsSelect") ||
+    select.classList.contains("panelSelect") ||
+    select.classList.contains("locFilter") ||
+    /\b(settingsSelectBtn|panelSelectBtn|settingsDropDownBtn)\b/.test(buttonClassRaw);
+  if (wantsClamp) wrap.classList.add("selectDropdownClamp");
+
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = buttonClass;
