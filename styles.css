@@ -1387,38 +1387,37 @@ label.settingsItem {
 @media (max-width: 600px) {
   .topbar {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr auto;  /* key change */
     grid-template-rows: auto auto;
     gap: 4px;
     align-items: center;
+    padding: 8px 10px;
   }
 
-  /* Title (and status) get the full first row */
+  /* Title + status take the full width (both columns) */
   .titlewrap {
     grid-row: 1;
+    grid-column: 1 / -1;             /* key change */
+    min-width: 0;
   }
 
-  /* Controls sit on row 2 */
-  .topbarCenter,
+  /* Row 2: clock left, controls right */
+  .topbarCenter {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
   .topbarRight {
     grid-row: 2;
+    grid-column: 2;
+    justify-content: flex-end;
   }
 
-  /* Give the title a bit more breathing room on mobile */
+  /* Optional: give title a bit more breathing room on mobile */
   #campaignTitle {
     font-size: 18px;
   }
-
-  /* Keep row-2 controls aligned nicely */
-  .topbarRight {
-    justify-content: flex-start;
-  }
 }
-
-@media (max-width: 600px) {
-  .topbar { padding: 8px 10px; }
-}
-
 
 /* ======================
    Option B: universal panel header -> content spacing
