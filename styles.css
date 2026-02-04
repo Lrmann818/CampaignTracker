@@ -1,3 +1,12 @@
+/* ==============================================
+   styles.css organization
+   - Base + Theme (CSS variables + base elements)
+   - Global controls (scrollbars, inputs, steppers)
+   - Shared UI (panel spacing, modals)
+   - Page styles (Tracker, Character, Map)
+   - Widgets (Spells, Calculator, Dice)
+   ============================================== */
+
 /* ======================
    Base + Theme
    ====================== */
@@ -530,6 +539,7 @@ body {
   color: var(--text);
 }
 
+
 /* ======================
    Global scrollbar styling
    ====================== */
@@ -562,10 +572,43 @@ body {
   background: var(--sb-thumb-hover);
 }
 
+
 /* ======================
    Number inputs & Range sliders: hide native spinners & style range sliders
    ====================== */
 
+
+
+/* ======================
+   Search highlight (true in-field matches)
+   ====================== */
+
+.hlWrap{
+  position: relative;
+  width: 100%;
+}
+
+.hlOverlay{
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: transparent; /* hide overlay text, show only <mark> backgrounds */
+  border-radius: inherit;
+}
+
+.hlOverlay .searchMark{
+  background: #ffffff33;
+  color: transparent;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.hlField{
+  position: relative;
+  z-index: 1;
+  background: transparent; /* let mark background show through */
+}
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: auto;
 }
@@ -621,7 +664,7 @@ input {
 }
 
 /* Theme the slider (track + thumb) */
-#brushSize{
+input[type="range"].uiRange{
   -webkit-appearance: none;
   appearance: none;
   height: 18px;              /* gives it a nice click/touch target */
@@ -629,7 +672,7 @@ input {
 }
 
 /* WebKit track */
-#brushSize::-webkit-slider-runnable-track{
+input[type="range"].uiRange::-webkit-slider-runnable-track{
   height: 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--border) 75%, transparent);
@@ -637,7 +680,7 @@ input {
 }
 
 /* WebKit thumb */
-#brushSize::-webkit-slider-thumb{
+input[type="range"].uiRange::-webkit-slider-thumb{
   -webkit-appearance: none;
   appearance: none;
   width: 16px;
@@ -650,7 +693,7 @@ input {
 }
 
 /* Firefox track */
-#brushSize::-moz-range-track{
+input[type="range"].uiRange::-moz-range-track{
   height: 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--border) 75%, transparent);
@@ -658,7 +701,7 @@ input {
 }
 
 /* Firefox thumb */
-#brushSize::-moz-range-thumb{
+input[type="range"].uiRange::-moz-range-thumb{
   width: 16px;
   height: 16px;
   border-radius: 50%;
@@ -666,6 +709,7 @@ input {
   border: 1px solid var(--border);
   box-shadow: 0 0 0 2px var(--ring) inset;
 }
+
 
 /* ======================
    Number inputs: custom steppers styled like native
@@ -1111,6 +1155,50 @@ button.warn:hover {
   background-repeat: no-repeat;
 }
 
+/* =====================
+   Enhanced <select> buttons
+   =====================
+   We progressively enhance some native <select> elements into a custom Popovers
+   dropdown so we can style the OPEN menu consistently.
+   These button classes mimic the CLOSED <select> look + size so the UI doesn't shift.
+*/
+
+/* Settings-style selects (Theme, Save Mod To All, etc.) */
+button.settingsSelectBtn {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 36px 6px 8px; /* room for arrow */
+  border-radius: 10px;
+  font: inherit;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+  text-align: left;
+}
+
+button.settingsSelectBtn:focus-visible,
+button.settingsSelectBtn[aria-expanded="true"] {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
 .settingsSelect:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--ring) inset;
@@ -1132,6 +1220,14 @@ button.warn:hover {
   padding: 6px 8px;
   margin: 6px 0;
   cursor: pointer;
+}
+
+button.settingsItem,
+label.settingsItem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
 }
 
 .settingsItem:hover {
@@ -1290,226 +1386,158 @@ button.warn:hover {
   .topbar { padding: 8px 10px; }
 }
 
+
 /* ======================
-   Map Page
+   Option B: universal panel header -> content spacing
    ====================== */
-
-/* --- Map: tool + color dropdowns --- */
-
-/* Restore native range slider look */
-input[type="range"] {
-  all: unset;                 /* nukes inherited input styles */
-  -webkit-appearance: slider-horizontal;
-  appearance: auto;
-  width: 90%;               /* or 100% if you want it fluid */
-  accent-color: var(--bg);
-  background: var(--surface-3-hover);
+:root {
+  --panel-header-gap: 4px; /* tweak this knob */
 }
 
-/* Map toolbar: Size slider inline + vertically centered */
-.brushSizeLabel{
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
+/* ======================
+   Shared panel controls (buttons, search, selects)
+   ====================== */
+:root{
+  --panel-control-gap: 4px;
+  --panel-control-h: 30px;
+  --panel-control-radius: 10px;
+  --panel-control-pad-x: 5px;
+  --panel-control-pad-y: 8px;
+  --panel-control-font: 0.85rem;
+  --panel-control-min-search: 80px;
 }
 
-.dropdown {
-  position: relative;
-  display: inline-block;
-}
-
-.dropdownBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.dropdownBtn .caret {
-  opacity: 0.85;
-}
-
-.dropdownMenu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 50;
-  min-width: 120px;
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  box-shadow: 0 12px 28px var(--shadow-drop);
-  max-width: calc(100vw - 16px);
-  max-height: min(60vh, 420px);
-  overflow: auto;
-}
-
-.swatchOption {
-  width: 100%;
+/* Controls row in panel headers */
+.panelControls,
+.sessionControls,
+.npcControls,
+.partyControls,
+.locControls{
   display: flex;
+  gap: var(--panel-control-gap);
+  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+}
+
+/* Regular panel button */
+.panelBtn{
+  height: var(--panel-control-h);
+  padding: var(--panel-control-pad-y) var(--panel-control-pad-x);
+  border-radius: var(--panel-control-radius);
+  line-height: 1;
+  font-size: var(--panel-control-font);
+}
+
+/* Small panel button (header actions, icon-ish actions) */
+.panelBtnSm{
+  height: var(--panel-control-h);
   padding: 6px 8px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
+  font-size: var(--panel-control-font);
 }
 
-.swatchOption:hover {
-  background: var(--surface-3-hover);
-  border-color: var(--hairline);
+/* Delete buttons that live in panel headers */
+.panelDelete{
+  border-color: var(--danger-border);
+  color: var(--danger);
+  font-size: var(--panel-control-font);
+}
+.panelDelete:hover{
+  background: var(--danger-hover);
 }
 
-.swatchOption.active {
-  background: var(--surface-3-hover);
-  outline: none;
-  box-shadow: 0 0 0 2px var(--ring) inset;
-}
-
-.colorSwatch[data-color="teal"] {
-  --swatch-color: #35d0d6;
-}
-
-.colorSwatch[data-color="red"] {
-  --swatch-color: #e04b4b;
-}
-
-.colorSwatch[data-color="blue"] {
-  --swatch-color: #3aa6ff;
-}
-
-.colorSwatch[data-color="green"] {
-  --swatch-color: #34c97b;
-}
-
-.colorSwatch[data-color="black"] {
-  --swatch-color: #111111;
-}
-
-.colorSwatch[data-color="white"] {
-  --swatch-color: #f0f0f0;
-}
-
-.colorSwatch[data-color="yellow"] {
-  --swatch-color: #f2c94c;
-}
-
-.colorSwatch[data-color="purple"] {
-  --swatch-color: #9b7bff;
-}
-
-.colorSwatch[data-color="grey"] {
-  --swatch-color: #8c8c8c;
-}
-
-/* De-emphasize color control when eraser is selected */
-.dropdown.disabled {
-  opacity: 0.55;
-}
-
-.dropdown.disabled .dropdownBtn {
-  cursor: not-allowed;
-}
-
-.dropdown.disabled .dropdownBtn:hover {
-  background: var(--surface-3);
-}
-
-/* --- Color grid dropdown --- */
-.colorGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 36px);
-  gap: 4px;
-  padding: 4px;
-
-  justify-content: center;
-  align-content: center;
-}
-
-.colorSwatch {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 1px solid var(--color-swatch-border);
-  background: var(--swatch-color);
-  box-sizing: border-box;
-  transition:
-    transform 0.12s ease,
-    border-color 0.12s ease,
-    box-shadow 0.12s ease;
-}
-
-.colorSwatch:hover {
-  transform: scale(1.08);
-  border-color: var(--color-swatch-hover);
-}
-
-.colorSwatch.active {
-  border-color: white;
-  box-shadow: 0 0 0 2px var(--swatch-color-active-border);
-}
-
-/* Preview circle in the button */
-.colorPreview {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--swatch-color);
-  border: 1px solid var(--swatch-color-preview);
-}
-
-.canvasWrap{
-  width: 100%;
-  overflow: auto;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  box-shadow:
-    0 0 0 1px var(--shadow-inset) inset,
-    0 6px 16px var(--shadow-drop);
-
-  /* ✅ default: allow normal 1-finger panning/scrolling */
-  touch-action: pan-x pan-y;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-}
-
-/* ✅ while drawing, we block scrolling so strokes feel right */
-.canvasWrap.drawingMode{
-  touch-action: none;
-}
-
-/* ✅ while a 2-finger gesture is active, we block browser handling */
-.canvasWrap.gestureMode{
-  touch-action: none;
-}
-
-#mapCanvas {
-  display: block;
-  max-width: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
-
-/* Make the HTML `hidden` attribute always win (fix stuck-open dropdowns) */
-.dropdownMenu[hidden] {
-  display: none !important;
-}
-
-/* Make Map dropdown match the styled selects */
-select.mapSelect {
-  width: auto;
+/* Search inputs used in panel headers */
+.panelSearch,
+.sessionSearch,
+.npcSearch,
+.partySearch,
+.locSearch{
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
-  padding: 6px 36px 6px 8px;
-  /* space for arrow */
+  padding: 6px 8px;
+  border-radius: 10px;
+  min-width: var(--panel-control-min-search);
+  max-width: 150px;
+  width: auto;
+  height: var(--panel-control-h);
+  font-size: var(--panel-control-font);
+}
+
+/* Dropdowns used in panel headers */
+.panelSelect,
+.locFilter,
+button.panelSelectBtn{
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 36px 6px 8px; /* room for arrow */
+  border-radius: 10px;
+  height: var(--panel-control-h);
+  font-size: var(--panel-control-font);
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  /* arrow to mimic native select */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+  text-align: left;
+}
+
+/* Panel move buttons (top-right arrows) */
+.moveBtn,
+.panelMoveBtn{
+  width: 30px;
+  height: var(--panel-control-h);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--muted);
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: var(--panel-control-font);
+}
+
+.moveBtn:hover,
+.panelMoveBtn:hover{
+  color: var(--text);
+  background: var(--surface-3-hover);
+}
+
+/* Any “header row” that is the first child of a panel gets the same gap */
+.panel > .panelHeader,
+.panel > .sessionHeader,
+.panel > .npcHeader,
+.panel > .partyHeader,
+.panel > .locHeader,
+.panel > .row {
+  margin-bottom: var(--panel-header-gap);
+}
+
+/* Card dropdowns (inside cards) */
+.cardSelect,
+button.cardSelectBtn {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 4px 36px 4px 6px;  /* space for arrow */
+  margin-bottom: 8px;
   border-radius: 10px;
   font: inherit;
 
@@ -1517,7 +1545,6 @@ select.mapSelect {
   -webkit-appearance: none;
   -moz-appearance: none;
 
-  /* custom arrow */
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%),
@@ -1533,10 +1560,258 @@ select.mapSelect {
   background-repeat: no-repeat;
 }
 
-select.mapSelect:focus {
+.cardSelect:focus,
+button.cardSelectBtn:focus-visible,
+button.cardSelectBtn[aria-expanded="true"] {
   outline: none;
   box-shadow: 0 0 0 2px var(--ring) inset;
 }
+
+.sectionMoves {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.abilityMoves {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+}
+
+/* Abilities header: title + ⋯ grouped on the left, section move buttons stay right */
+#charAbilitiesPanel>.panelHeader {
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+#charAbilitiesPanel>.panelHeader .sectionMoves {
+  margin-left: auto;
+  /* pushes the injected move buttons back to the right */
+}
+
+/* Character portrait column layout */
+.charBasicsLayout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 4px;
+  margin-top: 4px;
+  align-items: stretch;
+}
+
+.charPortraitCard {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+.charPortraitTop {
+  flex: 1 1 auto;
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+}
+
+.portraitPlaceholder {
+  pointer-events: none;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 10px;
+  text-align: center;
+  opacity: 0.95;
+}
+
+/* Character portrait: if the image is showing, hide the placeholder text */
+#charPortraitImg:not([hidden])+#charPortraitPlaceholder {
+  display: none;
+}
+
+.charPortraitTop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center-top;
+  display: block;
+}
+
+@media (max-width: 700px) {
+  .charBasicsLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .charPortraitTop {
+    min-height: 220px;
+  }
+}
+
+
+/* ======================
+   Image crop modal
+   (used by cropImageModal in app.js)
+   ====================== */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.modalOverlay[hidden] {
+  display: none !important;
+}
+
+.modalPanel {
+  width: min(720px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow:
+    0 0 0 1px var(--shadow-inset) inset,
+    0 16px 40px var(--shadow-drop);
+}
+
+.modalTitle {
+  font-weight: 700;
+  /* margin: 4px 4px 10px; */
+}
+
+.cropWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--portrait-ratio);
+  max-height: calc(100dvh - 240px);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--map-empty);
+  border: 1px solid var(--hairline);
+  margin-bottom: 10px;
+}
+
+.cropCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  touch-action: none;
+  /* allows drag on mobile without scrolling */
+}
+
+.cropFrame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 2px var(--hairline) inset,
+    0 0 0 999px rgba(0, 0, 0, 0.18) inset;
+}
+
+.modalControls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px;
+}
+
+.modalLabel {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.modalRange {
+  width: 100%;
+}
+
+/* ======================
+   UI Confirm/Prompt modal
+   (CSP-safe replacement for window.confirm/prompt)
+   ====================== */
+
+.uiDialogPanel {
+  width: min(420px, 100%);
+  padding: 4px;
+}
+
+/* compact header/body/footer spacing */
+.uiDialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 2px 2px 6px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.uiDialogHeader .modalTitle {
+  margin: 0;            /* remove any inherited margin */
+  padding: 0;
+  font-size: 18px;
+}
+
+.uiDialogBody {
+  padding: 8px 2px;     /* tight, consistent */
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.uiDialogInput {
+  width: calc(100% - 8px);
+}
+
+.uiDialogActions {
+  justify-content: flex-end;
+}
+
+#uiDialogMessage {
+  margin: 0 0 2px;      /* space under prompt text */
+  white-space: pre-wrap; /* moved here */
+}
+
+#uiDialogInput {
+  margin: 0;            /* no extra air */
+  margin-top: 10px;      /* space above input */
+}
+
+.uiDialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 6px 2px 2px;
+  border-top: 1px solid var(--hairline);
+}
+
+.modalBtnRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modalBtn {
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.modalBtn:hover {
+  background: var(--surface-3-hover);
+}
+
+.modalBtnPrimary {
+  background: var(--surface-3-hover);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
 
 /* ======================
    Tracker Page (Sessions / NPCs / Party / Locations)
@@ -1550,11 +1825,6 @@ select.mapSelect:focus {
   margin-bottom: 4px;
 }
 
-.sessionControls {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
 
 .sessionTabsWrap {
   border: 1px solid var(--border);
@@ -1563,7 +1833,7 @@ select.mapSelect:focus {
   padding: 4px;
   margin-bottom: 4px;
   overflow: auto;
-  max-width: 99%;
+  max-width: 100%;
 }
 
 .sessionTabs {
@@ -1590,15 +1860,6 @@ select.mapSelect:focus {
   box-shadow: 0 0 0 2px var(--ring) inset;
 }
 
-.sessionSearch {
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  padding: 6px 8px;
-  border-radius: 10px;
-  min-width: 180px;
-  width: auto;
-}
 
 /* NPC Panel */
 .npcHeader {
@@ -1609,22 +1870,7 @@ select.mapSelect:focus {
   margin-bottom: 4px;
 }
 
-.npcControls {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  align-items: stretch;
-}
 
-.npcSearch {
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  padding: 6px 8px;
-  border-radius: 10px;
-  min-width: 180px;
-  width: auto;
-}
 
 .npcTabsWrap {
   display: flex;
@@ -1659,11 +1905,17 @@ select.mapSelect:focus {
   position: relative;  /* anchors ::after */
   border: 2px solid var(--border);  /* the frame */
   border-radius: 16px;
-  overflow: hidden;  /* clips image to the frame */
+  overflow: visible;  /* allow dropdown menus to escape */
   background: var(--card);  /* npc card background */
   isolation: isolate;  /* prevents shadow bleeding */
   box-shadow:
     0 6px 16px var(--shadow-drop);
+}
+
+/* When a dropdown inside a card is open, raise the card above its siblings.
+   This prevents the open menu from rendering behind the next card in the grid. */
+.npcCard.popoverRaised {
+  z-index: 200;
 }
 
 /* Drop shadow layer (outside, clipped) */
@@ -1707,22 +1959,7 @@ select.mapSelect:focus {
   margin-bottom: 4px;
 }
 
-.partyControls {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  align-items: stretch;
-}
 
-.partySearch {
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  padding: 6px 8px;
-  border-radius: 10px;
-  min-width: 180px;
-  width: auto;
-}
 
 .partyCards {
   display: grid;
@@ -1745,30 +1982,8 @@ select.mapSelect:focus {
   margin-bottom: 4px;
 }
 
-.locControls {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  align-items: stretch;
-}
 
-.locSearch {
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  padding: 6px 8px;
-  border-radius: 10px;
-  min-width: 180px;
-  width: auto;
-}
 
-.locFilter {
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  padding: 6px 8px;
-  border-radius: 10px;
-}
 
 .locCards {
   display: grid;
@@ -1839,6 +2054,9 @@ select.npcField:focus {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  /* Clip the image to the card's rounded frame.
+     The card itself uses overflow: visible so dropdown menus can escape. */
+  border-radius: 14px 14px 0 0;
   cursor: pointer;
   position: relative;
 }
@@ -2000,7 +2218,13 @@ select.npcField:focus {
 /* Footer actions separated from "in-world" content */
 .npcCardFooter {
   padding: 4px 12px;
-  transform: translateY(-6px);
+  /* IMPORTANT:
+     Do NOT use transform here.
+     A transformed ancestor becomes the containing block for `position: fixed`.
+     Our dropdown menus are positioned with `position: fixed` (positioning.js).
+     The transform made footer dropdowns open but not be visible/clickable.
+     Use margin instead for the slight visual lift. */
+  margin-top: -6px;
   border-top: 0;
   position: relative;
 
@@ -2048,6 +2272,10 @@ select.npcField:focus {
   max-height: var(--tracker-list-max);
   overflow-y: auto;
   overflow-x: hidden;
+
+  /* give shadows room so they don’t clip against the scroll box edges */
+  padding: 12px;
+  padding-bottom: 20px; /* extra room for bottom shadows */
 
   /* prevents weird “stretching/squishing” behavior in some layouts */
   align-content: start;
@@ -2250,13 +2478,21 @@ select.npcField:focus {
 
 /* --- Attacks --- */
 .attackList{
-  display: grid;
-  gap: 4px;
-  margin-top: 4px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Flex-wrap packs cards like the vitals tiles
+     (avoids big empty space when a row has an empty grid cell). */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  /* pack from the left; leftover space stays on the right */
+  justify-content: flex-start;
+  align-content: flex-start;
+
+  /* optional: prevents weird stretching in some cases */
+  align-items: flex-start;
 }
 @media (max-width: 600px){
-  .attackList{ grid-template-columns: 1fr; }
+  .attackList{ flex-direction: column; }
 }
 
 /* Outer card: 2 columns, 3 rows */
@@ -2274,6 +2510,10 @@ select.npcField:focus {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: auto auto auto;
   align-items: start;
+
+  flex: 0 0 auto;
+  min-width: 200px;        /* adjust to taste */
+  max-width: 100%;
 }
 
 /* Each section spans the full width (both columns) */
@@ -2342,6 +2582,10 @@ select.npcField:focus {
   .attackRow {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
+
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .attackTop,
@@ -2625,226 +2869,6 @@ select.npcField:focus {
   margin-bottom: 4px;
 }
 
-/* ======================
-   Option B: universal panel header -> content spacing
-   ====================== */
-:root {
-  --panel-header-gap: 8px; /* tweak this knob */
-}
-
-/* Any “header row” that is the first child of a panel gets the same gap */
-.panel > .panelHeader,
-.panel > .sessionHeader,
-.panel > .npcHeader,
-.panel > .partyHeader,
-.panel > .locHeader,
-.panel > .row {
-  margin-bottom: var(--panel-header-gap);
-}
-
-.sectionMoves {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.moveBtn {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--border);
-  background: var(--surface-3);
-  color: var(--muted);
-  border-radius: 10px;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-.moveBtn:hover {
-  color: var(--text);
-  background: var(--surface-3-hover);
-}
-
-
-.abilityMoves {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  gap: 4px;
-}
-
-/* Abilities header: title + ⋯ grouped on the left, section move buttons stay right */
-#charAbilitiesPanel>.panelHeader {
-  justify-content: flex-start;
-  gap: 4px;
-}
-
-#charAbilitiesPanel>.panelHeader .sectionMoves {
-  margin-left: auto;
-  /* pushes the injected move buttons back to the right */
-}
-
-/* Character portrait column layout */
-.charBasicsLayout {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 4px;
-  margin-top: 4px;
-  align-items: stretch;
-}
-
-.charPortraitCard {
-  display: flex;
-  flex-direction: column;
-  align-self: stretch;
-}
-
-.charPortraitTop {
-  flex: 1 1 auto;
-  min-height: 320px;
-  display: grid;
-  place-items: center;
-}
-
-.portraitPlaceholder {
-  pointer-events: none;
-  color: var(--muted);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 10px;
-  text-align: center;
-  opacity: 0.95;
-}
-
-/* Character portrait: if the image is showing, hide the placeholder text */
-#charPortraitImg:not([hidden])+#charPortraitPlaceholder {
-  display: none;
-}
-
-.charPortraitTop img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center-top;
-  display: block;
-}
-
-@media (max-width: 700px) {
-  .charBasicsLayout {
-    grid-template-columns: 1fr;
-  }
-
-  .charPortraitTop {
-    min-height: 220px;
-  }
-}
-
-/* ======================
-   Image crop modal
-   (used by cropImageModal in app.js)
-   ====================== */
-
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 5000;
-  display: grid;
-  place-items: center;
-  padding: 18px;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(4px);
-}
-
-.modalPanel {
-  width: min(720px, 100%);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px;
-  box-shadow:
-    0 0 0 1px var(--shadow-inset) inset,
-    0 16px 40px var(--shadow-drop);
-}
-
-.modalTitle {
-  font-weight: 700;
-  margin: 4px 4px 10px;
-}
-
-.cropWrap {
-  position: relative;
-  width: 100%;
-  aspect-ratio: var(--portrait-ratio);
-  max-height: calc(100dvh - 240px);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--map-empty);
-  border: 1px solid var(--hairline);
-  margin-bottom: 10px;
-}
-
-.cropCanvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: contain;
-  touch-action: none;
-  /* allows drag on mobile without scrolling */
-}
-
-.cropFrame {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  box-shadow:
-    0 0 0 2px var(--hairline) inset,
-    0 0 0 999px rgba(0, 0, 0, 0.18) inset;
-}
-
-.modalControls {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  padding: 4px;
-}
-
-.modalLabel {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.modalRange {
-  width: 100%;
-}
-
-.modalBtnRow {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-  padding: 6px 4px 2px;
-}
-
-.modalBtn {
-  border: 1px solid var(--border);
-  background: var(--surface-3);
-  color: var(--text);
-  padding: 6px 8px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.modalBtn:hover {
-  background: var(--surface-3-hover);
-}
-
-.modalBtnPrimary {
-  background: var(--surface-3-hover);
-  outline: none;
-  box-shadow: 0 0 0 2px var(--ring) inset;
-}
 
 /* ======================
    Spells v2 (layout)
@@ -3073,6 +3097,381 @@ select.npcField:focus {
   }
 }
 
+
+/* ======================
+   Map Page
+   ====================== */
+
+/* Restore native range slider look */
+input[type="range"] {
+  all: unset;                 /* nukes inherited input styles */
+  -webkit-appearance: slider-horizontal;
+  appearance: auto;
+  width: 90%;               /* or 100% if you want it fluid */
+  accent-color: var(--bg);
+  background: var(--surface-3-hover);
+}
+
+/* Map toolbar: Size slider inline + vertically centered */
+.brushSizeLabel{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* Enhanced <select> wrappers that should NOT shrink to content.
+   (Used for settings rows, card footers, and panel header selects.) */
+.selectDropdown.selectDropdownBlock {
+  display: block;
+  width: auto;
+  min-width: 61.5px;
+  max-width: 200px;
+}
+
+.dropdownBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dropdownBtn .caret {
+  opacity: 0.85;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 120px;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: 0 12px 28px var(--shadow-drop);
+  max-width: calc(100vw - 16px);
+  max-height: min(60vh, 420px);
+  overflow: auto;
+}
+
+.swatchOption {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.swatchOption:hover {
+  background: var(--surface-3-hover);
+  border-color: var(--hairline);
+}
+
+.swatchOption.active {
+  background: var(--surface-3-hover);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+.colorSwatch[data-color="teal"] {
+  --swatch-color: #35d0d6;
+}
+
+.colorSwatch[data-color="red"] {
+  --swatch-color: #e04b4b;
+}
+
+.colorSwatch[data-color="blue"] {
+  --swatch-color: #3aa6ff;
+}
+
+.colorSwatch[data-color="green"] {
+  --swatch-color: #34c97b;
+}
+
+.colorSwatch[data-color="black"] {
+  --swatch-color: #111111;
+}
+
+.colorSwatch[data-color="white"] {
+  --swatch-color: #f0f0f0;
+}
+
+.colorSwatch[data-color="yellow"] {
+  --swatch-color: #f2c94c;
+}
+
+.colorSwatch[data-color="purple"] {
+  --swatch-color: #9b7bff;
+}
+
+.colorSwatch[data-color="grey"] {
+  --swatch-color: #8c8c8c;
+}
+
+/* De-emphasize color control when eraser is selected */
+.dropdown.disabled {
+  opacity: 0.55;
+}
+
+.dropdown.disabled .dropdownBtn {
+  cursor: not-allowed;
+}
+
+.dropdown.disabled .dropdownBtn:hover {
+  background: var(--surface-3);
+}
+
+/* --- Color grid dropdown --- */
+.colorGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 36px);
+  gap: 4px;
+  padding: 4px;
+
+  justify-content: center;
+  align-content: center;
+}
+
+#colorDropdownMenu.colorGrid {
+  place-content: center; /* replaces justify-content + align-content */
+  place-items: center;   /* centers items within their cells */
+}
+
+.colorSwatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1px solid var(--color-swatch-border);
+  background: var(--swatch-color);
+  box-sizing: border-box;
+  transition:
+    transform 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.colorSwatch:hover {
+  transform: scale(1.08);
+  border-color: var(--color-swatch-hover);
+}
+
+.colorSwatch.active {
+  border-color: white;
+  box-shadow: 0 0 0 2px var(--swatch-color-active-border);
+}
+
+/* Preview circle in the button */
+.colorPreview {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--swatch-color);
+  border: 1px solid var(--swatch-color-preview);
+}
+
+.canvasWrap{
+  width: 100%;
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow:
+    0 0 0 1px var(--shadow-inset) inset,
+    0 6px 16px var(--shadow-drop);
+
+  /* ✅ default: allow normal 1-finger panning/scrolling */
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ✅ while drawing, we block scrolling so strokes feel right */
+.canvasWrap.drawingMode{
+  touch-action: none;
+}
+
+/* ✅ while a 2-finger gesture is active, we block browser handling */
+.canvasWrap.gestureMode{
+  touch-action: none;
+}
+
+#mapCanvas {
+  display: block;
+  max-width: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Make the HTML `hidden` attribute always win (fix stuck-open dropdowns) */
+.dropdownMenu[hidden] {
+  display: none !important;
+}
+
+/* Hide native selects that have been enhanced into custom dropdowns.
+   Keep them in the DOM so existing JS that reads/writes .value keeps working. */
+select.nativeSelectHidden {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+}
+
+.dropdownGroupLabel {
+  padding: 6px 8px 4px;
+  font-size: 0.78rem;
+  opacity: 0.85;
+  color: var(--muted);
+  user-select: none;
+}
+
+/* In settings panels, we generally want the dropdown button to span the row. */
+.settingsDropDownBtn {
+  width: 100%;
+}
+
+/* Make Map dropdown match the styled selects */
+select.mapSelect,
+button.mapSelectBtn {
+  width: auto;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 36px 6px 8px;
+  /* space for arrow */
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.85rem; /* match app button sizing */
+  line-height: 1.2;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  /* custom arrow */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+select.mapSelect:focus,
+button.mapSelectBtn:focus-visible,
+button.mapSelectBtn[aria-expanded="true"] {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+/* Map tool dropdown: looks like the map select, but sizes to content (not 160px wide) */
+button.mapToolDropDown {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  white-space: nowrap;
+
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 36px 6px 8px; /* space for arrow */
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.85rem;        /* keep consistent with app buttons */
+  line-height: 1.2;
+
+  /* Match the custom arrow used on the map <select> */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+button.mapToolDropDown:hover {
+  background: var(--surface-3-hover);
+}
+
+/* Map color dropdown — EXACT match to map select / tool dropdown */
+button#colorBtn.dropdownBtn {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+
+  /* height + font match */
+  padding: 6px 36px 6px 8px; /* space for arrow */
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.2;
+
+  width: auto;
+  min-width: 44px;
+  white-space: nowrap;
+
+  /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* Hide the old caret so it doesn't affect height */
+button#colorBtn .caret {
+  display: none;
+}
+
+button#colorBtn:hover {
+  background: var(--surface-3-hover);
+}
+
+button#colorBtn:focus-visible,
+button#colorBtn[aria-expanded="true"] {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
 /* ======================
    Calculator dropdown
    ====================== */
@@ -3187,6 +3586,7 @@ select.npcField:focus {
 .calcHistItem:hover {
   background: var(--surface-3-hover);
 }
+
 
 /* ======================
    Dice Roller dropdown
@@ -3549,3 +3949,134 @@ textarea {
   overflow-x: hidden;
 }
 
+/* Data & Settings modal */
+.dataPanelPanel {
+  width: min(300px, 100%);
+}
+
+.dataPanelHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.dataPanelSection{
+  padding: 6px 4px;
+}
+.dataPanelLabel{
+  font-weight: 700;
+  margin: 2px 0 8px;
+}
+.dataPanelActions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+.dangerLabel{
+  color: var(--danger);
+}
+
+/* Settings modal: let the Theme dropdown span the same full width as the
+   other buttons in this modal, without changing card/panel selects. */
+#dataPanelPanel .selectDropdown.selectDropdownBlock {
+  width: 100%;
+  max-width: none;
+}
+
+/* =========================================================
+   Collapse Buttons (centralized)
+   - cardCollapseBtns: .cardCollapseBtn  (alias: .npcCollapseToggle)
+   - spellCollapseBtns: .spellCollapseBtn / .spellSpellCollapseBtn
+   - panelCollapseBtns: .panelCollapseBtn (alias: .collapseMini)
+   ========================================================= */
+
+:root{
+  --collapse-card-size: 30px;
+  --collapse-panel-size: 26px;
+  --collapse-radius: 10px;
+  --collapse-font-size: 0.85rem;
+}
+
+/* shared base */
+.cardCollapseBtn,
+.npcCollapseToggle,
+.spellCollapseBtn,
+.spellSpellCollapseBtn,
+.panelCollapseBtn,
+.collapseMini{
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: var(--collapse-font-size);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Card collapse (NPC/Party/Location cards) */
+.cardCollapseBtn,
+.npcCollapseToggle{
+  width: var(--collapse-card-size);
+  height: var(--collapse-card-size);
+  display: grid;
+  place-items: center;
+  border-radius: var(--collapse-radius);
+  background: var(--surface-3);
+}
+.cardCollapseBtn:hover,
+.npcCollapseToggle:hover{
+  color: var(--text);
+  background: var(--surface-3-hover);
+}
+.cardCollapseBtn:active,
+.npcCollapseToggle:active{
+  transform: translateY(1px);
+}
+
+/* Panel/section collapse (character sheet mini chevrons) */
+.panelCollapseBtn,
+.collapseMini,
+.spellCollapseBtn,
+.spellSpellCollapseBtn{
+  width: var(--collapse-panel-size);
+  height: var(--collapse-panel-size);
+  display: grid;
+  place-items: center;
+  border-radius: var(--collapse-radius);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.spellCollapseBtn:hover,
+.spellSpellCollapseBtn:hover,
+.panelCollapseBtn:hover,
+.collapseMini:hover{
+  background: var(--surface-3-hover);
+}
+.spellCollapseBtn:active,
+.spellSpellCollapseBtn:active,
+.panelCollapseBtn:active,
+.collapseMini:active{
+  transform: translateY(1px);
+}
+
+/* Click-to-collapse panels: header stays visible */
+.panelHeaderClickable{
+  cursor: pointer;
+  user-select: none;
+}
+.panelHeaderClickable :is(button, input, select, textarea, label, a){
+  cursor: default;
+}
+
+/* When collapsed, hide everything in the panel EXCEPT the header element.
+   JS ensures the chosen header gets [data-panel-header]. */
+section.panel[data-collapsed="true"] > :not([data-panel-header]){
+  display: none !important;
+}
+
+/* Ensure search highlight overlay can show through even for fields with their own background rules */
+.hlWrap .hlField{
+  background: transparent !important;
+}

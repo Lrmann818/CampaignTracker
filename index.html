@@ -17,6 +17,7 @@
   worker-src 'self' blob:;
 ">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="app-version" content="0.3.0" />
 
   <title>Campaign Tracker</title>
 
@@ -175,58 +176,10 @@
         </div>
       </div>
 
-      <!-- Settings dropdown -->
-      <div class="settingsDropdown" id="settingsDropdown">
-        <button id="settingsBtn" class="tab settingsBtn" type="button" aria-haspopup="true" aria-expanded="false"
-          title="Settings">
-          ⚙
-        </button>
-
-        <div class="settingsMenu" id="settingsMenu" hidden>
-          <div class="settingsSection">
-            <div class="settingsLabel">Theme</div>
-            <select id="themeSelect" class="settingsSelect" title="Theme">
-              <!-- Unlabeled: System sits above groups -->
-              <option value="system">Default</option>
-
-              <optgroup label="☀︎  Light Themes">
-                <option value="light">Light</option>
-                <option value="beige">Parchment</option>
-                <option value="rose">Blush</option>
-                <option value="teal">Teal</option>
-                <option value="blue">Blue</option>
-              </optgroup>
-
-              <optgroup label="⏾  Dark Themes">
-                <option value="dark">Dark</option>
-                <option value="purple">Purple</option>
-                <option value="red">Crimson</option>
-                <option value="red-gold">Royal Red</option>
-                <option value="arcane">Arcane</option>
-                <option value="arcane-gold">Arcane Gold</option>
-                <option value="green">Toxic Core</option>
-                <option value="slate">Stone</option>
-                <option value="forest">Forest</option>
-                <option value="ember">Dark Copper</option>
-                <option value="sepia">Sepia</option>
-              </optgroup>
-            </select>
-          </div>
-
-          <div class="settingsDivider"></div>
-
-          <button id="exportBtn" class="settingsItem" type="button">Export Backup (.json)</button>
-
-          <label class="settingsItem settingsFileItem" title="Import a previously exported backup">
-            Import Backup
-            <input id="importFile" type="file" accept="application/json" />
-          </label>
-
-          <div class="settingsDivider"></div>
-
-          <button class="settingsItem danger" id="resetBtn" type="button">Reset Everything</button>
-        </div>
-      </div>
+      <!-- Settings -->
+      <button id="settingsBtn" class="tab settingsBtn" type="button" title="Data &amp; Settings">
+        ⚙
+      </button>
     </div>
   </header>
 
@@ -238,11 +191,11 @@
           <div class="sessionHeader">
             <h2 class="m0">Sessions</h2>
 
-            <div class="sessionControls">
-              <button id="addSessionBtn" title="Add a new session">+ Session</button>
-              <button id="renameSessionBtn" title="Rename current session">Rename</button>
-              <button id="deleteSessionBtn" class="danger" title="Delete current session">Delete</button>
-              <input id="sessionSearch" class="sessionSearch" placeholder="Search sessions..." />
+            <div class="sessionControls panelControls">
+              <button id="addSessionBtn" class="panelBtn panelBtnSm" title="Add a new session">+ Session</button>
+              <button id="renameSessionBtn" class="panelBtn panelBtnSm" title="Rename current session">Rename</button>
+              <button id="deleteSessionBtn" class="danger panelBtn panelBtnSm panelDelete" title="Delete current session">Delete</button>
+              <input id="sessionSearch" class="sessionSearch panelSearch" placeholder="Search sessions..." />
             </div>
           </div>
 
@@ -257,16 +210,20 @@
           <div class="npcHeader">
             <h2 class="m0">NPCs</h2>
 
-            <div class="npcControls">
-              <button id="addNpcBtn" title="Add NPC">+ Add NPC</button>
-              <input id="npcSearch" class="npcSearch" placeholder="Search NPCs..." />
+            <div class="npcControls panelControls">
+              <button id="addNpcBtn" class="panelBtn panelBtnSm" title="Add NPC">+ Add NPC</button>
+
+              <button id="addNpcSectionBtn" class="panelBtn panelBtnSm" title="Add NPC Section">+ Section</button>
+              <button id="renameNpcSectionBtn" class="panelBtn panelBtnSm" title="Rename Selected Section">Rename</button>
+              <button id="deleteNpcSectionBtn" class="danger panelBtn panelBtnSm panelDelete" title="Delete Selected Section">Delete</button>
+
+              <input id="npcSearch" class="npcSearch panelSearch" placeholder="Search NPCs..." />
             </div>
           </div>
 
-          <div class="npcTabsWrap" role="tablist" aria-label="NPC Groups">
-            <button class="npcTab active" data-group="friendly" role="tab" aria-selected="true">Friendly</button>
-            <button class="npcTab" data-group="undecided" role="tab" aria-selected="false">Undecided</button>
-            <button class="npcTab" data-group="foe" role="tab" aria-selected="false">Foe</button>
+          <!-- <div class="npcTabsWrap" role="tablist" aria-label="NPC Sections"> -->
+          <div class="sessionTabsWrap" role="tablist" aria-label="Sessions">
+            <div id="npcTabs" class="sessionTabs"></div>
           </div>
 
           <div id="npcCards" class="npcCards"></div>
@@ -276,19 +233,20 @@
           <div class="partyHeader">
             <h2 class="m0">Party</h2>
 
-            <div class="partyControls">
-              <button id="addPartyBtn" title="Add Party Member">+ Add Member</button>
+            <div class="partyControls panelControls">
+              <button id="addPartyBtn" class="panelBtn panelBtnSm" title="Add Party Member">+ Add Member</button>
 
-              <button id="addPartySectionBtn" title="Add Party Section">+ Section</button>
-              <button id="renamePartySectionBtn" title="Rename Selected Section">Rename</button>
-              <button id="deletePartySectionBtn" class="danger" title="Delete Selected Section">Delete</button>
+              <button id="addPartySectionBtn" class="panelBtn panelBtnSm" title="Add Party Section">+ Section</button>
+              <button id="renamePartySectionBtn" class="panelBtn panelBtnSm" title="Rename Selected Section">Rename</button>
+              <button id="deletePartySectionBtn" class="danger panelBtn panelBtnSm panelDelete" title="Delete Selected Section">Delete</button>
 
-              <input id="partySearch" class="partySearch" placeholder="Search party..." />
+              <input id="partySearch" class="partySearch panelSearch" placeholder="Search party..." />
             </div>
           </div>
 
           <!-- ✅ Party Sections (NPC-style tabs) -->
-          <div class="npcTabsWrap" role="tablist" aria-label="Party Sections">
+          <!-- <div class="npcTabsWrap" role="tablist" aria-label="Party Sections"> -->
+          <div class="sessionTabsWrap" role="tablist" aria-label="Sessions">
             <div id="partyTabs" class="sessionTabs"></div>
           </div>
 
@@ -299,10 +257,14 @@
           <div class="locHeader">
             <h2 class="m0">Locations</h2>
 
-            <div class="locControls">
-              <button id="addLocBtn" title="Add Location">+ Add Location</button>
+            <div class="locControls panelControls">
+              <button id="addLocBtn" class="panelBtn panelBtnSm" title="Add Location">+ Location</button>
 
-              <select id="locFilter" class="locFilter" title="Filter by type">
+              <button id="addLocSectionBtn" class="panelBtn panelBtnSm" title="Add Location Section">+ Section</button>
+              <button id="renameLocSectionBtn" class="panelBtn panelBtnSm" title="Rename Selected Section">Rename</button>
+              <button id="deleteLocSectionBtn" class="danger panelBtn panelBtnSm panelDelete" title="Delete Selected Section">Delete</button>
+
+              <select id="locFilter" class="locFilter panelSelect" title="Filter by type">
                 <option value="all">All</option>
                 <option value="town">Town</option>
                 <option value="dungeon">Dungeon</option>
@@ -310,8 +272,13 @@
                 <option value="other">Other</option>
               </select>
 
-              <input id="locSearch" class="locSearch" placeholder="Search locations..." />
+              <input id="locSearch" class="locSearch panelSearch" placeholder="Search locations..." />
             </div>
+          </div>
+
+          <!-- <div class="npcTabsWrap" role="tablist" aria-label="Location Sections"> -->
+          <div class="sessionTabsWrap" role="tablist" aria-label="Sessions">
+            <div id="locTabs" class="sessionTabs"></div>
           </div>
 
           <div id="locCards" class="locCards"></div>
@@ -356,7 +323,7 @@
 
               <div class="fieldLabelRow">
                 <div class="fieldLabel">Features / Traits</div>
-                <button type="button" class="collapseMini" data-collapse-target="charFeatures" aria-expanded="true"
+                <button type="button" class="panelCollapseBtn" data-collapse-target="charFeatures" aria-expanded="true"
                   title="Collapse/Expand">▾</button>
               </div>
 
@@ -630,28 +597,28 @@
           <h2 class="m0">Proficiencies & Languages</h2>
           <div class="fieldLabelRow">
             <div class="fieldLabel">Armor Proficiencies</div>
-            <button type="button" class="collapseMini" data-collapse-target="charArmorProf" aria-expanded="true"
+            <button type="button" class="panelCollapseBtn" data-collapse-target="charArmorProf" aria-expanded="true"
               title="Collapse/Expand">▾</button>
           </div>
           <textarea id="charArmorProf" data-persist-size placeholder="Armor proficiencies..."></textarea>
 
           <div class="fieldLabelRow">
             <div class="fieldLabel">Weapon Proficiencies</div>
-            <button type="button" class="collapseMini" data-collapse-target="charWeaponProf" aria-expanded="true"
+            <button type="button" class="panelCollapseBtn" data-collapse-target="charWeaponProf" aria-expanded="true"
               title="Collapse/Expand">▾</button>
           </div>
           <textarea id="charWeaponProf" data-persist-size placeholder="Weapon proficiencies..."></textarea>
 
           <div class="fieldLabelRow">
             <div class="fieldLabel">Tool Proficiencies</div>
-            <button type="button" class="collapseMini" data-collapse-target="charToolProf" aria-expanded="true"
+            <button type="button" class="panelCollapseBtn" data-collapse-target="charToolProf" aria-expanded="true"
               title="Collapse/Expand">▾</button>
           </div>
           <textarea id="charToolProf" data-persist-size placeholder="Tool proficiencies..."></textarea>
 
           <div class="fieldLabelRow">
             <div class="fieldLabel">Languages</div>
-            <button type="button" class="collapseMini" data-collapse-target="charLanguages" aria-expanded="true"
+            <button type="button" class="panelCollapseBtn" data-collapse-target="charLanguages" aria-expanded="true"
               title="Collapse/Expand">▾</button>
           </div>
           <textarea id="charLanguages" data-persist-size placeholder="Languages known..."></textarea>
@@ -681,7 +648,7 @@
           <h2 class="m0">Equipment</h2>
           <div class="fieldLabelRow">
             <div class="fieldLabel">Inventory</div>
-            <button type="button" class="collapseMini" data-collapse-target="charEquipment" aria-expanded="true"
+            <button type="button" class="panelCollapseBtn" data-collapse-target="charEquipment" aria-expanded="true"
               title="Collapse/Expand">▾</button>
           </div>
           <textarea id="charEquipment" data-persist-size placeholder="Equipment, items, treasures..."></textarea>
@@ -709,35 +676,35 @@
           <h2 class="m0">Personality</h2>
           <div class="fieldLabelRow">
             <div class="fieldLabel">Traits</div>
-            <button type="button" class="collapseMini" data-collapse-target="charTraits" aria-expanded="true"
+            <button type="button" class="panelCollapseBtn" data-collapse-target="charTraits" aria-expanded="true"
               title="Collapse/Expand">▾</button>
           </div>
           <textarea id="charTraits" data-persist-size placeholder="Personality traits..."></textarea>
 
           <div class="fieldLabelRow">
             <div class="fieldLabel">Ideals</div>
-            <button type="button" class="collapseMini" data-collapse-target="charIdeals" aria-expanded="true"
+            <button type="button" class="panelCollapseBtn" data-collapse-target="charIdeals" aria-expanded="true"
               title="Collapse/Expand">▾</button>
           </div>
           <textarea id="charIdeals" data-persist-size placeholder="Ideals..."></textarea>
 
           <div class="fieldLabelRow">
             <div class="fieldLabel">Bonds</div>
-            <button type="button" class="collapseMini" data-collapse-target="charBonds" aria-expanded="true"
+            <button type="button" class="panelCollapseBtn" data-collapse-target="charBonds" aria-expanded="true"
               title="Collapse/Expand">▾</button>
           </div>
           <textarea id="charBonds" data-persist-size placeholder="Bonds..."></textarea>
 
           <div class="fieldLabelRow">
             <div class="fieldLabel">Flaws</div>
-            <button type="button" class="collapseMini" data-collapse-target="charFlaws" aria-expanded="true"
+            <button type="button" class="panelCollapseBtn" data-collapse-target="charFlaws" aria-expanded="true"
               title="Collapse/Expand">▾</button>
           </div>
           <textarea id="charFlaws" data-persist-size placeholder="Flaws..."></textarea>
 
           <div class="fieldLabelRow">
             <div class="fieldLabel">Notes</div>
-            <button type="button" class="collapseMini" data-collapse-target="charCharNotes" aria-expanded="true"
+            <button type="button" class="panelCollapseBtn" data-collapse-target="charCharNotes" aria-expanded="true"
               title="Collapse/Expand">▾</button>
           </div>
           <textarea id="charCharNotes" data-persist-size placeholder="Anything else..."></textarea>
@@ -765,10 +732,9 @@
             </label>
 
             <div class="dropdown" id="toolDropdown">
-              <button type="button" class="chip dropdownBtn" id="toolDropdownBtn" aria-haspopup="true"
+              <button type="button" class="mapToolDropDown" id="toolDropdownBtn" aria-haspopup="true"
                 aria-expanded="false" title="Choose a tool">
                 <span data-tool-label>Brush</span>
-                <span class="caret" aria-hidden="true">▾</span>
               </button>
               <div class="dropdownMenu" id="toolDropdownMenu" hidden>
                 <button type="button" class="swatchOption" data-tool="brush">Brush</button>
@@ -823,7 +789,58 @@
     </section>
   </main>
 
-  <script src="app.js"></script>
+
+  <!-- Data & Settings modal -->
+  <div id="dataPanelOverlay" class="modalOverlay" hidden aria-hidden="true">
+    <div class="modalPanel dataPanelPanel" id="dataPanelPanel" role="dialog" aria-modal="true" aria-labelledby="dataPanelTitle" tabindex="-1">
+      <div class="dataPanelHeader">
+        <div class="modalTitle" id="dataPanelTitle">Data &amp; Settings</div>
+        <button type="button" class="npcSmallBtn" id="dataPanelClose" aria-label="Close">✕</button>
+      </div>
+
+      <div class="dataPanelSection">
+        <div class="dataPanelLabel">Theme</div>
+        <select id="dataPanelThemeSelect" class="settingsSelect" title="Theme"></select>
+      </div>
+
+      <div class="settingsDivider"></div>
+
+      <div class="dataPanelSection">
+        <div class="dataPanelLabel">Backups</div>
+        <div class="dataPanelActions">
+          <button id="dataExportBtn" class="settingsItem" type="button">Export Backup (.json)</button>
+
+          <label class="settingsItem settingsFileItem" title="Import a previously exported backup">
+            Import Backup
+            <input id="dataImportFile" type="file" accept="application/json" />
+          </label>
+        </div>
+      </div>
+
+      <div class="settingsDivider"></div>
+
+      <div class="dataPanelSection">
+        <div class="dataPanelLabel">Maintenance</div>
+        <div class="mutedSmall">These options affect data stored in your browser on this device.</div>
+        <div class="dataPanelActions">
+          <button id="dataResetUiBtn" class="settingsItem" type="button">Reset UI Only</button>
+          <button id="dataClearImagesBtn" class="settingsItem" type="button">Clear Images Only</button>
+          <button id="dataClearTextsBtn" class="settingsItem" type="button">Clear Text Notes Only</button>
+          <button id="dataAboutBtn" class="settingsItem" type="button">About</button>
+        </div>
+      </div>
+
+      <div class="settingsDivider"></div>
+
+      <div class="dataPanelSection">
+        <div class="dataPanelLabel dangerLabel">Danger Zone</div>
+        <button class="settingsItem danger" id="dataResetAllBtn" type="button">Reset Everything</button>
+        <div class="mutedSmall">This clears campaign data + images + notes from this browser.</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
 </body>
 
 </html>

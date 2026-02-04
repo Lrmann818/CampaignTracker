@@ -1,0 +1,283 @@
+// js/ui/popovers.js
+// Centralized popover / dropdown manager.
+//
+// Handles:
+//  - click-outside close (optional per popover)
+//  - Escape close (optional per popover)
+//  - resize reposition for open popovers
+
+/**
+ * @typedef {Object} PopoverRegistration
+ * @property {HTMLElement} button
+ * @property {HTMLElement} menu
+ * @property {boolean} preferRight
+ * @property {boolean} closeOnOutside
+ * @property {boolean} closeOnEsc
+ * @property {boolean} stopInsideClick
+ * @property {() => void | null} onOpen
+ * @property {() => void | null} onClose
+ */
+
+/**
+ * @param {{ positionFn: (menu: HTMLElement, anchor: HTMLElement, opts?: any) => void }} cfg
+ */
+export function createPopoverManager(cfg) {
+  const positionFn = cfg?.positionFn;
+  /** @type {Set<PopoverRegistration>} */
+  const registrations = new Set();
+  const menuToReg = new WeakMap();
+  let installed = false;
+
+  // When a popover is opened, we record the anchor's viewport position.
+  // If the user scrolls enough that the anchor moves (relative to viewport),
+  // we close the popover to mimic native <select> behavior.
+  const openAnchorPos = new Map(); // reg -> { top, left }
+  const SCROLL_CLOSE_PX = 10;
+
+  const isOpen = (reg) => reg && reg.menu && !reg.menu.hidden;
+
+  const reposition = (reg) => {
+    if (!reg || !isOpen(reg)) return;
+    if (typeof positionFn !== "function") return;
+    positionFn(reg.menu, reg.button, { preferRight: !!reg.preferRight });
+  };
+
+  const close = (reg, { focusButton = false } = {}) => {
+    if (!reg || !reg.menu || !reg.button) return;
+    if (reg.menu.hidden) return;
+    reg.menu.hidden = true;
+    reg.button.setAttribute("aria-expanded", "false");
+    openAnchorPos.delete(reg);
+    try { reg.onClose?.(); } catch (e) { console.warn("popover onClose failed", e); }
+    if (focusButton) {
+      try { reg.button.focus?.({ preventScroll: true }); } catch { reg.button.focus?.(); }
+    }
+  };
+
+  const closeAll = () => {
+    registrations.forEach((reg) => {
+      if (isOpen(reg)) close(reg);
+    });
+  };
+
+  const closeAllExcept = (keep) => {
+    registrations.forEach((reg) => {
+      if (reg !== keep && isOpen(reg)) close(reg);
+    });
+  };
+
+  const open = (reg, { exclusive = true } = {}) => {
+    if (!reg || !reg.menu || !reg.button) return;
+    if (exclusive) closeAllExcept(reg);
+    reg.menu.hidden = false;
+    reg.button.setAttribute("aria-expanded", "true");
+    // Record the anchor's position at open; used to decide when to auto-close
+    // on scroll (native select behavior).
+    try {
+      const r = reg.button.getBoundingClientRect();
+      openAnchorPos.set(reg, { top: r.top, left: r.left });
+    } catch {
+      // ignore
+    }
+    reposition(reg);
+    try { reg.onOpen?.(); } catch (e) { console.warn("popover onOpen failed", e); }
+  };
+
+  const toggle = (reg, { exclusive = true } = {}) => {
+    if (!reg) return;
+    if (isOpen(reg)) close(reg, { focusButton: false });
+    else open(reg, { exclusive });
+  };
+
+  const ensureInstalled = () => {
+    if (installed) return;
+    installed = true;
+
+    // --- Keep open popovers anchored while *any* scrollable container scrolls ---
+    // Many areas (NPC/Party/Locations lists, panels) are `overflow: auto`.
+    // Our menus are positioned with `position: fixed` (see positioning.js).
+    // Without listening for scroll events, the menu can appear to "stay" in
+    // the old spot while its button moves.
+    let raf = 0;
+    let lastScrollTarget = null;
+    const requestRepositionAll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        registrations.forEach((reg) => {
+          if (!isOpen(reg)) return;
+
+          // Native dropdowns close as soon as you scroll the page/list.
+          // We mimic that by closing on any scroll that didn't originate from
+          // inside the open menu or its button.
+          if (lastScrollTarget && typeof lastScrollTarget === "object") {
+            const t = /** @type {any} */ (lastScrollTarget);
+            if (!reg.menu.contains(t) && !reg.button.contains(t)) {
+              close(reg);
+              return;
+            }
+          }
+
+          // Close on scroll once the anchor has moved a bit.
+          const start = openAnchorPos.get(reg);
+          if (start) {
+            try {
+              const now = reg.button.getBoundingClientRect();
+              const dx = Math.abs(now.left - start.left);
+              const dy = Math.abs(now.top - start.top);
+              if (dx > SCROLL_CLOSE_PX || dy > SCROLL_CLOSE_PX) {
+                close(reg);
+                return;
+              }
+            } catch {
+              // If we can't read the rect for any reason, fall back to keeping it positioned.
+            }
+          }
+
+          reposition(reg);
+        });
+      });
+    };
+
+    // Capture phase catches scrolls from nested containers.
+    window.addEventListener(
+      "scroll",
+      (e) => {
+        lastScrollTarget = e.target;
+        requestRepositionAll();
+      },
+      true
+    );
+
+    // click-outside close
+    document.addEventListener("click", (e) => {
+      registrations.forEach((reg) => {
+        if (!reg.closeOnOutside) return;
+        if (!isOpen(reg)) return;
+        const t = e.target;
+        if (reg.button.contains(t)) return;
+        if (reg.menu.contains(t)) return;
+        close(reg);
+      });
+    });
+
+    // Escape close (topmost = last registered open)
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      // Close the most recently opened eligible popover
+      // (best-effort: iterate registrations in insertion order)
+      const openRegs = Array.from(registrations).filter(r => r.closeOnEsc && isOpen(r));
+      const last = openRegs[openRegs.length - 1];
+      if (last) {
+        e.preventDefault();
+        close(last, { focusButton: true });
+      }
+    });
+
+    // resize reposition
+    window.addEventListener("resize", () => {
+      registrations.forEach((reg) => reposition(reg));
+    });
+  };
+
+  /**
+   * Register a popover.
+   * @param {{
+   *  button: HTMLElement,
+   *  menu: HTMLElement,
+   *  preferRight?: boolean,
+   *  closeOnOutside?: boolean,
+   *  closeOnEsc?: boolean,
+   *  stopInsideClick?: boolean,
+   *  onOpen?: () => void,
+   *  onClose?: () => void,
+   *  wireButton?: boolean
+   * }} args
+   */
+  const register = (args) => {
+    if (!args?.button || !args?.menu) return null;
+
+    const reg = /** @type {PopoverRegistration} */ ({
+      button: args.button,
+      menu: args.menu,
+      preferRight: !!args.preferRight,
+      closeOnOutside: args.closeOnOutside !== false,
+      closeOnEsc: args.closeOnEsc !== false,
+      stopInsideClick: args.stopInsideClick !== false,
+      onOpen: args.onOpen || null,
+      onClose: args.onClose || null,
+    });
+
+    registrations.add(reg);
+    menuToReg.set(reg.menu, reg);
+    ensureInstalled();
+
+    // menu click: keep open
+    if (reg.stopInsideClick) {
+      reg.menu.addEventListener("click", (e) => e.stopPropagation());
+    }
+
+    // optional: wire the button click to toggle
+    if (args.wireButton !== false) {
+      reg.button.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggle(reg, { exclusive: true });
+      });
+    }
+
+    return {
+      reg,
+      open: () => open(reg, { exclusive: true }),
+      close: () => close(reg, { focusButton: false }),
+      toggle: () => toggle(reg, { exclusive: true }),
+      reposition: () => reposition(reg)
+    };
+  };
+
+  /**
+   * For dynamically-created menus where you don't want to auto-wire the button.
+   * This returns a stable registration (stored in a WeakMap) per menu element.
+   */
+  const trackDynamic = ({ button, menu, preferRight = false, closeOnOutside = true, closeOnEsc = true, stopInsideClick = true, onOpen, onClose } = {}) => {
+    if (!button || !menu) return null;
+    let reg = menuToReg.get(menu);
+    if (!reg) {
+      reg = /** @type {PopoverRegistration} */ ({
+        button,
+        menu,
+        preferRight: !!preferRight,
+        closeOnOutside: !!closeOnOutside,
+        closeOnEsc: !!closeOnEsc,
+        stopInsideClick: !!stopInsideClick,
+        onOpen: onOpen || null,
+        onClose: onClose || null,
+      });
+      registrations.add(reg);
+      menuToReg.set(menu, reg);
+      ensureInstalled();
+      if (stopInsideClick) menu.addEventListener("click", (e) => e.stopPropagation());
+    }
+    // keep latest button reference (in case the same menu is reused)
+    reg.button = button;
+    reg.preferRight = !!preferRight;
+    reg.closeOnOutside = !!closeOnOutside;
+    reg.closeOnEsc = !!closeOnEsc;
+    reg.stopInsideClick = !!stopInsideClick;
+    reg.onOpen = onOpen || reg.onOpen;
+    reg.onClose = onClose || reg.onClose;
+    return reg;
+  };
+
+  return {
+    register,
+    trackDynamic,
+    open,
+    close,
+    toggle,
+    reposition,
+    closeAll,
+    closeAllExcept,
+    isOpen
+  };
+}
