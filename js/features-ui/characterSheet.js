@@ -52,6 +52,20 @@ export function initCharacterSheetUI(deps) {
     return { id: newTextId('spellLevel'), label: label || 'New Level', hasSlots: !!hasSlots, used: null, total: null, collapsed: false, spells: [] };
   }
 
+  // Spell factory (Spells v2).
+  // Keep this local so the UI can always create a valid spell object,
+  // even if other modules refactor/rename helpers.
+  function newSpell(name = '') {
+    return {
+      id: newTextId('spell'),
+      name: name || '',
+      notesCollapsed: true,
+      known: true,
+      prepared: false,
+      expended: false
+    };
+  }
+
   function setupSpellsV2() {
     const container = document.getElementById('spellLevels');
     const addLevelBtn = document.getElementById('addSpellLevelBtn');
@@ -199,6 +213,8 @@ export function initCharacterSheetUI(deps) {
       addSpellBtn.type = 'button';
       addSpellBtn.textContent = '+ Spell';
       addSpellBtn.addEventListener('click', () => {
+        // Defensive: ensure the spells array exists before pushing.
+        if (!Array.isArray(level.spells)) level.spells = [];
         level.spells.push(newSpell(''));
         SaveManager.markDirty();
         render();
