@@ -56,7 +56,7 @@
       <!-- Calculator dropdown -->
       <div class="calcDropdown" id="calcDropdown">
         <button id="calcBtn" class="tab calcBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Calculator">
-          <img id="calcBtnIcon" src="icons/calcIcon.svg" alt="Calculator" class="btnIcon"/>
+          <span id="calcBtnIcon" class="iconMask btnIcon" aria-hidden="true" style="--icon:url('icons/calcIcon.svg');"></span>
         </button>
 
         <div class="calcMenu" id="calcMenu" hidden>
@@ -104,7 +104,7 @@
       <div class="diceDropdown" id="diceDropdown">
         <button id="diceBtn" class="tab diceBtn" type="button" aria-haspopup="true" aria-expanded="false"
           title="Dice Roller">
-          <img id="diceBtnIcon" src="icons/dice/d20.svg" alt="Dice roller" class="diceIconImg" />
+          <span id="diceBtnIcon" class="iconMask diceIconImg" aria-hidden="true" style="--icon:url('icons/dice/d20.svg');"></span>
         </button>
         <div class="diceMenu" id="diceMenu" hidden>
           <div class="diceTop">
@@ -113,18 +113,18 @@
           </div>
 
           <div class="diceTopRow" aria-label="Dice inputs">
-            <label class="diceField">
-              <div class="mutedSmall">#</div>
+            <label class="diceField diceCountField">
+              <div class="mutedSmall diceCountLabel">#</div>
               <input id="diceCount" type="number" min="1" max="100" step="1" value="1" inputmode="numeric" />
             </label>
 
             <!-- NEW: big active die icon -->
             <div class="diceHero" aria-hidden="true">
-              <img id="diceActiveIcon" class="diceActiveIcon" src="icons/dice/d20.svg" alt="" />
+              <span id="diceActiveIcon" class="iconMask diceActiveIcon" style="--icon:url('icons/dice/d20.svg');"></span>
             </div>
 
-            <label class="diceField">
-              <div class="mutedSmall">Mod</div>
+            <label class="diceField diceModField">
+              <div class="mutedSmall diceModLabel">Mod</div>
               <div class="modWrap">
                 <span id="diceModPlus" class="modPlus" aria-hidden="true">+</span>
                 <input id="diceMod" type="number" step="1" inputmode="numeric" />
@@ -147,25 +147,25 @@
           <!-- NEW: icon presets (select die, do NOT roll) -->
           <div class="dicePresets" aria-label="Choose die">
             <button type="button" class="dicePreset" data-sides="4" aria-label="d4">
-              <img class="dicePresetIcon" src="icons/dice/d4.svg" alt="" />
+              <span class="iconMask dicePresetIcon" aria-hidden="true" style="--icon:url('icons/dice/d4.svg');"></span>
             </button>
             <button type="button" class="dicePreset" data-sides="6" aria-label="d6">
-              <img class="dicePresetIcon" src="icons/dice/d6.svg" alt="" />
+              <span class="iconMask dicePresetIcon" aria-hidden="true" style="--icon:url('icons/dice/d6.svg');"></span>
             </button>
             <button type="button" class="dicePreset" data-sides="8" aria-label="d8">
-              <img class="dicePresetIcon" src="icons/dice/d8.svg" alt="" />
+              <span class="iconMask dicePresetIcon" aria-hidden="true" style="--icon:url('icons/dice/d8.svg');"></span>
             </button>
             <button type="button" class="dicePreset" data-sides="10" aria-label="d10">
-              <img class="dicePresetIcon" src="icons/dice/d10.svg" alt="" />
+              <span class="iconMask dicePresetIcon" aria-hidden="true" style="--icon:url('icons/dice/d10.svg');"></span>
             </button>
             <button type="button" class="dicePreset" data-sides="12" aria-label="d12">
-              <img class="dicePresetIcon" src="icons/dice/d12.svg" alt="" />
+              <span class="iconMask dicePresetIcon" aria-hidden="true" style="--icon:url('icons/dice/d12.svg');"></span>
             </button>
             <button type="button" class="dicePreset" data-sides="20" aria-label="d20">
-              <img class="dicePresetIcon" src="icons/dice/d20.svg" alt="" />
+              <span class="iconMask dicePresetIcon" aria-hidden="true" style="--icon:url('icons/dice/d20.svg');"></span>
             </button>
             <button type="button" class="dicePreset" data-sides="100" aria-label="d100">
-              <img class="dicePresetIcon" src="icons/dice/d100.svg" alt="" />
+              <span class="iconMask dicePresetIcon" aria-hidden="true" style="--icon:url('icons/dice/d100.svg');"></span>
             </button>
           </div>
 

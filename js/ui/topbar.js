@@ -521,10 +521,11 @@ export function initTopbarUI(deps) {
     };
   
     const updateDiceIcon = (sides) => {
-      const topImg = document.getElementById("diceBtnIcon");
+      const topIcon = document.getElementById("diceBtnIcon");
       const src = diceIconMap[sides] || diceIconMap[20];
-      if (topImg) topImg.src = src || diceIconMap[20];
-      if (activeIcon) activeIcon.src = src || diceIconMap[20];
+      // Icons are CSS-mask based (span.iconMask), so we swap the --icon url.
+      if (topIcon) topIcon.style.setProperty("--icon", `url('${src || diceIconMap[20]}')`);
+      if (activeIcon) activeIcon.style.setProperty("--icon", `url('${src || diceIconMap[20]}')`);
     };
   
     const readUi = () => {

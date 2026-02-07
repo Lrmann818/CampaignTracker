@@ -8,7 +8,7 @@
    ============================================== */
 
 /* ======================
-   Base + Theme
+      Base / Dark Theme
    ====================== */
 
 :root {
@@ -16,14 +16,21 @@
   --panel: #121212;
   --card: linear-gradient(to bottom,
       rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.0));
+      rgba(255, 255, 255, 0.0178));
   --collapsedCard: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.13),
       rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
   --frame-fill: color-mix(in srgb, var(--border) 60%, transparent);
   --text: #f0f0f0;
   --muted: #b9b9b9;
   --border: #404040;
+  --diceIconColor: #b9b9b9;
 
   --surface-2: #141414;
   /* inputs */
@@ -82,6 +89,10 @@
   }
 }
 
+/*=======================
+    Light Themes Below
+  =======================*/
+
 /* Light theme */
 :root[data-theme="light"] {
   --bg: #f5f5f7;
@@ -92,16 +103,17 @@
   --collapsedCard: linear-gradient(to bottom,
       rgba(0, 0, 0, 0.0),
       rgba(0, 0, 0, 0.02));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
   --spell-card: linear-gradient(to bottom,
       rgba(0, 0, 0, .1),
       rgba(0, 0, 0, 0.15));
-  --calculatorBg: linear-gradient(to bottom,
-      rgba(0, 0, 0, 0.2),
-      rgba(0, 0, 0, 0.1));
 
   --text: #1a1a1a;
   --muted: #555;
   --border: #d0d0d6;
+  --diceIconColor: #555;
 
   --surface-2: #f0f0f3;
   /* inputs */
@@ -118,37 +130,78 @@
   --map-empty: #e9e9ee;
 }
 
-/* Purple theme */
-:root[data-theme="purple"] {
-  --bg: #391E54;
-  --panel: #4A3062;
+/* Parchment theme */
+:root[data-theme="beige"] {
+  --bg: #c3b596;
+  /* warmer, slightly darker backdrop */
+  --panel: #d6c7a9;
+  /* parchment surface */
   --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
-      rgba(0, 0, 0, 0.2));
+      rgba(0, 0, 0, 0.1));
   --collapsedCard: linear-gradient(to bottom,
       rgba(0, 0, 0, 0.0),
-      rgba(0, 0, 0, 0.085));
+      rgba(0, 0, 0, 0.02));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
   --spell-card: linear-gradient(to bottom,
-      rgba(0, 0, 0, 0.2),
-      rgba(0, 0, 0, 0.25));
+      rgba(0, 0, 0, .1),
+      rgba(0, 0, 0, 0.15));
+  --text: #221a11;
+  --muted: #4b4030;
+  --border: #9a8a6b;
+  --diceIconColor: #4b4030;
 
-  --text: #f3efff;
-  --muted: #c3b6dd;
-  --border: #332146;
-
-  --surface-2: #402758;
+  --surface-2: #ccbda0;
   /* inputs */
-  --surface-3: #3B2450;
+  --surface-3: #c0b191;
   /* buttons/tabs */
-  --surface-3-hover: #352148;
-  /* hover/active */
+  --surface-3-hover: #b4a47f;
 
-  --ring: #e6d4ff38;
-  --hairline: #e6d4ff1f;
-  --shadow-inset: #0000008c;
-  --shadow-drop: #000000a8;
+  --ring: rgba(96, 67, 28, 0.38);
+  --hairline: rgba(96, 67, 28, 0.26);
+  --shadow-inset: rgba(0, 0, 0, 0.18);
+  --shadow-drop: rgba(0, 0, 0, 0.38);
 
-  --map-empty: #100a18;
+  --map-empty: #b3a483;
+}
+
+/* Blush theme */
+:root[data-theme="rose"] {
+  --bg: #f2d6df;
+  /* soft blush background */
+  --panel: #f8e6ec;
+  /* light rose panels */
+    --card: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.0),
+      rgba(0, 0, 0, 0.02));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --spell-card: linear-gradient(to bottom,
+      rgba(0, 0, 0, .1),
+      rgba(0, 0, 0, 0.15));
+  --text: #3a1f2b;
+  --muted: #7a4a5a;
+  --border: #d4a3b4;
+  --diceIconColor: #7a4a5a;
+
+  --surface-2: #f1d7df;
+  /* inputs */
+  --surface-3: #e8c6d0;
+  /* buttons/tabs */
+  --surface-3-hover: #ddb5c2;
+
+  --ring: rgba(180, 90, 120, 0.32);
+  --hairline: rgba(180, 90, 120, 0.20);
+  --shadow-inset: rgba(0, 0, 0, 0.10);
+  --shadow-drop: rgba(0, 0, 0, 0.28);
+
+  --map-empty: #e6bcc9;
 }
 
 /* Teal theme */
@@ -157,18 +210,22 @@
   /* warmer deep turquoise backdrop */
   --panel: #b2d4cf;
   /* card surface */
+  --card: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.0),
+      rgba(0, 0, 0, 0.02));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --spell-card: linear-gradient(to bottom,
+      rgba(0, 0, 0, .1),
+      rgba(0, 0, 0, 0.15));
   --text: #0a2421;
   --muted: #355b56;
   --border: #5e9a90;
-  --card: linear-gradient(to bottom,
-      rgba(0, 0, 0, 0),
-      rgba(0, 0, 0, 0.2));
-  --collapsedCard: linear-gradient(to bottom,
-      rgba(0, 0, 0, 0.0),
-      rgba(0, 0, 0, 0.085));
-  --spell-card: linear-gradient(to bottom,
-      rgba(0, 0, 0, 0.2),
-      rgba(0, 0, 0, 0.25));
+  --diceIconColor: #355b56;
 
   --surface-2: #a6c9c3;
   /* inputs */
@@ -184,54 +241,29 @@
   --map-empty: #7ea8a1;
 }
 
-/* Green theme */
-:root[data-theme="green"] {
-  --bg: #091a07;
-  /* darker toxic green-black */
-  --panel: #0e2b0a;
-  /* deepened core surface */
-  --text: #e9ffe3;
-  --muted: #97cf8d;
-  --border: #1c5315;
-  /* darker cousin of #0E6605 */
-
-  --surface-2: #123c0f;
-  /* inputs */
-  --surface-3: #174e13;
-  /* buttons/tabs */
-  --surface-3-hover: #1e6618;
-  /* toxic lift */
-
-  /* Toxic glow accents */
-  --ring: rgba(70, 200, 60, 0.38);
-  --hairline: rgba(70, 200, 60, 0.24);
-
-  --shadow-inset: rgba(0, 0, 0, 0.65);
-  --shadow-drop: rgba(0, 0, 0, 0.82);
-
-  --map-empty: #050f04;
-}
-
 /* Blue theme */
 :root[data-theme="blue"] {
   --bg: #c7f2f7;
   /* pale cyan backdrop */
-  --panel: #e3f9fc;
+  --panel: #D6FCFF;
   /* light blue-glass panels */
-  --text: #0b2a30;
-  --muted: #4f6f75;
   --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
-      rgba(0, 0, 0, 0.15));
+      rgba(0, 0, 0, 0.1));
   --collapsedCard: linear-gradient(to bottom,
       rgba(0, 0, 0, 0.0),
-      rgba(0, 0, 0, 0.039));
+      rgba(0, 0, 0, 0.02));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
   --spell-card: linear-gradient(to bottom,
       rgba(0, 0, 0, .1),
       rgba(0, 0, 0, 0.15));
-
+  --text: #0b2a30;
+  --muted: #4f6f75;
   /* Steel / iron structure */
   --border: #9fb7bd;
+  --diceIconColor: #4f6f75;
 
   --surface-2: #d6eef3;
   /* inputs */
@@ -249,13 +281,67 @@
   --map-empty: #b8dde3;
 }
 
-/* Red theme */
+/*======================
+    Dark Themes Below
+  ======================*/
+
+/* Purple theme */
+:root[data-theme="purple"] {
+  --bg: #391E54;
+  --panel: #4A3062;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+
+  --text: #f3efff;
+  --muted: #c3b6dd;
+  --border: #332146;
+  --diceIconColor: #c3b6dd;
+
+  --surface-2: #402758;
+  /* inputs */
+  --surface-3: #3B2450;
+  /* buttons/tabs */
+  --surface-3-hover: #352148;
+  /* hover/active */
+
+  --ring: #e6d4ff38;
+  --hairline: #e6d4ff1f;
+  --shadow-inset: #0000008c;
+  --shadow-drop: #000000a8;
+
+  --map-empty: #100a18;
+}
+
+/* Crimson theme */
 :root[data-theme="red"] {
   --bg: #2a0f12;
   --panel: #3a1519;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
   --text: #ffecec;
   --muted: #e0b3b3;
   --border: #6a2a2f;
+  --diceIconColor: #e0b3b3;
 
   --surface-2: #451a1f;
   --surface-3: #4f2026;
@@ -288,10 +374,10 @@
   --text: #ffecec;
   --muted: #e0b3b3;
   --border: #7a6738;
-
   --surface-2: #451a1f;
   --surface-3: #4f2026;
   --surface-3-hover: #612a31;
+  --diceIconColor: #7a6738;
 
   --ring: rgba(255, 205, 120, 0.55);
   --hairline: rgba(255, 200, 95, 0.35);
@@ -301,161 +387,28 @@
   --map-empty: #160708;
 }
 
-/* Rose theme */
-:root[data-theme="rose"] {
-  --bg: #f2d6df;
-  /* soft blush background */
-  --panel: #f8e6ec;
-  /* light rose panels */
-  --text: #3a1f2b;
-  --muted: #7a4a5a;
-  --border: #d4a3b4;
-  --card: linear-gradient(to bottom,
-      rgba(0, 0, 0, 0),
-      rgba(0, 0, 0, 0.15));
-  --collapsedCard: linear-gradient(to bottom,
-      rgba(0, 0, 0, 0.0),
-      rgba(0, 0, 0, 0.039));
-  --spell-card: linear-gradient(to bottom,
-      rgba(0, 0, 0, .1),
-      rgba(0, 0, 0, 0.15));
-
-  --surface-2: #f1d7df;
-  /* inputs */
-  --surface-3: #e8c6d0;
-  /* buttons/tabs */
-  --surface-3-hover: #ddb5c2;
-
-  --ring: rgba(180, 90, 120, 0.32);
-  --hairline: rgba(180, 90, 120, 0.20);
-  --shadow-inset: rgba(0, 0, 0, 0.10);
-  --shadow-drop: rgba(0, 0, 0, 0.28);
-
-  --map-empty: #e6bcc9;
-}
-
-/* Beige theme */
-:root[data-theme="beige"] {
-  --bg: #c3b596;
-  /* warmer, slightly darker backdrop */
-  --panel: #d6c7a9;
-  /* parchment surface */
-  --text: #221a11;
-  --muted: #4b4030;
-  --border: #9a8a6b;
-  --card: linear-gradient(to bottom,
-      rgba(0, 0, 0, 0),
-      rgba(0, 0, 0, 0.15));
-  --collapsedCard: linear-gradient(to bottom,
-      rgba(0, 0, 0, 0.0),
-      rgba(0, 0, 0, 0.039));
-  --spell-card: linear-gradient(to bottom,
-      rgba(0, 0, 0, .1),
-      rgba(0, 0, 0, 0.15));
-
-  --surface-2: #ccbda0;
-  /* inputs */
-  --surface-3: #c0b191;
-  /* buttons/tabs */
-  --surface-3-hover: #b4a47f;
-
-  --ring: rgba(96, 67, 28, 0.38);
-  --hairline: rgba(96, 67, 28, 0.26);
-  --shadow-inset: rgba(0, 0, 0, 0.18);
-  --shadow-drop: rgba(0, 0, 0, 0.38);
-
-  --map-empty: #b3a483;
-}
-
-/* Slate theme */
-:root[data-theme="slate"] {
-  --bg: #1c1f22;
-  --panel: #24282c;
-  --text: #e6e8ea;
-  --muted: #a6abb0;
-  --border: #3a4046;
-
-  --surface-2: #2a2f34;
-  --surface-3: #30363c;
-  --surface-3-hover: #3a4148;
-
-  --ring: rgba(180, 190, 200, 0.20);
-  --hairline: rgba(180, 190, 200, 0.12);
-  --shadow-inset: rgba(0, 0, 0, 0.45);
-  --shadow-drop: rgba(0, 0, 0, 0.65);
-
-  --map-empty: #16191c;
-}
-
-/* Forest theme */
-:root[data-theme="forest"] {
-  --bg: #0f1a13;
-  --panel: #16241b;
-  --text: #e9f3ec;
-  --muted: #a9c2b2;
-  --border: #2d4637;
-
-  --surface-2: #1c3024;
-  --surface-3: #223a2b;
-  --surface-3-hover: #2a4a36;
-
-  --ring: rgba(110, 170, 130, 0.22);
-  --hairline: rgba(110, 170, 130, 0.14);
-  --shadow-inset: rgba(0, 0, 0, 0.55);
-  --shadow-drop: rgba(0, 0, 0, 0.75);
-
-  --map-empty: #0a120d;
-}
-
-/* Ember theme */
-:root[data-theme="ember"] {
-  --bg: #1e120c;
-  --panel: #2a1912;
-  --text: #fff0e6;
-  --muted: #d0a88e;
-  --border: #6a3a22;
-
-  --surface-2: #332017;
-  --surface-3: #3d261c;
-  --surface-3-hover: #4a2f23;
-
-  --ring: rgba(255, 140, 80, 0.28);
-  --hairline: rgba(255, 140, 80, 0.18);
-  --shadow-inset: rgba(0, 0, 0, 0.55);
-  --shadow-drop: rgba(0, 0, 0, 0.75);
-
-  --map-empty: #120805;
-}
-
-/* Sepia theme */
-:root[data-theme="sepia"] {
-  --bg: #2a231b;
-  --panel: #342c22;
-  --text: #f3eadc;
-  --muted: #c2b19a;
-  --border: #5c4d3b;
-
-  --surface-2: #3d3328;
-  --surface-3: #463b2e;
-  --surface-3-hover: #524536;
-
-  --ring: rgba(190, 160, 110, 0.26);
-  --hairline: rgba(190, 160, 110, 0.16);
-  --shadow-inset: rgba(0, 0, 0, 0.55);
-  --shadow-drop: rgba(0, 0, 0, 0.75);
-
-  --map-empty: #1b160f;
-}
-
 /* Arcane theme */
 :root[data-theme="arcane"] {
   --bg: #14112a;
   /* deep arcane void */
   --panel: #1d1a3a;
   /* spell-slate panels */
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
   --text: #f0ecff;
   --muted: #b7b0e0;
   --border: #3c3670;
+  --diceIconColor: #b7b0e0;
 
   --surface-2: #24204a;
   /* inputs */
@@ -477,17 +430,29 @@
   /* arcane void */
   --panel: #1b1634;
   /* spell-slate panels */
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
   --text: #f6f2ff;
   --muted: #cfc6ee;
 
   /* Violet structure with gold influence */
   --border: #7a6738;
-
   --surface-2: #231e44;
   /* inputs */
   --surface-3: #2b2554;
   /* buttons/tabs */
   --surface-3-hover: #382f6a;
+  --diceIconColor: #7a6738;
 
   /* Gold rune accents (now unmistakable) */
   --ring: rgba(255, 205, 120, 0.55);
@@ -499,6 +464,183 @@
 
   --map-empty: #0a0916;
 }
+
+/* Toxic Core theme */
+:root[data-theme="green"] {
+  --bg: #091a07;
+  /* darker toxic green-black */
+  --panel: #0e2b0a;
+  /* deepened core surface */
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --text: #e9ffe3;
+  --muted: #97cf8d;
+  --border: #1c5315;
+  /* darker cousin of #0E6605 */
+  --diceIconColor: #46C83C;
+
+  --surface-2: #123c0f;
+  /* inputs */
+  --surface-3: #174e13;
+  /* buttons/tabs */
+  --surface-3-hover: #1e6618;
+  /* toxic lift */
+
+  /* Toxic glow accents */
+  --ring: rgba(70, 200, 60, 0.38);
+  --hairline: rgba(70, 200, 60, 0.24);
+
+  --shadow-inset: rgba(0, 0, 0, 0.65);
+  --shadow-drop: rgba(0, 0, 0, 0.82);
+
+  --map-empty: #050f04;
+}
+
+/* Stone theme */
+:root[data-theme="slate"] {
+  --bg: #1c1f22;
+  --panel: #24282c;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --text: #e6e8ea;
+  --muted: #a6abb0;
+  --border: #3a4046;
+
+  --surface-2: #2a2f34;
+  --surface-3: #30363c;
+  --surface-3-hover: #3a4148;
+  --diceIconColor: #a6abb0;
+
+  --ring: rgba(180, 190, 200, 0.20);
+  --hairline: rgba(180, 190, 200, 0.12);
+  --shadow-inset: rgba(0, 0, 0, 0.45);
+  --shadow-drop: rgba(0, 0, 0, 0.65);
+
+  --map-empty: #16191c;
+}
+
+/* Forest theme */
+:root[data-theme="forest"] {
+  --bg: #0f1a13;
+  --panel: #16241b;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --text: #e9f3ec;
+  --muted: #a9c2b2;
+  --border: #2d4637;
+
+  --surface-2: #1c3024;
+  --surface-3: #223a2b;
+  --surface-3-hover: #2a4a36;
+  --diceIconColor: #a9c2b2;
+
+  --ring: rgba(110, 170, 130, 0.22);
+  --hairline: rgba(110, 170, 130, 0.14);
+  --shadow-inset: rgba(0, 0, 0, 0.55);
+  --shadow-drop: rgba(0, 0, 0, 0.75);
+
+  --map-empty: #0a120d;
+}
+
+/* Dark Copper theme */
+:root[data-theme="ember"] {
+  --bg: #1e120c;
+  --panel: #2a1912;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --text: #fff0e6;
+  --muted: #d0a88e;
+  --border: #6a3a22;
+
+  --surface-2: #332017;
+  --surface-3: #3d261c;
+  --surface-3-hover: #4a2f23;
+  --diceIconColor: #d0a88e;
+
+  --ring: rgba(255, 140, 80, 0.28);
+  --hairline: rgba(255, 140, 80, 0.18);
+  --shadow-inset: rgba(0, 0, 0, 0.55);
+  --shadow-drop: rgba(0, 0, 0, 0.75);
+
+  --map-empty: #120805;
+}
+
+/* Sepia theme */
+:root[data-theme="sepia"] {
+  --bg: #2a231b;
+  --panel: #342c22;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --text: #f3eadc;
+  --muted: #c2b19a;
+  --border: #5c4d3b;
+
+  --surface-2: #3d3328;
+  --surface-3: #463b2e;
+  --surface-3-hover: #524536;
+  --diceIconColor: #c2b19a;
+
+  --ring: rgba(190, 160, 110, 0.26);
+  --hairline: rgba(190, 160, 110, 0.16);
+  --shadow-inset: rgba(0, 0, 0, 0.55);
+  --shadow-drop: rgba(0, 0, 0, 0.75);
+
+  --map-empty: #1b160f;
+}
+
+/*========================
+    Theme Template Below
+  ========================*/
 
 /* ______ theme (theme template - fill in and uncomment)
 
@@ -3607,14 +3749,34 @@ button#colorBtn[aria-expanded="true"] {
   justify-content: center;
 }
 
-/* remove the inner “box” so it doesn’t look double-bordered */
+/* ======================
+   Theme-aware SVG icons
+   ====================== */
+/*
+  We use CSS masks so icons can be tinted with theme colors.
+  Any element with .iconMask needs a CSS variable:
+    style="--icon:url('path/to/icon.svg')"
+  Then the icon color is controlled by --iconColor (defaults to var(--border)).
+*/
+.iconMask{
+  background: var(--iconColor, currentColor);
+  -webkit-mask: var(--icon) no-repeat center / contain;
+  mask: var(--icon) no-repeat center / contain;
+  display: inline-block;
+}
+
+/* Everything inside the dropdown menu uses the themed dice icon color */
+.diceMenu .iconMask{
+  --iconColor: var(--diceIconColor);
+}
+
+/* Calculator button icon */
 .btnIcon{
   width: 16px;
   height: 16px;
   display: block;
   pointer-events: none;
   transform: scale(1.15) translateY(-0.5px);
-  filter: var(--icon-filter);
 }
 
 .calcMenu {
@@ -3732,14 +3894,6 @@ button#colorBtn[aria-expanded="true"] {
   width: 16px;
   height: 16px;
   display: block;
-
-  /* theme tint magic */
-  filter: var(--icon-filter, none);
-}
-
-/* If your app already uses this pattern elsewhere, reuse it */
-:root {
-  --icon-filter: invert(1);
 }
 
 /* Match your dropdown look */
@@ -3863,7 +4017,6 @@ button#colorBtn[aria-expanded="true"] {
   width: 46px;
   height: 46px;
   display: block;
-  filter: var(--icon-filter, none);
   opacity: 0.95;
 }
 
@@ -3917,7 +4070,6 @@ button#colorBtn[aria-expanded="true"] {
   width: 26px;
   height: 26px;
   display: block;
-  filter: var(--icon-filter, none);
 }
 
 .dicePresetPct{
@@ -3926,28 +4078,9 @@ button#colorBtn[aria-expanded="true"] {
   line-height: 1;
 }
 
-/* Dice top row: #  [big die]  Mod */
-.diceTopRow{
-  display: grid;
-  grid-template-columns:1fr auto 1fr;
-  align-items: center;
-  margin-bottom: 8px;
-  gap: 20px;
-}
-
-.diceTopRow .diceField:first-child {
-  justify-self: end;
-  text-align: right;
-}
-
-.diceTopRow .diceField:last-child {
-  justify-self: start;
-  text-align: left;
-}
-
-/* keep inputs from stretching weirdly */
-.diceTopRow .diceField input{
-  width: 100%;
+/* (Optional) ensure the wrapper doesn't force max-content sizing inside the cell */
+#diceMenu .diceTopRow .diceField .numWrap{
+  width: auto;
 }
 
 .diceTop,
@@ -3960,6 +4093,44 @@ button#colorBtn[aria-expanded="true"] {
 
 .diceHistory::-webkit-scrollbar {
   width: 8px;
+}
+
+/* Dice top row: left | hero | right — symmetric spacing */
+#diceMenu .diceTopRow{
+  display: grid;
+  grid-template-columns: 1fr max-content 1fr;
+  align-items: center;
+  column-gap: 10px;
+  margin: 0 0 8px;      /* no auto-centering */
+  width: 100%;          /* IMPORTANT: give it real space */
+}
+
+/* Hug hero using your stable classes */
+#diceMenu .diceTopRow .diceCountField{ justify-self: end; }
+#diceMenu .diceTopRow .diceModField{ justify-self: start; }
+
+#diceMenu .diceTopRow .diceField{
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* keeps label centered over input */
+  min-width: 56px;
+}
+
+/* Mod side: modWrap is often the clampHost, so give it the same minimum */
+#diceMenu .diceTopRow .modWrap{
+  width: auto;
+  min-width: 56px;   /* <-- key */
+}
+
+/* Don't force 100% width on these top-row number inputs */
+#diceMenu .diceTopRow .diceField input{
+  width: auto;
+}
+
+/* Dice top row: nudge ONLY the left (# + count) stack toward the hero */
+#diceMenu .diceTopRow .diceCountField{
+  justify-self: end;      /* make sure it hugs inward */
+  margin-right: -25px;     /* move right; tweak -2px to -10px */
 }
 
 .modWrap{
@@ -4252,4 +4423,16 @@ section.panel[data-collapsed="true"] > :not([data-panel-header]){
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+#diceMenu .diceTopRow .diceCountLabel,
+#diceMenu .diceTopRow .diceModLabel{
+  width: 100%;
+  text-align: left;
+  display: block;
+  margin-left: 8px;
+}
+
+#diceMenu .diceTopRow .diceCountLabel {
+  margin-left: 25px;
 }
