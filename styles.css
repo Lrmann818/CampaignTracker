@@ -2753,9 +2753,15 @@ select.npcField:focus {
 
 .abilityGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  /* was: repeat(2, minmax(0, 1fr)); */
+  grid-template-columns: repeat(auto-fit, minmax(0, 400px));
+
   gap: 4px;
   align-items: start;
+
+  /* keeps the 400px columns from stretching across the full row */
+  justify-content: center;
 }
 
 .moneyTile .numWrap {
@@ -2773,6 +2779,8 @@ select.npcField:focus {
   border-radius: 16px;
   box-shadow: 0 6px 16px var(--shadow-drop);
   overflow: hidden;
+  width: 100%;
+  max-width: 400px;
 }
 
 .abilityHeader {
@@ -2792,7 +2800,7 @@ select.npcField:focus {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px; /* spacing between score / mod / save */
+  gap: 50px; /* spacing between score / mod / save */
 }
 
 /* make the score box a predictable width */
@@ -2821,7 +2829,8 @@ select.npcField:focus {
 }
 
 .abilityStat {
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
   text-align: center;
 }
 
