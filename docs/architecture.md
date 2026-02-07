@@ -9,6 +9,8 @@ This doc captures the intended long-term module boundaries so future refactors a
 - **CSP-friendly**: avoid inline scripts/handlers; keep storage + dialogs safe.
 - **Low global surface area**: prefer ES module imports; minimize `window.*`.
 
+> Editing rules for AI-assisted changes live in `/AI_RULES.md`.
+
 ## Top-level entrypoints
 
 ### `index.html`

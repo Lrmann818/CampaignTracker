@@ -38,6 +38,8 @@ export const state = {
 
     hpCur: null,
     hpMax: null,
+    hitDieAmt: null,
+    hitDieSize: null,
     ac: null,
     initiative: null,
     speed: null,
@@ -257,6 +259,8 @@ export function migrateState(raw) {
     delete c.resourceCur;
     delete c.resourceMax;
 
+    if (!("hitDieAmt" in c)) c.hitDieAmt = null;
+    if (!("hitDieSize" in c)) c.hitDieSize = null;
 
     // Map defaults (multi-map manager expects these)
     const m = data.map;

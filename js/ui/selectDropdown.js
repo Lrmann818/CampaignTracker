@@ -64,9 +64,7 @@ export function enhanceSelectDropdown(args) {
   // Card selects should be allowed to stretch to the full card width.
   const wantsClamp =
     select.classList.contains("settingsSelect") ||
-    select.classList.contains("panelSelect") ||
-    select.classList.contains("locFilter") ||
-    /\b(settingsSelectBtn|panelSelectBtn|settingsDropDownBtn)\b/.test(buttonClassRaw);
+    /\b(settingsSelectBtn|settingsDropDownBtn)\b/.test(buttonClassRaw);
   if (wantsClamp) wrap.classList.add("selectDropdownClamp");
 
   const btn = document.createElement("button");

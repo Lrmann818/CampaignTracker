@@ -213,7 +213,7 @@
             <h2 class="m0">NPCs</h2>
 
             <div class="npcControls panelControls">
-              <button id="addNpcBtn" class="panelBtn panelBtnSm" title="Add NPC">+ Add NPC</button>
+              <button id="addNpcBtn" class="panelBtn panelBtnSm" title="Add NPC">+ NPC</button>
 
               <button id="addNpcSectionBtn" class="panelBtn panelBtnSm" title="Add NPC Section">+ Section</button>
               <button id="renameNpcSectionBtn" class="panelBtn panelBtnSm" title="Rename Selected Section">Rename</button>
@@ -236,7 +236,7 @@
             <h2 class="m0">Party</h2>
 
             <div class="partyControls panelControls">
-              <button id="addPartyBtn" class="panelBtn panelBtnSm" title="Add Party Member">+ Add Member</button>
+              <button id="addPartyBtn" class="panelBtn panelBtnSm" title="Add Party Member">+ Member</button>
 
               <button id="addPartySectionBtn" class="panelBtn panelBtnSm" title="Add Party Section">+ Section</button>
               <button id="renamePartySectionBtn" class="panelBtn panelBtnSm" title="Rename Selected Section">Rename</button>
@@ -260,7 +260,7 @@
             <h2 class="m0">Locations</h2>
 
             <div class="locControls panelControls">
-              <button id="addLocBtn" class="panelBtn panelBtnSm" title="Add Location">+ Location</button>
+              <button id="addLocBtn" class="panelBtn panelBtnSm" title="Add Location">+ Place</button>
 
               <button id="addLocSectionBtn" class="panelBtn panelBtnSm" title="Add Location Section">+ Section</button>
               <button id="renameLocSectionBtn" class="panelBtn panelBtnSm" title="Rename Selected Section">Rename</button>
@@ -338,18 +338,28 @@
         </section>
 
         <section class="panel" id="charVitalsPanel">
-          <div class="panelHeader between items-center">
+          <div class="panelHeader">
             <h2 class="m0">Vitals</h2>
-            <button id="addResourceBtn" type="button" title="Add another resource tracker">+ Resource</button>
+            <button id="addResourceBtn" type="button" class="headerAddBtn" title="Add another resource tracker">+ Resource</button>
           </div>
 
           <div class="charTiles" id="charVitalsTiles">
+
             <div class="charTile" data-vital-key="hp">
               <div class="charTileLabel">HP</div>
               <div class="charHpRow">
                 <input id="charHpCur" type="number" placeholder="Cur" />
                 <span class="muted">/</span>
                 <input id="charHpMax" type="number" placeholder="Max" />
+              </div>
+            </div>
+
+            <div class="charTile" data-vital-key="hitDie">
+              <div class="charTileLabel">Hit Dice</div>
+              <div class="charHpRow">
+                <input id="hitDieAmt" type="number" placeholder="2" />
+                <span class="muted">d</span>
+                <input id="hitDieSize" type="number" placeholder="6" />
               </div>
             </div>
 
@@ -428,7 +438,7 @@
 
                 <div class="saveOptionsRow">
                   <div class="saveOptionsRowLabel">Ability Mod To All Saves</div>
-                  <select id="saveModToAllSelect" class="settingsSelect" title="Ability Mod To All Saves">
+                  <select id="saveModToAllSelect" class="settingsSelect abilitySaves" title="Ability Mod To All Saves">
                     <option value="">None</option>
                     <option value="str">Str</option>
                     <option value="dex">Dex</option>
@@ -633,7 +643,7 @@
         <section class="panel" id="charAttacksPanel">
           <div class="row between items-center">
             <h2 class="m0">Weapons</h2>
-            <button id="addAttackBtn" type="button" title="Add a new weapon">+ Weapon</button>
+            <button id="addAttackBtn" type="button" class="headerAddBtn" title="Add a new weapon">+ Weapon</button>
           </div>
           <div id="attackList" class="attackList"></div>
         </section>
@@ -641,7 +651,7 @@
         <section class="panel" id="charSpellsPanel">
           <div class="row between items-center">
             <h2 class="m0">Spells</h2>
-            <button id="addSpellLevelBtn" type="button">+ Level</button>
+            <button id="addSpellLevelBtn" type="button" class="headerAddBtn" title="Add spell level">+ Level</button>
           </div>
 
           <div id="spellLevels" class="spellLevels"></div>

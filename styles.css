@@ -836,13 +836,13 @@ input[type="range"].uiRange::-moz-range-thumb{
 .clockChip {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
   border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
   opacity: 0.95;
   background: color-mix(in srgb, var(--panel) 85%, black);
   color: var(--text);
   border-radius: 10px;
-  padding: 6px 4px 4px 4px;
+  padding: 5px;
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
@@ -913,7 +913,7 @@ main {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 10px;
+  padding: 6px;
   box-shadow:
     0 6px 16px var(--shadow-inset);
   min-width: 0;
@@ -1283,7 +1283,8 @@ label.settingsItem {
 
 /* Ability saves options dropdown (Character page) */
 .saveOptionsDropdown {
-  position: relative;
+  position:relative;
+  margin-left: auto;
 }
 
 .saveOptionsMenu {
@@ -1346,10 +1347,20 @@ label.settingsItem {
 /* Abilities header: title + ⋯ options chip */
 .abilitiesHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-start;
-  gap: 1px;
-  /* ← this is the main knob to tweak */
+  gap: 1px; /* ← this is the main knob to tweak */
+}
+
+/* Title takes the available space so the controls can sit on the right */
+.abilitiesHeader > h2 {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+/* Push the ⋯ + the injected move buttons to the far right */
+.abilitiesHeader #saveOptionsDropdown {
+  margin-left: auto;
 }
 
 /* ===== Topbar: mobile polish ===== */
@@ -1416,6 +1427,13 @@ label.settingsItem {
   /* Optional: give title a bit more breathing room on mobile */
   #campaignTitle {
     font-size: 18px;
+  }
+
+  /* Allow status text to wrap cleanly on narrow screens */
+  #statusText {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 }
 
@@ -1502,7 +1520,7 @@ button.panelSelectBtn{
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
-  padding: 6px 36px 6px 8px; /* room for arrow */
+  padding: 6px 30px 6px 8px; /* room for arrow */
   border-radius: 10px;
   height: var(--panel-control-h);
   font-size: var(--panel-control-font);
@@ -1569,7 +1587,7 @@ button.cardSelectBtn {
   background: var(--surface-2);
   color: var(--text);
   padding: 4px 36px 4px 6px;  /* space for arrow */
-  margin-bottom: 8px;
+  margin-bottom: 5px;
   border-radius: 10px;
   font: inherit;
 
@@ -1597,6 +1615,17 @@ button.cardSelectBtn:focus-visible,
 button.cardSelectBtn[aria-expanded="true"] {
   outline: none;
   box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+.cardSelect,
+button.npcSmallBtn {
+  margin-bottom: 5.5px;
+}
+
+.cardSelect,
+div.mutedSmall {
+  margin-bottom: 5px;
+  color: var(--muted);
 }
 
 .sectionMoves {
@@ -2088,7 +2117,7 @@ select.npcField:focus {
   overflow: hidden;
   /* Clip the image to the card's rounded frame.
      The card itself uses overflow: visible so dropdown menus can escape. */
-  border-radius: 14px 14px 0 0;
+  border-radius: 14px;
   cursor: pointer;
   position: relative;
 }
@@ -2263,6 +2292,7 @@ select.npcField:focus {
   display: flex;
   gap: 6px;
   align-items: center;
+  align-content: center;
   justify-content: space-between;
   flex-wrap: wrap;
 }
@@ -2399,7 +2429,7 @@ select.npcField:focus {
 }
 
 .vitalHeader .charTileLabel {
-  margin: 0;
+  margin-right: 4px;
 }
 
 .fieldLabel {
@@ -2462,33 +2492,52 @@ select.npcField:focus {
   flex-wrap: wrap;
 }
 
+/* Resource title: same vibe as the campaign title (editable text, no input box) */
+.resourceTitle{
+  margin-right: 4px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Placeholder for empty contenteditable */
+.resourceTitle:empty::before{
+  content: attr(data-placeholder);
+  color: var(--muted);
+}
+
 .iconBtn {
   padding: 6px 8px;
   border-radius: 10px;
   line-height: 1;
-}
-
-/* Resource tracker: name + numbers on one row */
-.resourceMainRow{
-  display: flex;
-  align-items: center;
-  align-self: flex-start;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-/* Name should shrink and not force overflow */
-.resourceName{
-  padding: 5px 5px;
+  width: 30px;
+  height: var(--panel-control-h);
 }
 
 /* Numbers should stay together and not wrap */
-.resourceNums{
-  flex: 0 0 auto;
+.resourceFooterRow{
   display: flex;
   align-items: center;
+  width: 100%;
   gap: 4px;
-  flex-wrap: wrap;
+}
+
+/* Shrink-wrapped number group (inputs + slash) */
+.resourceNums{
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+/* Push the delete button to the far right within the footer row */
+.resourceFooterRow .resourceDeleteBtn{
+  margin-left: auto;
 }
 
 /* Resource number inputs are smaller than the default 78px vitals */
@@ -2568,11 +2617,17 @@ select.npcField:focus {
   justify-content: start;
 }
 
-.attackMiddle,
-.attackBottom{
+.attackMiddle{
   grid-template-columns: max-content max-content; /* or: auto auto */
   column-gap: 4px;                               /* your desired gap */
   justify-content: start;                        /* keep them left */
+  overflow: hidden;
+}
+
+.attackBottom{
+  grid-template-columns: max-content max-content max-content; /* ✅ adds column for X */
+  column-gap: 4px;                                           /* ✅ your desired gap */
+  justify-content: start;
   overflow: hidden;
 }
 
@@ -2592,23 +2647,39 @@ select.npcField:focus {
   padding: 5px 6px;
 }
 
-/* ✅ Actions live ONLY on row 3, shoved to the far right */
 .attackActions{
-  grid-row: 3;
-  grid-column: 2;            /* anchor to right half */
-  justify-self: end;         /* push to the far right edge of card */
-  align-self: end;
-
-  display: flex;
-  gap: 6px;
+  display: inline-flex;
   align-items: center;
+  gap: 6px;
 }
 
 /* keep delete from being absolutely positioned */
 .attackActions .danger{ 
   position: static;
   padding: 4px 6px;
- }
+  width: 30px;
+  height: var(--panel-control-h);
+}
+
+/* Attacks: keep Range/Type left, push ONLY the delete button to the far right */
+.attackRow .attackBottom{
+  display: flex;
+  align-items: center;
+  gap: 4px;          /* your desired spacing between Range and Type */
+  justify-content: flex-start;
+}
+
+.attackRow .attackBottom .attackRange,
+.attackRow .attackBottom .attackType{
+  flex: 0 0 auto;    /* don't stretch */
+}
+
+.attackRow .attackBottom .attackActions{
+  margin-left: auto; /* <-- this is the magic "flex-end" for only the delete button */
+  display: inline-flex;
+  align-items: center;
+}
+
 
 @media (max-width: 600px) {
   .attackRow {
@@ -2901,6 +2972,10 @@ select.npcField:focus {
   margin-bottom: 4px;
 }
 
+.headerAddBtn {
+  /* justify-content: flex-end; */
+  margin-left: auto;
+}
 
 /* ======================
    Spells v2 (layout)
@@ -3163,8 +3238,8 @@ input[type="range"] {
    (Cards, card footers, settings rows, and other block-style selects.) */
 .selectDropdown.selectDropdownBlock {
   display: block;
-  width: 100%;
-  min-width: 61.5px;
+  min-width: 50px;
+  max-width: 350px;
 }
 
 /* Optional: clamp some block-style selects (toolbar filters, settings rows)
@@ -4119,3 +4194,23 @@ section.panel[data-collapsed="true"] > :not([data-panel-header]){
 .hlWrap .hlField{
   background: transparent !important;
 }
+
+/* HP row: keep Cur/Max on one horizontal line (like character vitals) */
+.npcRowBlock.npcHpRow {
+  grid-template-columns: var(--npc-label-w, 40px) auto; /* shrink-wrap numbers */
+}
+
+.npcHpWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.npcRowBlock.npcHpRow .npcField {
+  width: auto;
+  min-width: 30px;
+  max-width: 70px;
+}
+

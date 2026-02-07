@@ -802,6 +802,8 @@ export function initCharacterSheetUI(deps) {
     // Vitals
     bindNumber("charHpCur", () => state.character.hpCur, v => state.character.hpCur = v);
     bindNumber("charHpMax", () => state.character.hpMax, v => state.character.hpMax = v);
+    bindNumber("hitDieAmt", () => state.character.hitDieAmount, v => state.character.hitDieAmount = v);
+    bindNumber("hitDieSize", () => state.character.hitDieSize, v => state.character.hitDieSize = v);
     bindNumber("charAC", () => state.character.ac, v => state.character.ac = v);
     bindNumber("charInit", () => state.character.initiative, v => state.character.initiative = v);
     bindNumber("charSpeed", () => state.character.speed, v => state.character.speed = v);
@@ -813,6 +815,8 @@ export function initCharacterSheetUI(deps) {
     [
       "charHpCur",
       "charHpMax",
+      "hitDieAmt",
+      "hitDieSize",
       "charAC",
       "charInit",
       "charSpeed",
@@ -860,20 +864,46 @@ export function initCharacterSheetUI(deps) {
   
         (state.character.resources || []).forEach((r, idx) => {
           const tile = document.createElement("div");
-          tile.className = "charTile";
+          tile.className = "charTile resourceTile";
           tile.dataset.resourceId = r.id;
           tile.dataset.vitalKey = `res:${r.id}`;
   
           const header = document.createElement("div");
           header.className = "resourceHeader";
   
-          const label = document.createElement("div");
-          label.className = "charTileLabel";
-          label.textContent = "Resource";
+          // Title label (editable) — visually matches the campaign title style,
+          // but saves into r.name.
+          const title = document.createElement("div");
+          title.className = "resourceTitle";
+          title.setAttribute("contenteditable", "true");
+          title.setAttribute("spellcheck", "false");
+          title.setAttribute("role", "textbox");
+          title.setAttribute("aria-label", "Resource name");
+          title.dataset.placeholder = "Resource";
+          title.textContent = (r.name ?? "").trim();
+
+          // Prevent Enter from creating new lines inside the tile header.
+          title.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              title.blur();
+            }
+          });
+
+          title.addEventListener("input", () => {
+            r.name = title.textContent ?? "";
+            setAndSave();
+          });
+
+          // Normalize empty state so CSS :empty placeholder works reliably.
+          title.addEventListener("blur", () => {
+            const t = (title.textContent ?? "").trim();
+            if (!t) title.textContent = "";
+          });
   
           const del = document.createElement("button");
           del.type = "button";
-          del.className = "iconBtn danger";
+          del.className = "iconBtn danger resourceDeleteBtn";
           del.title = "Remove this resource";
           del.textContent = "✕";
           del.disabled = (state.character.resources.length <= 1);
@@ -889,20 +919,14 @@ export function initCharacterSheetUI(deps) {
             render();
           });
   
-          header.appendChild(label);
-          header.appendChild(del);
-  
-          const name = document.createElement("input");
-          name.placeholder = "Sorcery Pts, Ki, Rage...";
-          name.value = r.name ?? "";
-          autoSizeInput(name, { min: 30, max: 120 });
-          name.addEventListener("input", () => {
-            r.name = name.value;
-            setAndSave();
-          });
-  
-          const row = document.createElement("div");
-          row.className = "charHpRow";
+          header.appendChild(title);
+
+          // Footer row: keep the number group tight (inputs + slash) and push the delete button to the right.
+          const footer = document.createElement("div");
+          footer.className = "resourceFooterRow";
+
+          const nums = document.createElement("div");
+          nums.className = "resourceNums";
   
           const cur = document.createElement("input");
           cur.type = "number";
@@ -928,25 +952,16 @@ export function initCharacterSheetUI(deps) {
             setAndSave();
           });
   
-          row.appendChild(cur) + row.appendChild(slash);
-          row.appendChild(max);
-  
-          // --- layout row: [name.................][cur / max] ---
-          const mainRow = document.createElement("div");
-          mainRow.className = "resourceMainRow";
-  
-          // Give the name input a class so we can size it cleanly
-          name.classList.add("resourceName");
-  
-          // Give the numbers row a class so we can force nowrap + sizing
-          row.classList.add("resourceNums");
-  
-          mainRow.appendChild(name);
-          mainRow.appendChild(row);
+          nums.appendChild(cur);
+          nums.appendChild(slash);
+          nums.appendChild(max);
+
+          footer.appendChild(nums);
+          footer.appendChild(del);
   
           tile.appendChild(header);
-          tile.appendChild(mainRow);
-  
+          tile.appendChild(footer);
+
           wrap.appendChild(tile);
         });
         // Add custom steppers to the newly-rendered resource inputs
@@ -1157,8 +1172,10 @@ export function initCharacterSheetUI(deps) {
       top.className = "attackTop";
   
       const name = document.createElement("input");
+      name.classList.add("attackName");
       name.placeholder = "Dagger";
       name.value = a.name || "";
+      autoSizeInput(name, { min: 50, max: 200 });
       name.addEventListener("input", () => patchAttack(a.id, { name: name.value }));
   
       // const notes = document.createElement("input");
@@ -1206,9 +1223,6 @@ export function initCharacterSheetUI(deps) {
       autoSizeInput(type, { min: 0, max: 150 });
       type.addEventListener("input", () => patchAttack(a.id, { type: type.value }));
   
-      bottom.appendChild(range);
-      bottom.appendChild(type);
-  
       const actions = document.createElement("div");
       actions.className = "attackActions";
   
@@ -1219,11 +1233,14 @@ export function initCharacterSheetUI(deps) {
       del.addEventListener("click", async () => { await deleteAttack(a.id); });
   
       actions.appendChild(del);
+
+      bottom.appendChild(range);
+      bottom.appendChild(type);
+      bottom.appendChild(actions);
   
       row.appendChild(top);
       row.appendChild(middle);
       row.appendChild(bottom);
-      row.appendChild(actions);
   
       return row;
     }
