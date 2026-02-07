@@ -572,13 +572,6 @@ body {
   background: var(--sb-thumb-hover);
 }
 
-
-/* ======================
-   Number inputs & Range sliders: hide native spinners & style range sliders
-   ====================== */
-
-
-
 /* ======================
    Search highlight (true in-field matches)
    ====================== */
@@ -917,6 +910,7 @@ main {
   box-shadow:
     0 6px 16px var(--shadow-inset);
   min-width: 0;
+  overflow: hidden;
 }
 
 .mapPanel {
@@ -1971,6 +1965,7 @@ div.mutedSmall {
   isolation: isolate;  /* prevents shadow bleeding */
   box-shadow:
     0 6px 16px var(--shadow-drop);
+  overflow: hidden;
 }
 
 /* When a dropdown inside a card is open, raise the card above its siblings.
@@ -4206,20 +4201,51 @@ section.panel[data-collapsed="true"] > :not([data-panel-header]){
 
 /* HP row: keep Cur/Max on one horizontal line (like character vitals) */
 .npcRowBlock.npcHpRow {
-  grid-template-columns: var(--npc-label-w, 40px) auto; /* shrink-wrap numbers */
+  grid-template-columns: var(--npc-label-w, 40px)  minmax(0, 1fr); /* shrink-wrap numbers */
 }
 
 .npcHpWrap {
-  display: inline-flex;
+  display: flex;          /* not inline-flex */
+  width: 100%;            /* take the cell width */
   align-items: center;
-  gap: 4px;
-  flex-wrap: nowrap;
+  gap: 4px;               /* constant spacing around "/" */
+  flex-wrap: nowrap;      /* never stack */
   min-width: 0;
+  justify-content: flex-start;
 }
 
-.npcRowBlock.npcHpRow .npcField {
-  width: auto;
-  min-width: 30px;
-  max-width: 70px;
+.npcField.npcHpInput {
+  background: transparent;
 }
 
+/* HP row: keep / and Max stationary, but allow Cur/Max to shrink when constrained */
+.npcHpWrap .numWrap {
+  flex: 0 1 auto;                 /* DON'T grow; DO allow shrink */
+  min-width: 0;                   /* critical: allow shrinking in flex */
+  width: auto;                    /* override width:max-content behavior */
+  max-width: calc(50% - 10px);    /* prevents one box from hogging the row */
+}
+
+/* Clamp the autosize width when the card shrinks */
+.npcHpWrap .numWrap > input[type="number"].npcHpInput {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Slash should never flex or wrap */
+.npcHpWrap > span.muted {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Status Effects input: autosize until constrained, then clamp + truncate */
+.statusInput {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

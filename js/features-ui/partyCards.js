@@ -69,262 +69,266 @@ function numberOrNull(v) {
 }
 
 function renderPartyCard(m) {
-    // Reuse the NPC card styling classes so it looks identical
-    const card = document.createElement("div");
-    card.className = "npcCard npcCardStack";
+  // Reuse the NPC card styling classes so it looks identical
+  const card = document.createElement("div");
+  card.className = "npcCard npcCardStack";
 
-    const isCollapsed = !!m.collapsed;
-    card.classList.toggle("collapsed", isCollapsed);
+  const isCollapsed = !!m.collapsed;
+  card.classList.toggle("collapsed", isCollapsed);
 
-    const portrait = document.createElement("div");
-    portrait.className = "npcPortraitTop";
-    portrait.title = "Click to set/replace image";
+  const portrait = document.createElement("div");
+  portrait.className = "npcPortraitTop";
+  portrait.title = "Click to set/replace image";
 
-    if (m.imgBlobId) {
-      const img = document.createElement("img");
-      img.alt = m.name || "Party Member Portrait";
-      portrait.appendChild(img);
+  if (m.imgBlobId) {
+    const img = document.createElement("img");
+    img.alt = m.name || "Party Member Portrait";
+    portrait.appendChild(img);
 
-      blobIdToObjectUrl(m.imgBlobId).then(url => {
-        if (url) img.src = url;
-      });
-    } else {
-      const placeholder = document.createElement("div");
-      placeholder.className = "mutedSmall";
-      placeholder.textContent = "Click to add image";
-      portrait.appendChild(placeholder);
-    }
-
-    portrait.addEventListener("click", () => _pickPartyImage(m.id));
-
-    const body = document.createElement("div");
-    body.className = "npcCardBodyStack";
-
-    const headerRow = document.createElement("div");
-    headerRow.className = "npcHeaderRow";
-
-    const nameInput = document.createElement("input");
-    nameInput.className = "npcField npcNameBig";
-    nameInput.placeholder = "Name";
-    nameInput.value = m.name || "";
-    nameInput.addEventListener("input", () => _updateParty(m.id, { name: nameInput.value }, false));
-
-    const moveUp = document.createElement("button");
-    moveUp.type = "button";
-    moveUp.className = "moveBtn";
-    moveUp.textContent = "↑";
-    moveUp.title = "Move card up";
-    moveUp.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      _movePartyCard(m.id, -1);
+    blobIdToObjectUrl(m.imgBlobId).then(url => {
+      if (url) img.src = url;
     });
-
-    const moveDown = document.createElement("button");
-    moveDown.type = "button";
-    moveDown.className = "moveBtn";
-    moveDown.textContent = "↓";
-    moveDown.title = "Move card down";
-    moveDown.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      _movePartyCard(m.id, +1);
-    });
-
-    const toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "cardCollapseBtn";
-    toggle.setAttribute("aria-label", isCollapsed ? "Expand card" : "Collapse card");
-    toggle.setAttribute("aria-expanded", (!isCollapsed).toString());
-    toggle.textContent = isCollapsed ? "▼" : "▲";
-    toggle.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      _updateParty(m.id, { collapsed: !isCollapsed }, true);
-    });
-
-    headerRow.appendChild(nameInput);
-    headerRow.appendChild(moveUp);
-    headerRow.appendChild(moveDown);
-    headerRow.appendChild(toggle);
-
-    const collapsible = document.createElement("div");
-    collapsible.className = "npcCollapsible";
-    collapsible.hidden = isCollapsed;
-
-    //   const classRow = … through notesBlock …
-
-    const classRow = document.createElement("div");
-    classRow.className = "npcRowBlock";
-
-    const classLabel = document.createElement("div");
-    classLabel.className = "npcMiniLabel";
-    classLabel.textContent = "Class";
-
-    const classInput = document.createElement("input");
-    classInput.className = "npcField npcClass";
-    classInput.placeholder = "Class / Role";
-    classInput.value = m.className || "";
-    classInput.classList.add("autosize");
-    autoSizeInput(classInput, { min: 60, max: 200 });
-    classInput.addEventListener("input", () => _updateParty(m.id, { className: classInput.value }, false));
-
-    classRow.appendChild(classLabel);
-    classRow.appendChild(classInput);
-
-    const hpRow = document.createElement("div");
-    hpRow.className = "npcRowBlock npcHpRow";
-
-    const hpLabel = document.createElement("div");
-    hpLabel.className = "npcMiniLabel";
-    hpLabel.textContent = "HP";
-
-    const hpWrap = document.createElement("div");
-    hpWrap.className = "npcHpWrap";
-
-    const hpCur = document.createElement("input");
-    hpCur.className = "npcField npcHpInput";
-    hpCur.classList.add("num-lg");
-    hpCur.type = "number";
-    hpCur.placeholder = "Cur";
-    hpCur.value = m.hpCurrent ?? "";
-    autoSizeInput(hpCur, { min: 30, max: 70 });
-    hpCur.addEventListener("input", () => _updateParty(m.id, { hpCurrent: numberOrNull(hpCur.value) }, false));
-
-    const slash = document.createElement("span");
-    slash.className = "muted";
-    slash.textContent = "/";
-
-    const hpMax = document.createElement("input");
-    hpMax.className = "npcField npcHpInput";
-    hpMax.classList.add("num-lg");
-    hpMax.type = "number";
-    hpMax.placeholder = "Max";
-    hpMax.value = m.hpMax ?? "";
-    autoSizeInput(hpMax, { min: 30, max: 70 });
-    hpMax.addEventListener("input", () => _updateParty(m.id, { hpMax: numberOrNull(hpMax.value) }, false));
-
-    hpWrap.appendChild(hpCur);
-    hpWrap.appendChild(slash);
-    hpWrap.appendChild(hpMax);
-
-    hpRow.appendChild(hpLabel);
-    hpRow.appendChild(hpWrap);
-
-    const statusRow = document.createElement("div");
-    statusRow.className = "npcRowBlock";
-
-    const statusLabel = document.createElement("div");
-    statusLabel.className = "npcMiniLabel";
-    statusLabel.textContent = "Status Effects";
-
-    const statusInput = document.createElement("input");
-    statusInput.className = "npcField";
-    statusInput.placeholder = "Poisoned, Charmed…";
-    statusInput.value = m.status || "";
-    autoSizeInput(statusInput, { min: 60, max: 300 });
-    statusInput.addEventListener("input", () => _updateParty(m.id, { status: statusInput.value }, false));
-
-    statusRow.appendChild(statusLabel);
-    statusRow.appendChild(statusInput);
-
-    const notesBlock = document.createElement("div");
-    notesBlock.className = "npcBlock";
-
-    const notesLabel = document.createElement("div");
-    notesLabel.className = "npcMiniLabel";
-    notesLabel.textContent = "Notes";
-
-    const notesArea = document.createElement("textarea");
-    notesArea.className = "npcTextarea npcNotesBox";
-    notesArea.placeholder = "Anything important...";
-    notesArea.value = m.notes || "";
-    notesArea.addEventListener("input", () => _updateParty(m.id, { notes: notesArea.value }, false));
-
-    // True in-field search highlight is attached for all inputs/textareas
-    // near the end of renderPartyCard (after the query getter is defined).
-
-    notesBlock.appendChild(notesLabel);
-    notesBlock.appendChild(notesArea);
-
-    collapsible.appendChild(classRow);
-    collapsible.appendChild(hpRow);
-    collapsible.appendChild(statusRow);
-    collapsible.appendChild(notesBlock);
-
-    const footer = document.createElement("div");
-    footer.className = "npcCardFooter";
-
-    // ✅ NPC-style “move between sections”, but scalable:
-    // a dropdown that switches which section the member belongs to
-    const sectionWrap = document.createElement("div");
-    sectionWrap.className = "row";
-    sectionWrap.style.gap = "4px";
-
-    const sectionLabel = document.createElement("div");
-    sectionLabel.className = "mutedSmall";
-    sectionLabel.textContent = "Section";
-
-    const sectionSelect = document.createElement("select");
-    sectionSelect.className = "cardSelect"; // shared select styling (plus existing mapSelect look)
-    sectionSelect.title = "Move to section";
-    (state.tracker.partySections || []).forEach(sec => {
-      const opt = document.createElement("option");
-      opt.value = sec.id;
-      opt.textContent = sec.name || "Section";
-      sectionSelect.appendChild(opt);
-    });
-    sectionSelect.value = m.sectionId || state.tracker.partyActiveSectionId;
-
-    sectionSelect.addEventListener("change", () => {
-      _updateParty(m.id, { sectionId: sectionSelect.value }, true);
-      if (_renderPartyTabs) _renderPartyTabs(); // so tab filtering (search) stays accurate
-    });
-
-    sectionWrap.appendChild(sectionLabel);
-    sectionWrap.appendChild(sectionSelect);
-
-// Enhance the OPEN menu styling (closed look stays the same size as .cardSelect).
-// Call only after the select is appended (needs a parentElement).
-if (_Popovers && !sectionSelect.dataset.dropdownEnhanced) {
-  enhanceSelectDropdown({
-    select: sectionSelect,
-    Popovers: _Popovers,
-    buttonClass: "cardSelectBtn",
-    optionClass: "swatchOption",
-    groupLabelClass: "dropdownGroupLabel",
-    preferRight: true
-  });
-}
-
-
-    const del = document.createElement("button");
-    del.type = "button";
-    del.className = "npcSmallBtn danger";
-    del.textContent = "Delete";
-    del.addEventListener("click", () => _deleteParty(m.id));
-
-    footer.appendChild(sectionWrap);
-    footer.appendChild(del);
-
-    body.appendChild(headerRow);
-    body.appendChild(collapsible);
-
-    card.appendChild(portrait);
-    card.appendChild(body);
-
-    footer.hidden = isCollapsed;
-    card.appendChild(footer);
-
-    
-    // True in-field search highlight (every occurrence)
-    const _getPartyQuery = () => (state.tracker.partySearch || "");
-    card.querySelectorAll("input, textarea").forEach(el => {
-      attachSearchHighlightOverlay(el, _getPartyQuery);
-    });
-
-return card;
+  } else {
+    const placeholder = document.createElement("div");
+    placeholder.className = "mutedSmall";
+    placeholder.textContent = "Click to add image";
+    portrait.appendChild(placeholder);
   }
+
+  portrait.addEventListener("click", () => _pickPartyImage(m.id));
+
+  const body = document.createElement("div");
+  body.className = "npcCardBodyStack";
+
+  const headerRow = document.createElement("div");
+  headerRow.className = "npcHeaderRow";
+
+  const nameInput = document.createElement("input");
+  nameInput.className = "npcField npcNameBig";
+  nameInput.placeholder = "Name";
+  nameInput.value = m.name || "";
+  nameInput.addEventListener("input", () => _updateParty(m.id, { name: nameInput.value }, false));
+
+  const moveUp = document.createElement("button");
+  moveUp.type = "button";
+  moveUp.className = "moveBtn";
+  moveUp.textContent = "↑";
+  moveUp.title = "Move card up";
+  moveUp.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    _movePartyCard(m.id, -1);
+  });
+
+  const moveDown = document.createElement("button");
+  moveDown.type = "button";
+  moveDown.className = "moveBtn";
+  moveDown.textContent = "↓";
+  moveDown.title = "Move card down";
+  moveDown.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    _movePartyCard(m.id, +1);
+  });
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "cardCollapseBtn";
+  toggle.setAttribute("aria-label", isCollapsed ? "Expand card" : "Collapse card");
+  toggle.setAttribute("aria-expanded", (!isCollapsed).toString());
+  toggle.textContent = isCollapsed ? "▼" : "▲";
+  toggle.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    _updateParty(m.id, { collapsed: !isCollapsed }, true);
+  });
+
+  headerRow.appendChild(nameInput);
+  headerRow.appendChild(moveUp);
+  headerRow.appendChild(moveDown);
+  headerRow.appendChild(toggle);
+
+  const collapsible = document.createElement("div");
+  collapsible.className = "npcCollapsible";
+  collapsible.hidden = isCollapsed;
+
+  //   const classRow = … through notesBlock …
+
+  const classRow = document.createElement("div");
+  classRow.className = "npcRowBlock";
+
+  const classLabel = document.createElement("div");
+  classLabel.className = "npcMiniLabel";
+  classLabel.textContent = "Class";
+
+  const classInput = document.createElement("input");
+  classInput.className = "npcField npcClass";
+  classInput.placeholder = "Class / Role";
+  classInput.value = m.className || "";
+  classInput.classList.add("autosize");
+  autoSizeInput(classInput, { min: 60, max: 200 });
+  classInput.addEventListener("input", () => _updateParty(m.id, { className: classInput.value }, false));
+
+  classRow.appendChild(classLabel);
+  classRow.appendChild(classInput);
+
+  const hpRow = document.createElement("div");
+  hpRow.className = "npcRowBlock npcHpRow";
+
+  const hpLabel = document.createElement("div");
+  hpLabel.className = "npcMiniLabel";
+  hpLabel.textContent = "HP";
+
+  const hpWrap = document.createElement("div");
+  hpWrap.className = "npcHpWrap";
+
+  const hpCur = document.createElement("input");
+  hpCur.className = "npcField npcHpInput";
+  hpCur.classList.add("num-lg");
+  hpCur.classList.add("autosize");
+  hpCur.type = "number";
+  hpCur.placeholder = "Cur";
+  hpCur.value = m.hpCurrent ?? "";
+  autoSizeInput(hpCur, { min: 30, max: 70 });
+  hpCur.addEventListener("input", () => { autoSizeInput(hpCur, { min: 30, max: 70 }); _updateParty(m.id, { hpCurrent: numberOrNull(hpCur.value) }, false); });
+
+  const slash = document.createElement("span");
+  slash.className = "muted";
+  slash.textContent = "/";
+
+  const hpMax = document.createElement("input");
+  hpMax.className = "npcField npcHpInput";
+  hpMax.classList.add("num-lg");
+  hpMax.classList.add("autosize");
+  hpMax.type = "number";
+  hpMax.placeholder = "Max";
+  hpMax.value = m.hpMax ?? "";
+  autoSizeInput(hpMax, { min: 30, max: 70 });
+  hpMax.addEventListener("input", () => { autoSizeInput(hpMax, { min: 30, max: 70 }); _updateParty(m.id, { hpMax: numberOrNull(hpMax.value) }, false); });
+
+  hpWrap.appendChild(hpCur);
+  hpWrap.appendChild(slash);
+  hpWrap.appendChild(hpMax);
+
+  hpRow.appendChild(hpLabel);
+  hpRow.appendChild(hpWrap);
+
+  const statusRow = document.createElement("div");
+  statusRow.className = "npcRowBlock";
+
+  const statusLabel = document.createElement("div");
+  statusLabel.className = "npcMiniLabel";
+  statusLabel.textContent = "Status Effects";
+
+  const statusInput = document.createElement("input");
+  statusInput.className = "npcField";
+  statusInput.classList.add("statusInput");
+  statusInput.placeholder = "Poisoned, Charmed…";
+  statusInput.value = m.status || "";
+  autoSizeInput(statusInput, { min: 60, max: 300 });
+  statusInput.addEventListener("input", () => _updateParty(m.id, { status: statusInput.value }, false));
+
+  statusRow.appendChild(statusLabel);
+  statusRow.appendChild(statusInput);
+
+  const notesBlock = document.createElement("div");
+  notesBlock.className = "npcBlock";
+
+  const notesLabel = document.createElement("div");
+  notesLabel.className = "npcMiniLabel";
+  notesLabel.textContent = "Notes";
+
+  const notesArea = document.createElement("textarea");
+  notesArea.className = "npcTextarea npcNotesBox";
+  notesArea.placeholder = "Anything important...";
+  notesArea.value = m.notes || "";
+  notesArea.addEventListener("input", () => _updateParty(m.id, { notes: notesArea.value }, false));
+
+  // True in-field search highlight is attached for all inputs/textareas
+  // near the end of renderPartyCard (after the query getter is defined).
+
+  notesBlock.appendChild(notesLabel);
+  notesBlock.appendChild(notesArea);
+
+  collapsible.appendChild(classRow);
+  collapsible.appendChild(hpRow);
+  collapsible.appendChild(statusRow);
+  collapsible.appendChild(notesBlock);
+
+  const footer = document.createElement("div");
+  footer.className = "npcCardFooter";
+
+  // ✅ NPC-style “move between sections”, but scalable:
+  // a dropdown that switches which section the member belongs to
+  const sectionWrap = document.createElement("div");
+  sectionWrap.className = "row";
+  sectionWrap.style.gap = "4px";
+
+  const sectionLabel = document.createElement("div");
+  sectionLabel.className = "mutedSmall";
+  sectionLabel.textContent = "Section";
+
+  const sectionSelect = document.createElement("select");
+  sectionSelect.className = "cardSelect"; // shared select styling (plus existing mapSelect look)
+  sectionSelect.title = "Move to section";
+  (state.tracker.partySections || []).forEach(sec => {
+    const opt = document.createElement("option");
+    opt.value = sec.id;
+    opt.textContent = sec.name || "Section";
+    sectionSelect.appendChild(opt);
+  });
+  sectionSelect.value = m.sectionId || state.tracker.partyActiveSectionId;
+
+  sectionSelect.addEventListener("change", () => {
+    _updateParty(m.id, { sectionId: sectionSelect.value }, true);
+    if (_renderPartyTabs) _renderPartyTabs(); // so tab filtering (search) stays accurate
+  });
+
+  sectionWrap.appendChild(sectionLabel);
+  sectionWrap.appendChild(sectionSelect);
+
+  // Enhance the OPEN menu styling (closed look stays the same size as .cardSelect).
+  // Call only after the select is appended (needs a parentElement).
+  if (_Popovers && !sectionSelect.dataset.dropdownEnhanced) {
+    enhanceSelectDropdown({
+      select: sectionSelect,
+      Popovers: _Popovers,
+      buttonClass: "cardSelectBtn",
+      optionClass: "swatchOption",
+      groupLabelClass: "dropdownGroupLabel",
+      preferRight: true
+    });
+  }
+
+
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "npcSmallBtn danger";
+  del.textContent = "Delete";
+  del.addEventListener("click", () => _deleteParty(m.id));
+
+  footer.appendChild(sectionWrap);
+  footer.appendChild(del);
+
+  body.appendChild(headerRow);
+  body.appendChild(collapsible);
+
+  card.appendChild(portrait);
+  card.appendChild(body);
+
+  footer.hidden = isCollapsed;
+  card.appendChild(footer);
+
+
+  // True in-field search highlight (every occurrence)
+  const _getPartyQuery = () => (state.tracker.partySearch || "");
+  // Search highlight: exclude HP inputs entirely (cur/max) so numeric HP never gets marked.
+  card.querySelectorAll("input:not(.npcHpInput), textarea").forEach(el => {
+    attachSearchHighlightOverlay(el, _getPartyQuery);
+  });
+
+  return card;
+}
 
 
 // Phase 3 polish: Party init + CRUD helpers moved out of app.js

@@ -38,7 +38,24 @@ export function autoSizeInput(el, { min = 0, max = 300, extra = 0 } = {}) {
     const raw = textW + padL + padR + borderL + borderR + extra;
     const next = Math.min(max, Math.max(min, Math.ceil(raw)));
 
-    el.style.width = next + "px";
+    // Clamp target:
+    // - Most inputs: clamp to immediate parent (the grid/flex cell)
+    // - Number inputs: they get wrapped in .numWrap by steppers, which is content-sized;
+    //   so clamp to .numWrap's parent (the real cell)
+    let clampHost = el.parentElement;
+
+    if (clampHost?.classList?.contains("numWrap")) {
+      clampHost = clampHost.parentElement || clampHost;
+    }
+
+    const maxHost = (clampHost?.clientWidth || 0) - 4;
+
+    if (maxHost > 0) {
+      el.style.width = Math.min(next, maxHost) + "px";
+    } else {
+      el.style.width = next + "px";
+    }
+
   };
 
   // Small scheduler so we measure after layout/styles apply.
@@ -47,6 +64,40 @@ export function autoSizeInput(el, { min = 0, max = 300, extra = 0 } = {}) {
 
   el.addEventListener("input", schedule);
   el.addEventListener("blur", schedule);
+
+  // Re-measure when the layout around the input changes (card/grid resize)
+  // Re-measure when the layout around the input changes (card/grid resize)
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => schedule());
+
+    let observed = null;
+
+    const ensureObserved = () => {
+      if (!el.isConnected) return;
+
+      // Prefer the immediate parent cell (grid/flex item)
+      let target = el.parentElement || el;
+
+      if (target?.classList?.contains("numWrap")) {
+        target = target.parentElement || target;
+      }
+
+
+      if (target === observed) return;
+
+      try {
+        if (observed) ro.unobserve(observed);
+      } catch (_) { }
+
+      observed = target;
+      ro.observe(target);
+    };
+
+    // Try now (may be disconnected), and again after layout
+    ensureObserved();
+    requestAnimationFrame(ensureObserved);
+  }
+
 
   // Initial sizing: run a few times to catch late font/style application.
   schedule();
@@ -102,17 +153,17 @@ export function setupTextareaSizing({
   // Debounced save (so we don't spam saveAll)
   let saveTimer = null;
   function scheduleSave() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    if (typeof markDirty === "function") {
-      markDirty();
-    } else {
-      // Legacy fallback (shouldn't be used once app.js passes markDirty)
-      setStatus("Saving...");
-      saveAll();
-    }
-  }, 150);
-}
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      if (typeof markDirty === "function") {
+        markDirty();
+      } else {
+        // Legacy fallback (shouldn't be used once app.js passes markDirty)
+        setStatus("Saving...");
+        saveAll();
+      }
+    }, 150);
+  }
 
   function applySize(el) {
     if (!el || el.tagName !== "TEXTAREA") return;
