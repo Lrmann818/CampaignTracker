@@ -3246,6 +3246,10 @@ input[type="range"] {
   max-width: 350px;
 }
 
+#locCards .npcCollapsible select.cardSelect + .selectDropdown.selectDropdownBlock {
+  max-width: 100%;
+}
+
 /* Optional: clamp some block-style selects (toolbar filters, settings rows)
    so they don't become comically wide on large screens. */
 .selectDropdown.selectDropdownClamp {
