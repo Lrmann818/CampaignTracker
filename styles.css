@@ -206,9 +206,9 @@
 
 /* Teal theme */
 :root[data-theme="teal"] {
-  --bg: #8fbab4;
+  --bg: #377771;
   /* warmer deep turquoise backdrop */
-  --panel: #b2d4cf;
+  --panel: #4ce0b3;
   /* card surface */
   --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
@@ -224,17 +224,17 @@
       rgba(0, 0, 0, 0.15));
   --text: #0a2421;
   --muted: #355b56;
-  --border: #5e9a90;
-  --diceIconColor: #355b56;
+  --border: #f05446;
+  --diceIconColor: #ed6a5e;
 
-  --surface-2: #a6c9c3;
+  --surface-2: #43be99;
   /* inputs */
-  --surface-3: #96beb6;
+  --surface-3: #39b48f;
   /* buttons/tabs */
-  --surface-3-hover: #86b2a9;
+  --surface-3-hover: #09b984;
 
-  --ring: rgba(35, 135, 115, 0.42);
-  --hairline: rgba(35, 135, 115, 0.30);
+  --ring: rgba(222, 76, 13, 0.687);
+  --hairline: rgba(213, 98, 41, 0.558);
   --shadow-inset: rgba(0, 0, 0, 0.18);
   --shadow-drop: rgba(0, 0, 0, 0.38);
 
@@ -1032,6 +1032,10 @@ input[type="range"].uiRange::-moz-range-thumb{
   box-shadow: 0 0 0 2px var(--ring) inset;
 }
 
+button[aria-expanded="true"] {
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
 main {
   padding: 10px;
 }
@@ -1056,8 +1060,7 @@ main {
 }
 
 .mapPanel {
-  background: var(--card);
-  /* map panel background */
+  background: var(--panel);  /* map panel background */
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px;
@@ -3317,6 +3320,10 @@ select.npcField:focus {
   width: 100%;
 }
 
+.spellToggle[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
 @media (max-width: 750px) {
   .spellLevelHeader {
     flex-wrap: wrap;
@@ -3777,6 +3784,7 @@ button#colorBtn[aria-expanded="true"] {
   display: block;
   pointer-events: none;
   transform: scale(1.15) translateY(-0.5px);
+  
 }
 
 .calcMenu {
@@ -4337,7 +4345,7 @@ textarea {
   display: grid;
   place-items: center;
   border-radius: var(--collapse-radius);
-  background: var(--panel);
+  background: var(--surface-3);
   color: var(--text);
 }
 
