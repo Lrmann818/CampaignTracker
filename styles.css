@@ -270,13 +270,15 @@
 /* Blue theme */
 :root[data-theme="blue"] {
   --bg: var(--page-bg-metallic-blue);
-  --page-bg-metallic-blue: linear-gradient(135deg,
-  #dfe7ec 0%,
-  #d0d9df 20%,
-  #c4ced5 40%,
-  #d6dee4 60%,
-  #bcc7cf 80%,
-  #e2e9ee 100%);
+  --page-bg-metallic-blue:
+linear-gradient(
+  135deg,
+  #8596a2 0%,
+  #b3c0ca 24%,
+  #eef3f7 50%,
+  #b3c0ca 76%,
+  #8596a2 100%
+);
   --panel: #c1f6fa;
   /* light blue-glass panels */
   --card: linear-gradient(to bottom,
@@ -696,6 +698,11 @@
   --map-empty: #______;
 } */
 
+html,
+body {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -704,6 +711,20 @@ body {
   background-repeat: no-repeat;
   background-size: cover;
   background-attachment: fixed;
+}
+
+body::before {
+    content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at center,
+      rgba(255,255,255,0.25),
+      rgba(0,0,0,0.18)
+    );
+  z-index: -1;
 }
 
 
