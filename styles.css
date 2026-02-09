@@ -1224,6 +1224,17 @@ button.warn:hover {
 
 .settingsBtn {
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center
+}
+
+/* Settings button icon */
+.settingsBtnIcon{
+  width: 15px;
+  height: 15px;
+  display: block;
+  pointer-events: none;
 }
 
 .settingsMenu {
