@@ -62,6 +62,7 @@
   --calculatorBg: linear-gradient(to bottom,
       color-mix(in srgb, var(--bg) 90%, transparent),
       color-mix(in srgb, var(--bg) 70%, transparent));
+  --diceDivText: var(--diceIconColor);
 
   /* unchanging variables can go here */
   --portrait-ratio: 3 / 4;  /* width / height   matches character portrait */
@@ -3912,14 +3913,14 @@ button#colorBtn[aria-expanded="true"] {
 }
 
 .calcHistoryWrap {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--diceDivText);
   padding-top: 8px;
 }
 
 .calcHistoryTitle {
   font-size: 12px;
-  opacity: 0.8;
   margin-bottom: 6px;
+  color: var(--diceDivText);
 }
 
 .calcHistory {
@@ -3928,6 +3929,10 @@ button#colorBtn[aria-expanded="true"] {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.calcHistory .mutedSmall {
+  color: var(--diceDivText);
 }
 
 .calcHistItem {
