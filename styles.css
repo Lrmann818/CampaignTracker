@@ -32,17 +32,13 @@
   --border: #404040;
   --diceIconColor: #b9b9b9;
 
-  --surface-2: #141414;
-  /* inputs */
-  --surface-3: #151515;
-  /* buttons/tabs */
-  --surface-3-hover: #222;
-  /* hover/active */
+  --surface-2: #141414;/* inputs */
+  --surface-3: #151515; /* buttons/tabs */
+  --surface-3-hover: #222; /* hover/active */
   --ring: #ffffff22;
   --hairline: #ffffff14;
   --shadow-inset: #00000055;
   --shadow-drop: #00000066;
-
   --map-empty: #0f0f0f;
 
   /* Unchanging Colors? */
@@ -56,7 +52,7 @@
   --warn-hover: #ff8c001f;
   --danger: #ff5a5a;
   --danger-border: #ff5a5a59;
-  --danger-hover: #ff5a5a1f;
+  --danger-hover: #ff5a5a60;
   --swatch-color-preview: #ffffff55;
   --swatch-color-active-border: #ffffff33;
   --color-swatch-border: #ffffff2e;
@@ -115,27 +111,20 @@
   --border: #d0d0d6;
   --diceIconColor: #555;
 
-  --surface-2: #f0f0f3;
-  /* inputs */
-  --surface-3: #e8e8ee;
-  /* buttons/tabs */
-  --surface-3-hover: #dadbe3;
-  /* hover/active */
-
+  --surface-2: #f0f0f3;/* inputs */
+  --surface-3: #e8e8ee;/* buttons/tabs */
+  --surface-3-hover: #dadbe3; /* hover/active */
   --ring: #0000001f;
   --hairline: #00000052;
   --shadow-inset: #0000000f;
   --shadow-drop: #0000001f;
-
   --map-empty: #e9e9ee;
 }
 
 /* Parchment theme */
 :root[data-theme="beige"] {
-  --bg: #c3b596;
-  /* warmer, slightly darker backdrop */
-  --panel: #d6c7a9;
-  /* parchment surface */
+  --bg: #c3b596;/* warmer, slightly darker backdrop */
+  --panel: #d6c7a9;/* parchment surface */
   --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
       rgba(0, 0, 0, 0.1));
@@ -153,27 +142,26 @@
   --border: #9a8a6b;
   --diceIconColor: #4b4030;
 
-  --surface-2: #ccbda0;
-  /* inputs */
-  --surface-3: #c0b191;
-  /* buttons/tabs */
+  --surface-2: #ccbda0;/* inputs */
+  --surface-3: #c0b191;/* buttons/tabs */
   --surface-3-hover: #b4a47f;
-
   --ring: rgba(96, 67, 28, 0.38);
   --hairline: rgba(96, 67, 28, 0.26);
   --shadow-inset: rgba(0, 0, 0, 0.18);
   --shadow-drop: rgba(0, 0, 0, 0.38);
-
   --map-empty: #b3a483;
+
+  --warn: #ce5402;
+  --warn-border: #a84300;
+  --warn-hover: #ff7b001f;
+  --spell-toggle-warn-on-border: #a84300;
 }
 
 /* Blush theme */
 :root[data-theme="rose"] {
-  --bg: #f2d6df;
-  /* soft blush background */
-  --panel: #f8e6ec;
-  /* light rose panels */
-    --card: linear-gradient(to bottom,
+  --bg: #f2d6df; /* soft blush background */
+  --panel: #f8e6ec; /* light rose panels */
+  --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
       rgba(0, 0, 0, 0.1));
   --collapsedCard: linear-gradient(to bottom,
@@ -190,63 +178,63 @@
   --border: #d4a3b4;
   --diceIconColor: #7a4a5a;
 
-  --surface-2: #f1d7df;
-  /* inputs */
-  --surface-3: #e8c6d0;
-  /* buttons/tabs */
+  --surface-2: #f1d7df; /* inputs */
+  --surface-3: #e8c6d0;  /* buttons/tabs */
   --surface-3-hover: #ddb5c2;
-
+  --danger-hover: #ff5a5a91;
   --ring: rgba(180, 90, 120, 0.32);
   --hairline: rgba(180, 90, 120, 0.20);
   --shadow-inset: rgba(0, 0, 0, 0.10);
   --shadow-drop: rgba(0, 0, 0, 0.28);
-
   --map-empty: #e6bcc9;
+
+  --warn: #ce5402;
+  --warn-border: #a84300;
+  --warn-hover: #ff7b001f;
+  --spell-toggle-warn-on-border: #a84300;
 }
 
 /* Teal theme */
 :root[data-theme="teal"] {
-  --bg: #377771;
-  /* warmer deep turquoise backdrop */
-  --panel: #4ce0b3;
-  /* card surface */
+  --bg: #377771;     /* warmer deep turquoise backdrop */
+  --panel: #4ce0b3;     /* card surface */
   --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
-      rgba(0, 0, 0, 0.1));
+      rgba(0, 0, 0, 0.2));
   --collapsedCard: linear-gradient(to bottom,
       rgba(0, 0, 0, 0.0),
-      rgba(0, 0, 0, 0.02));
+      rgba(0, 0, 0, 0.04));
   --spell-level-header: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
-      rgba(0, 0, 0, 0.1));
+      rgba(0, 0, 0, 0.2));
   --spell-card: linear-gradient(to bottom,
-      rgba(0, 0, 0, .1),
-      rgba(0, 0, 0, 0.15));
+      rgba(0, 0, 0, .2),
+      rgba(0, 0, 0, 0.3));
   --text: #0a2421;
   --muted: #355b56;
   --border: #f05446;
-  --diceIconColor: #ed6a5e;
+  --diceIconColor: #ca3b2e;
 
-  --surface-2: #43be99;
-  /* inputs */
-  --surface-3: #39b48f;
-  /* buttons/tabs */
+  --surface-2: #43be99;      /* inputs */
+  --surface-3: #39b48f;      /* buttons/tabs */
   --surface-3-hover: #09b984;
-
+  --danger-hover: #ff5a5a91;
   --ring: rgba(222, 76, 13, 0.687);
   --hairline: rgba(213, 98, 41, 0.558);
   --shadow-inset: rgba(0, 0, 0, 0.18);
   --shadow-drop: rgba(0, 0, 0, 0.38);
-
   --map-empty: #7ea8a1;
+
+  --warn: #ce5402;
+  --warn-border: #a84300;
+  --warn-hover: #ff7b001f;
+  --spell-toggle-warn-on-border: #a84300;
 }
 
 /* Blue theme */
 :root[data-theme="blue"] {
-  --bg: #c7f2f7;
-  /* pale cyan backdrop */
-  --panel: #D6FCFF;
-  /* light blue-glass panels */
+  --bg: #98cacf;/* pale cyan backdrop */
+  --panel: #c1f6fa;/* light blue-glass panels */
   --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
       rgba(0, 0, 0, 0.1));
@@ -259,26 +247,31 @@
   --spell-card: linear-gradient(to bottom,
       rgba(0, 0, 0, .1),
       rgba(0, 0, 0, 0.15));
-  --text: #0b2a30;
-  --muted: #4f6f75;
-  /* Steel / iron structure */
-  --border: #9fb7bd;
+  --text: #081e22;
+  --muted: #4f6f75;/* Steel / iron structure */
+  --border: #969fa3;
   --diceIconColor: #4f6f75;
 
-  --surface-2: #d6eef3;
-  /* inputs */
-  --surface-3: #c4e6ec;
-  /* buttons/tabs */
-  --surface-3-hover: #b2dbe2;
+  --surface-2: #c5e6ec; /* inputs */
+  --surface-3: #c4e6ec; /* buttons/tabs */
+  --surface-3-hover: #a6ccd3;
 
   /* Cyan focus with steel restraint */
-  --ring: rgba(0, 180, 200, 0.34);
-  --hairline: rgba(120, 140, 150, 0.22);
-
+  --ring: rgba(30, 130, 157, 0.54);
+  --hairline: rgba(120, 140, 150, 0.2);
   --shadow-inset: rgba(0, 0, 0, 0.10);
   --shadow-drop: rgba(0, 0, 0, 0.26);
-
   --map-empty: #b8dde3;
+
+  --warn: #ce5402;
+  --warn-border: #a84300;
+  --warn-hover: #ff7b001f;
+  --spell-toggle-warn-on-border: #a84300;
+  --calcBg: #74aaaf;
+  --calculatorBg: linear-gradient(to bottom,
+      color-mix(in srgb, var(--calcBg) 90%, transparent),
+      color-mix(in srgb, var(--calcBg) 70%, transparent));
+  --diceDivText: #2f4547;
 }
 
 /*======================
@@ -290,35 +283,29 @@
   --bg: #391E54;
   --panel: #4A3062;
   --card: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.0178));
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.0356));
   --collapsedCard: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.13),
-      rgba(255, 255, 255, 0.0177));
+      rgba(255, 255, 255, 0.29),
+      rgba(255, 255, 255, 0.0354));
   --spell-level-header: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.0178));
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.0356));
   --spell-card: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0356),
       rgba(255, 255, 255, 0.0));
-
   --text: #f3efff;
   --muted: #c3b6dd;
   --border: #332146;
   --diceIconColor: #c3b6dd;
 
-  --surface-2: #402758;
-  /* inputs */
-  --surface-3: #3B2450;
-  /* buttons/tabs */
-  --surface-3-hover: #352148;
-  /* hover/active */
-
+  --surface-2: #402758; /* inputs */
+  --surface-3: #3B2450; /* buttons/tabs */
+  --surface-3-hover: #352148;  /* hover/active */
   --ring: #e6d4ff38;
   --hairline: #e6d4ff1f;
   --shadow-inset: #0000008c;
   --shadow-drop: #000000a8;
-
   --map-empty: #100a18;
 }
 
@@ -346,12 +333,10 @@
   --surface-2: #451a1f;
   --surface-3: #4f2026;
   --surface-3-hover: #612a31;
-
   --ring: rgba(255, 120, 120, 0.22);
   --hairline: rgba(255, 120, 120, 0.14);
   --shadow-inset: rgba(0, 0, 0, 0.45);
   --shadow-drop: rgba(0, 0, 0, 0.7);
-
   --map-empty: #160708;
 }
 
@@ -383,16 +368,13 @@
   --hairline: rgba(255, 200, 95, 0.35);
   --shadow-inset: rgba(0, 0, 0, 0.45);
   --shadow-drop: rgba(0, 0, 0, 0.7);
-
   --map-empty: #160708;
 }
 
 /* Arcane theme */
 :root[data-theme="arcane"] {
-  --bg: #14112a;
-  /* deep arcane void */
-  --panel: #1d1a3a;
-  /* spell-slate panels */
+  --bg: #14112a; /* deep arcane void */
+  --panel: #1d1a3a;  /* spell-slate panels */
   --card: linear-gradient(to bottom,
       rgba(255, 255, 255, 0.06),
       rgba(255, 255, 255, 0.0178));
@@ -410,26 +392,20 @@
   --border: #3c3670;
   --diceIconColor: #b7b0e0;
 
-  --surface-2: #24204a;
-  /* inputs */
-  --surface-3: #2b2660;
-  /* buttons/tabs */
+  --surface-2: #24204a;  /* inputs */
+  --surface-3: #2b2660;  /* buttons/tabs */
   --surface-3-hover: #362f78;
-
   --ring: rgba(155, 140, 255, 0.32);
   --hairline: rgba(155, 140, 255, 0.20);
   --shadow-inset: rgba(0, 0, 0, 0.55);
   --shadow-drop: rgba(0, 0, 0, 0.75);
-
   --map-empty: #0b0a1a;
 }
 
 /* Arcane Gold theme */
 :root[data-theme="arcane-gold"] {
-  --bg: #120f24;
-  /* arcane void */
-  --panel: #1b1634;
-  /* spell-slate panels */
+  --bg: #120f24; /* arcane void */
+  --panel: #1b1634; /* spell-slate panels */
   --card: linear-gradient(to bottom,
       rgba(255, 255, 255, 0.06),
       rgba(255, 255, 255, 0.0178));
@@ -447,10 +423,8 @@
 
   /* Violet structure with gold influence */
   --border: #7a6738;
-  --surface-2: #231e44;
-  /* inputs */
-  --surface-3: #2b2554;
-  /* buttons/tabs */
+  --surface-2: #231e44; /* inputs */
+  --surface-3: #2b2554; /* buttons/tabs */
   --surface-3-hover: #382f6a;
   --diceIconColor: #7a6738;
 
@@ -461,48 +435,39 @@
   /* Shadows stay dark so gold pops */
   --shadow-inset: rgba(0, 0, 0, 0.6);
   --shadow-drop: rgba(0, 0, 0, 0.8);
-
   --map-empty: #0a0916;
 }
 
 /* Toxic Core theme */
 :root[data-theme="green"] {
-  --bg: #091a07;
-  /* darker toxic green-black */
-  --panel: #0e2b0a;
-  /* deepened core surface */
+  --bg: #091a07; /* darker toxic green-black */
+  --panel: #0e2b0a; /* deepened core surface */
   --card: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.0178));
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.0356));
   --collapsedCard: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.13),
-      rgba(255, 255, 255, 0.0177));
+      rgba(255, 255, 255, 0.29),
+      rgba(255, 255, 255, 0.0354));
   --spell-level-header: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.0178));
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.0356));
   --spell-card: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0356),
       rgba(255, 255, 255, 0.0));
   --text: #e9ffe3;
   --muted: #97cf8d;
-  --border: #1c5315;
-  /* darker cousin of #0E6605 */
+  --border: #1c5315;  /* darker cousin of #0E6605 */
   --diceIconColor: #46C83C;
 
-  --surface-2: #123c0f;
-  /* inputs */
-  --surface-3: #174e13;
-  /* buttons/tabs */
-  --surface-3-hover: #1e6618;
-  /* toxic lift */
+  --surface-2: #123c0f; /* inputs */
+  --surface-3: #174e13; /* buttons/tabs */
+  --surface-3-hover: #1e6618;  /* toxic lift */
 
   /* Toxic glow accents */
   --ring: rgba(70, 200, 60, 0.38);
   --hairline: rgba(70, 200, 60, 0.24);
-
   --shadow-inset: rgba(0, 0, 0, 0.65);
   --shadow-drop: rgba(0, 0, 0, 0.82);
-
   --map-empty: #050f04;
 }
 
@@ -511,16 +476,16 @@
   --bg: #1c1f22;
   --panel: #24282c;
   --card: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.0178));
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.0356));
   --collapsedCard: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.13),
-      rgba(255, 255, 255, 0.0177));
+      rgba(255, 255, 255, 0.29),
+      rgba(255, 255, 255, 0.0354));
   --spell-level-header: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.0178));
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.0356));
   --spell-card: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0356),
       rgba(255, 255, 255, 0.0));
   --text: #e6e8ea;
   --muted: #a6abb0;
@@ -530,12 +495,10 @@
   --surface-3: #30363c;
   --surface-3-hover: #3a4148;
   --diceIconColor: #a6abb0;
-
   --ring: rgba(180, 190, 200, 0.20);
   --hairline: rgba(180, 190, 200, 0.12);
   --shadow-inset: rgba(0, 0, 0, 0.45);
   --shadow-drop: rgba(0, 0, 0, 0.65);
-
   --map-empty: #16191c;
 }
 
@@ -563,12 +526,10 @@
   --surface-3: #223a2b;
   --surface-3-hover: #2a4a36;
   --diceIconColor: #a9c2b2;
-
   --ring: rgba(110, 170, 130, 0.22);
   --hairline: rgba(110, 170, 130, 0.14);
   --shadow-inset: rgba(0, 0, 0, 0.55);
   --shadow-drop: rgba(0, 0, 0, 0.75);
-
   --map-empty: #0a120d;
 }
 
@@ -596,12 +557,10 @@
   --surface-3: #3d261c;
   --surface-3-hover: #4a2f23;
   --diceIconColor: #d0a88e;
-
   --ring: rgba(255, 140, 80, 0.28);
   --hairline: rgba(255, 140, 80, 0.18);
   --shadow-inset: rgba(0, 0, 0, 0.55);
   --shadow-drop: rgba(0, 0, 0, 0.75);
-
   --map-empty: #120805;
 }
 
@@ -610,16 +569,16 @@
   --bg: #2a231b;
   --panel: #342c22;
   --card: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.0178));
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.0356));
   --collapsedCard: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.13),
-      rgba(255, 255, 255, 0.0177));
+      rgba(255, 255, 255, 0.29),
+      rgba(255, 255, 255, 0.0354));
   --spell-level-header: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.0178));
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.0356));
   --spell-card: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0356),
       rgba(255, 255, 255, 0.0));
   --text: #f3eadc;
   --muted: #c2b19a;
@@ -629,12 +588,10 @@
   --surface-3: #463b2e;
   --surface-3-hover: #524536;
   --diceIconColor: #c2b19a;
-
   --ring: rgba(190, 160, 110, 0.26);
   --hairline: rgba(190, 160, 110, 0.16);
   --shadow-inset: rgba(0, 0, 0, 0.55);
   --shadow-drop: rgba(0, 0, 0, 0.75);
-
   --map-empty: #1b160f;
 }
 
@@ -1060,7 +1017,7 @@ main {
 }
 
 .mapPanel {
-  background: var(--panel);  /* map panel background */
+  background: var(--panel); /* map panel background */
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px;
@@ -1194,6 +1151,7 @@ button.danger {
 
 button.danger:hover {
   background: var(--danger-hover);
+  color: var(--text);
 }
 
 button.warn {
@@ -1363,6 +1321,24 @@ button.settingsSelectBtn {
     100% 100%;
   background-repeat: no-repeat;
   text-align: left;
+}
+
+button.settingsSelectBtn:hover {
+    background: var(--surface-3-hover);
+    /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
 }
 
 button.settingsSelectBtn:focus-visible,
@@ -1685,6 +1661,26 @@ button.panelSelectBtn{
   text-align: left;
 }
 
+.panelSelect:hover,
+.locFilter:hover,
+button.panelSelectBtn:hover{
+    background: var(--surface-3-hover);
+    /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
 /* Panel move buttons (top-right arrows) */
 .moveBtn,
 .panelMoveBtn{
@@ -1734,6 +1730,25 @@ button.cardSelectBtn {
   -webkit-appearance: none;
   -moz-appearance: none;
 
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+.cardSelect:hover,
+button.cardSelectBtn:hover {
+    background: var(--surface-3-hover);
+    /* SAME arrow system as mapSelect */
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%),
@@ -2254,10 +2269,8 @@ select.npcField:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  /* Clip the image to the card's rounded frame.
-     The card itself uses overflow: visible so dropdown menus can escape. */
-  border-radius: 14px;
+  overflow: hidden; /* Clip the image to the card's rounded frame. The card itself uses overflow: visible so dropdown menus can escape. */
+  border-radius: 14px 14px 0 0;
   cursor: pointer;
   position: relative;
 }
@@ -3324,6 +3337,10 @@ select.npcField:focus {
   box-shadow: 0 0 0 2px var(--ring) inset;
 }
 
+button.spellToggle.warn[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--warn-border) inset;
+}
+
 @media (max-width: 750px) {
   .spellLevelHeader {
     flex-wrap: wrap;
@@ -3652,6 +3669,25 @@ button.mapSelectBtn {
   background-repeat: no-repeat;
 }
 
+select.mapSelect:hover,
+button.mapSelectBtn:hover {
+    background: var(--surface-3-hover);
+    /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
 select.mapSelect:focus,
 button.mapSelectBtn:focus-visible,
 button.mapSelectBtn[aria-expanded="true"] {
@@ -3693,6 +3729,20 @@ button.mapToolDropDown {
 
 button.mapToolDropDown:hover {
   background: var(--surface-3-hover);
+    /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
 }
 
 /* Map color dropdown — EXACT match to map select / tool dropdown */
@@ -3735,6 +3785,20 @@ button#colorBtn .caret {
 
 button#colorBtn:hover {
   background: var(--surface-3-hover);
+    /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
 }
 
 button#colorBtn:focus-visible,
@@ -3983,13 +4047,13 @@ button#colorBtn[aria-expanded="true"] {
 }
 
 .diceHistoryWrap{
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--diceDivText);
   padding-top: 8px;
 }
 
 .diceHistoryTitle {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--diceDivText);
   margin: 0 2px 6px;
 }
 
@@ -4000,6 +4064,10 @@ button#colorBtn[aria-expanded="true"] {
   flex-direction: column;
   gap: 6px;
   padding-right: 2px;
+}
+
+.diceHistory .mutedSmall {
+  color: var(--diceDivText);
 }
 
 .diceHistRow {
@@ -4022,8 +4090,8 @@ button#colorBtn[aria-expanded="true"] {
 }
 
 .diceActiveIcon{
-  width: 46px;
-  height: 46px;
+  width: 70px;
+  height: 70px;
   display: block;
   opacity: 0.95;
 }
@@ -4054,8 +4122,6 @@ button#colorBtn[aria-expanded="true"] {
 .dicePresets{
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
-  margin-bottom: 8px;
 }
 
 @media (max-width: 420px){
@@ -4065,18 +4131,19 @@ button#colorBtn[aria-expanded="true"] {
 }
 
 .dicePreset{
-  padding: 8px;
+  padding: 4px 3px;
   border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  aspect-ratio: 1 / 1;
-  margin-top: 8px;
+  margin-top: 2px;
+  gap: 6px;
+  margin-bottom: 2px;
 }
 
 .dicePresetIcon{
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   display: block;
 }
 
@@ -4345,7 +4412,7 @@ textarea {
   display: grid;
   place-items: center;
   border-radius: var(--collapse-radius);
-  background: var(--surface-3);
+  background: var(--panel);
   color: var(--text);
 }
 
