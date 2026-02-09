@@ -32,9 +32,12 @@
   --border: #404040;
   --diceIconColor: #b9b9b9;
 
-  --surface-2: #141414;/* inputs */
-  --surface-3: #151515; /* buttons/tabs */
-  --surface-3-hover: #222; /* hover/active */
+  --surface-2: #141414;
+  /* inputs */
+  --surface-3: #151515;
+  /* buttons/tabs */
+  --surface-3-hover: #222;
+  /* hover/active */
   --ring: #ffffff22;
   --hairline: #ffffff14;
   --shadow-inset: #00000055;
@@ -65,19 +68,36 @@
   --diceDivText: var(--diceIconColor);
 
   /* unchanging variables can go here */
-  --portrait-ratio: 3 / 4;  /* width / height   matches character portrait */
+  --portrait-ratio: 3 / 4;
+  /* width / height   matches character portrait */
   --tracker-list-max: 720px;
 
   /* Scrollbars (theme-aware) */
   --sb-track: color-mix(in srgb, var(--panel) 70%, transparent);
   --sb-thumb: color-mix(in srgb, var(--border) 70%, transparent);
   --sb-thumb-hover: color-mix(in srgb, var(--border) 92%, transparent);
-  
+
   /* Size variants (override default width) */
-  .num-xs { width: 54px; }  /* tips and such */
-  .num-sum { width: 64px; } /* Ability scores (1–20) */
-  .num-md { width: 72px; }  /* Resources like CP / HP (0–999) */
-  .num-lg { width: 88px; }  /* Currency / larger counters */
+  .num-xs {
+    width: 54px;
+  }
+
+  /* tips and such */
+  .num-sum {
+    width: 64px;
+  }
+
+  /* Ability scores (1–20) */
+  .num-md {
+    width: 72px;
+  }
+
+  /* Resources like CP / HP (0–999) */
+  .num-lg {
+    width: 88px;
+  }
+
+  /* Currency / larger counters */
 
   /* Reusable: ring INSIDE the control (matches tabs) */
   .ringInset {
@@ -112,9 +132,12 @@
   --border: #d0d0d6;
   --diceIconColor: #555;
 
-  --surface-2: #f0f0f3;/* inputs */
-  --surface-3: #e8e8ee;/* buttons/tabs */
-  --surface-3-hover: #dadbe3; /* hover/active */
+  --surface-2: #f0f0f3;
+  /* inputs */
+  --surface-3: #e8e8ee;
+  /* buttons/tabs */
+  --surface-3-hover: #dadbe3;
+  /* hover/active */
   --ring: #0000001f;
   --hairline: #00000052;
   --shadow-inset: #0000000f;
@@ -124,8 +147,10 @@
 
 /* Parchment theme */
 :root[data-theme="beige"] {
-  --bg: #c3b596;/* warmer, slightly darker backdrop */
-  --panel: #d6c7a9;/* parchment surface */
+  --bg: #c3b596;
+  /* warmer, slightly darker backdrop */
+  --panel: #d6c7a9;
+  /* parchment surface */
   --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
       rgba(0, 0, 0, 0.1));
@@ -143,8 +168,10 @@
   --border: #9a8a6b;
   --diceIconColor: #4b4030;
 
-  --surface-2: #ccbda0;/* inputs */
-  --surface-3: #c0b191;/* buttons/tabs */
+  --surface-2: #ccbda0;
+  /* inputs */
+  --surface-3: #c0b191;
+  /* buttons/tabs */
   --surface-3-hover: #b4a47f;
   --ring: rgba(96, 67, 28, 0.38);
   --hairline: rgba(96, 67, 28, 0.26);
@@ -160,8 +187,10 @@
 
 /* Blush theme */
 :root[data-theme="rose"] {
-  --bg: #f2d6df; /* soft blush background */
-  --panel: #f8e6ec; /* light rose panels */
+  --bg: #f2d6df;
+  /* soft blush background */
+  --panel: #f8e6ec;
+  /* light rose panels */
   --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
       rgba(0, 0, 0, 0.1));
@@ -179,8 +208,10 @@
   --border: #d4a3b4;
   --diceIconColor: #7a4a5a;
 
-  --surface-2: #f1d7df; /* inputs */
-  --surface-3: #e8c6d0;  /* buttons/tabs */
+  --surface-2: #f1d7df;
+  /* inputs */
+  --surface-3: #e8c6d0;
+  /* buttons/tabs */
   --surface-3-hover: #ddb5c2;
   --danger-hover: #ff5a5a91;
   --ring: rgba(180, 90, 120, 0.32);
@@ -197,8 +228,10 @@
 
 /* Teal theme */
 :root[data-theme="teal"] {
-  --bg: #377771;     /* warmer deep turquoise backdrop */
-  --panel: #4ce0b3;     /* card surface */
+  --bg: #377771;
+  /* warmer deep turquoise backdrop */
+  --panel: #4ce0b3;
+  /* card surface */
   --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
       rgba(0, 0, 0, 0.2));
@@ -216,8 +249,10 @@
   --border: #f05446;
   --diceIconColor: #ca3b2e;
 
-  --surface-2: #43be99;      /* inputs */
-  --surface-3: #39b48f;      /* buttons/tabs */
+  --surface-2: #43be99;
+  /* inputs */
+  --surface-3: #39b48f;
+  /* buttons/tabs */
   --surface-3-hover: #09b984;
   --danger-hover: #ff5a5a91;
   --ring: rgba(222, 76, 13, 0.687);
@@ -234,8 +269,10 @@
 
 /* Blue theme */
 :root[data-theme="blue"] {
-  --bg: #98cacf;/* pale cyan backdrop */
-  --panel: #c1f6fa;/* light blue-glass panels */
+  --bg: #98cacf;
+  /* pale cyan backdrop */
+  --panel: #c1f6fa;
+  /* light blue-glass panels */
   --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
       rgba(0, 0, 0, 0.1));
@@ -249,17 +286,26 @@
       rgba(0, 0, 0, .1),
       rgba(0, 0, 0, 0.15));
   --text: #081e22;
-  --muted: #4f6f75;/* Steel / iron structure */
-  --border: #969fa3;
-  --diceIconColor: #4f6f75;
+  --muted: #4f6f75;
+  /* Steel / iron structure */
+  --border: #c0ccd4;
 
-  --surface-2: #c5e6ec; /* inputs */
-  --surface-3: #c4e6ec; /* buttons/tabs */
+  --diceIconColor: #4f6f75;
+  --diceDivText: #2f4547;
+  --calcBg: #74aaaf;
+  --calculatorBg: linear-gradient(to bottom,
+      color-mix(in srgb, var(--calcBg) 90%, transparent),
+      color-mix(in srgb, var(--calcBg) 70%, transparent));
+
+  --surface-2: #c5e6ec;
+  /* inputs */
+  --surface-3: #c4e6ec;
+  /* buttons/tabs */
   --surface-3-hover: #a6ccd3;
 
   /* Cyan focus with steel restraint */
   --ring: rgba(30, 130, 157, 0.54);
-  --hairline: rgba(120, 140, 150, 0.2);
+  --hairline: rgba(120, 130, 138, 0.3);
   --shadow-inset: rgba(0, 0, 0, 0.10);
   --shadow-drop: rgba(0, 0, 0, 0.26);
   --map-empty: #b8dde3;
@@ -268,11 +314,6 @@
   --warn-border: #a84300;
   --warn-hover: #ff7b001f;
   --spell-toggle-warn-on-border: #a84300;
-  --calcBg: #74aaaf;
-  --calculatorBg: linear-gradient(to bottom,
-      color-mix(in srgb, var(--calcBg) 90%, transparent),
-      color-mix(in srgb, var(--calcBg) 70%, transparent));
-  --diceDivText: #2f4547;
 }
 
 /*======================
@@ -300,9 +341,12 @@
   --border: #332146;
   --diceIconColor: #c3b6dd;
 
-  --surface-2: #402758; /* inputs */
-  --surface-3: #3B2450; /* buttons/tabs */
-  --surface-3-hover: #352148;  /* hover/active */
+  --surface-2: #402758;
+  /* inputs */
+  --surface-3: #3B2450;
+  /* buttons/tabs */
+  --surface-3-hover: #352148;
+  /* hover/active */
   --ring: #e6d4ff38;
   --hairline: #e6d4ff1f;
   --shadow-inset: #0000008c;
@@ -366,7 +410,7 @@
   --diceIconColor: #7a6738;
 
   --ring: rgba(255, 205, 120, 0.55);
-  --hairline: rgba(255, 200, 95, 0.35);
+  --hairline: rgba(255, 200, 95, 0.30);
   --shadow-inset: rgba(0, 0, 0, 0.45);
   --shadow-drop: rgba(0, 0, 0, 0.7);
   --map-empty: #160708;
@@ -374,8 +418,10 @@
 
 /* Arcane theme */
 :root[data-theme="arcane"] {
-  --bg: #14112a; /* deep arcane void */
-  --panel: #1d1a3a;  /* spell-slate panels */
+  --bg: #14112a;
+  /* deep arcane void */
+  --panel: #1d1a3a;
+  /* spell-slate panels */
   --card: linear-gradient(to bottom,
       rgba(255, 255, 255, 0.06),
       rgba(255, 255, 255, 0.0178));
@@ -393,8 +439,10 @@
   --border: #3c3670;
   --diceIconColor: #b7b0e0;
 
-  --surface-2: #24204a;  /* inputs */
-  --surface-3: #2b2660;  /* buttons/tabs */
+  --surface-2: #24204a;
+  /* inputs */
+  --surface-3: #2b2660;
+  /* buttons/tabs */
   --surface-3-hover: #362f78;
   --ring: rgba(155, 140, 255, 0.32);
   --hairline: rgba(155, 140, 255, 0.20);
@@ -405,8 +453,10 @@
 
 /* Arcane Gold theme */
 :root[data-theme="arcane-gold"] {
-  --bg: #120f24; /* arcane void */
-  --panel: #1b1634; /* spell-slate panels */
+  --bg: #120f24;
+  /* arcane void */
+  --panel: #1b1634;
+  /* spell-slate panels */
   --card: linear-gradient(to bottom,
       rgba(255, 255, 255, 0.06),
       rgba(255, 255, 255, 0.0178));
@@ -424,8 +474,10 @@
 
   /* Violet structure with gold influence */
   --border: #7a6738;
-  --surface-2: #231e44; /* inputs */
-  --surface-3: #2b2554; /* buttons/tabs */
+  --surface-2: #231e44;
+  /* inputs */
+  --surface-3: #2b2554;
+  /* buttons/tabs */
   --surface-3-hover: #382f6a;
   --diceIconColor: #7a6738;
 
@@ -441,8 +493,10 @@
 
 /* Toxic Core theme */
 :root[data-theme="green"] {
-  --bg: #091a07; /* darker toxic green-black */
-  --panel: #0e2b0a; /* deepened core surface */
+  --bg: #091a07;
+  /* darker toxic green-black */
+  --panel: #0e2b0a;
+  /* deepened core surface */
   --card: linear-gradient(to bottom,
       rgba(255, 255, 255, 0.14),
       rgba(255, 255, 255, 0.0356));
@@ -457,12 +511,16 @@
       rgba(255, 255, 255, 0.0));
   --text: #e9ffe3;
   --muted: #97cf8d;
-  --border: #1c5315;  /* darker cousin of #0E6605 */
+  --border: #1c5315;
+  /* darker cousin of #0E6605 */
   --diceIconColor: #46C83C;
 
-  --surface-2: #123c0f; /* inputs */
-  --surface-3: #174e13; /* buttons/tabs */
-  --surface-3-hover: #1e6618;  /* toxic lift */
+  --surface-2: #123c0f;
+  /* inputs */
+  --surface-3: #174e13;
+  /* buttons/tabs */
+  --surface-3-hover: #1e6618;
+  /* toxic lift */
 
   /* Toxic glow accents */
   --ring: rgba(70, 200, 60, 0.38);
@@ -654,7 +712,8 @@ body {
 /* Chromium / Safari */
 *::-webkit-scrollbar {
   width: 10px;
-  height: 10px; /* horizontal scrollbars */
+  height: 10px;
+  /* horizontal scrollbars */
 }
 
 *::-webkit-scrollbar-track {
@@ -665,7 +724,8 @@ body {
 *::-webkit-scrollbar-thumb {
   background: var(--sb-thumb);
   border-radius: 999px;
-  border: 2px solid var(--sb-track); /* makes it look “inset” & consistent */
+  border: 2px solid var(--sb-track);
+  /* makes it look “inset” & consistent */
 }
 
 *::-webkit-scrollbar-thumb:hover {
@@ -676,32 +736,35 @@ body {
    Search highlight (true in-field matches)
    ====================== */
 
-.hlWrap{
+.hlWrap {
   position: relative;
   width: 100%;
 }
 
-.hlOverlay{
+.hlOverlay {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  color: transparent; /* hide overlay text, show only <mark> backgrounds */
+  color: transparent;
+  /* hide overlay text, show only <mark> backgrounds */
   border-radius: inherit;
 }
 
-.hlOverlay .searchMark{
+.hlOverlay .searchMark {
   background: #ffffff33;
   color: transparent;
   border-radius: 3px;
   padding: 0 1px;
 }
 
-.hlField{
+.hlField {
   position: relative;
   z-index: 1;
-  background: transparent; /* let mark background show through */
+  background: transparent;
+  /* let mark background show through */
 }
+
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: auto;
 }
@@ -715,7 +778,8 @@ input[type="number"]::-webkit-inner-spin-button {
 
 input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
-  background: var(--border); /* or --ring if you want it brighter */
+  background: var(--border);
+  /* or --ring if you want it brighter */
   border-radius: 2px;
 }
 
@@ -727,7 +791,8 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--ring);
   border: 2px solid var(--surface-1);
-  margin-top: -5px; /* centers thumb on the track */
+  margin-top: -5px;
+  /* centers thumb on the track */
 }
 
 /* Firefox */
@@ -757,15 +822,17 @@ input {
 }
 
 /* Theme the slider (track + thumb) */
-input[type="range"].uiRange{
+input[type="range"].uiRange {
   -webkit-appearance: none;
   appearance: none;
-  height: 18px;              /* gives it a nice click/touch target */
-  background: transparent;   /* we draw the track ourselves */
+  height: 18px;
+  /* gives it a nice click/touch target */
+  background: transparent;
+  /* we draw the track ourselves */
 }
 
 /* WebKit track */
-input[type="range"].uiRange::-webkit-slider-runnable-track{
+input[type="range"].uiRange::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--border) 75%, transparent);
@@ -773,7 +840,7 @@ input[type="range"].uiRange::-webkit-slider-runnable-track{
 }
 
 /* WebKit thumb */
-input[type="range"].uiRange::-webkit-slider-thumb{
+input[type="range"].uiRange::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 16px;
@@ -782,11 +849,12 @@ input[type="range"].uiRange::-webkit-slider-thumb{
   background: var(--surface-2);
   border: 1px solid var(--border);
   box-shadow: 0 0 0 1px var(--ring) inset;
-  margin-top: -5px; /* centers thumb on 6px track */
+  margin-top: -5px;
+  /* centers thumb on 6px track */
 }
 
 /* Firefox track */
-input[type="range"].uiRange::-moz-range-track{
+input[type="range"].uiRange::-moz-range-track {
   height: 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--border) 75%, transparent);
@@ -794,7 +862,7 @@ input[type="range"].uiRange::-moz-range-track{
 }
 
 /* Firefox thumb */
-input[type="range"].uiRange::-moz-range-thumb{
+input[type="range"].uiRange::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
@@ -810,20 +878,23 @@ input[type="range"].uiRange::-moz-range-thumb{
 
 .numWrap {
   position: relative;
-  display: inline-block; /* lets the input stay full width */
+  display: inline-block;
+  /* lets the input stay full width */
   vertical-align: middle;
   align-self: flex-start;
   width: max-content;
 }
 
 :root {
-  --numWrapPadRight: 15px; /* space reserved for ▲▼ */
+  --numWrapPadRight: 15px;
+  /* space reserved for ▲▼ */
 }
 
 /* make room on the right inside the input, where native spinners usually live */
-.numWrap > input[type="number"] {
+.numWrap>input[type="number"] {
   padding: 5px;
-  padding-right: var(--numWrapPadRight); /* space reserved for ▲▼ */
+  padding-right: var(--numWrapPadRight);
+  /* space reserved for ▲▼ */
   text-align: center;
 }
 
@@ -866,7 +937,8 @@ input[type="range"].uiRange::-moz-range-thumb{
   display: grid;
   place-items: center;
 
-  color: var(--border); /* match your border color */
+  color: var(--border);
+  /* match your border color */
   opacity: 0.95;
   cursor: pointer;
   line-height: 1;
@@ -1018,7 +1090,8 @@ main {
 }
 
 .mapPanel {
-  background: var(--panel); /* map panel background */
+  background: var(--panel);
+  /* map panel background */
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px;
@@ -1057,23 +1130,26 @@ main {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-width: 0; /* allow children to shrink */
+  min-width: 0;
+  /* allow children to shrink */
 }
 
 @media (max-width: 600px) {
-    .charColumns {
+  .charColumns {
     grid-template-columns: 1fr;
   }
-.grid2 {
+
+  .grid2 {
     grid-template-columns: 1fr;
   }
+
   .trackerColumns {
     grid-template-columns: 1fr;
   }
 }
 
 /* IMPORTANT: allow grid children to shrink instead of forcing page-wide overflow */
-.grid2 > * {
+.grid2>* {
   min-width: 0;
 }
 
@@ -1181,7 +1257,7 @@ button.warn:hover {
   gap: 4px;
   flex-wrap: wrap;
   align-items: center;
-  padding:0;
+  padding: 0;
 }
 
 .mapSelectLabel {
@@ -1230,7 +1306,7 @@ button.warn:hover {
 }
 
 /* Settings button icon */
-.settingsBtnIcon{
+.settingsBtnIcon {
   width: 15px;
   height: 15px;
   display: block;
@@ -1311,7 +1387,8 @@ button.settingsSelectBtn {
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
-  padding: 6px 36px 6px 8px; /* room for arrow */
+  padding: 6px 36px 6px 8px;
+  /* room for arrow */
   border-radius: 10px;
   font: inherit;
 
@@ -1336,8 +1413,8 @@ button.settingsSelectBtn {
 }
 
 button.settingsSelectBtn:hover {
-    background: var(--surface-3-hover);
-    /* SAME arrow system as mapSelect */
+  background: var(--surface-3-hover);
+  /* SAME arrow system as mapSelect */
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%),
@@ -1410,7 +1487,7 @@ label.settingsItem {
 
 /* Ability saves options dropdown (Character page) */
 .saveOptionsDropdown {
-  position:relative;
+  position: relative;
   margin-left: auto;
 }
 
@@ -1476,11 +1553,12 @@ label.settingsItem {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 1px; /* ← this is the main knob to tweak */
+  gap: 1px;
+  /* ← this is the main knob to tweak */
 }
 
 /* Title takes the available space so the controls can sit on the right */
-.abilitiesHeader > h2 {
+.abilitiesHeader>h2 {
   flex: 1 1 auto;
   margin: 0;
 }
@@ -1492,12 +1570,15 @@ label.settingsItem {
 
 /* ===== Topbar: mobile polish ===== */
 @media (max-width: 600px) {
+
   /* Clock: never wrap "8:23 PM" into two lines */
   .clockChip {
     flex-wrap: nowrap;
     white-space: nowrap;
-    gap: 0;            /* you don't need gap for a single text node */
-    padding: 6px 8px;  /* tighter; reduces that “extra space” feel */
+    gap: 0;
+    /* you don't need gap for a single text node */
+    padding: 6px 8px;
+    /* tighter; reduces that “extra space” feel */
     font-size: 13px;
   }
 
@@ -1509,15 +1590,19 @@ label.settingsItem {
 
 @media (max-width: 600px) {
   .tabs {
-    flex-wrap: nowrap;     /* keep Tracker/Character/Map on one row */
+    flex-wrap: nowrap;
+    /* keep Tracker/Character/Map on one row */
     white-space: nowrap;
-    overflow-x: auto;      /* if it *still* can't fit, it scrolls instead of wrapping */
+    overflow-x: auto;
+    /* if it *still* can't fit, it scrolls instead of wrapping */
     -webkit-overflow-scrolling: touch;
-    gap: 4px;              /* slightly tighter */
+    gap: 4px;
+    /* slightly tighter */
   }
 
   .tab {
-    padding: 6px 8px;      /* smaller buttons on mobile */
+    padding: 6px 8px;
+    /* smaller buttons on mobile */
     font-size: 13px;
   }
 }
@@ -1525,7 +1610,8 @@ label.settingsItem {
 @media (max-width: 600px) {
   .topbar {
     display: grid;
-    grid-template-columns: 1fr auto;  /* key change */
+    grid-template-columns: 1fr auto;
+    /* key change */
     grid-template-rows: auto auto;
     gap: 4px;
     align-items: center;
@@ -1535,7 +1621,8 @@ label.settingsItem {
   /* Title + status take the full width (both columns) */
   .titlewrap {
     grid-row: 1;
-    grid-column: 1 / -1;             /* key change */
+    grid-column: 1 / -1;
+    /* key change */
     min-width: 0;
   }
 
@@ -1568,13 +1655,14 @@ label.settingsItem {
    Option B: universal panel header -> content spacing
    ====================== */
 :root {
-  --panel-header-gap: 4px; /* tweak this knob */
+  --panel-header-gap: 4px;
+  /* tweak this knob */
 }
 
 /* ======================
    Shared panel controls (buttons, search, selects)
    ====================== */
-:root{
+:root {
   --panel-control-gap: 4px;
   --panel-control-h: 30px;
   --panel-control-radius: 10px;
@@ -1589,7 +1677,7 @@ label.settingsItem {
 .sessionControls,
 .npcControls,
 .partyControls,
-.locControls{
+.locControls {
   display: flex;
   gap: var(--panel-control-gap);
   flex-wrap: wrap;
@@ -1597,7 +1685,7 @@ label.settingsItem {
 }
 
 /* Regular panel button */
-.panelBtn{
+.panelBtn {
   height: var(--panel-control-h);
   padding: var(--panel-control-pad-y) var(--panel-control-pad-x);
   border-radius: var(--panel-control-radius);
@@ -1606,19 +1694,20 @@ label.settingsItem {
 }
 
 /* Small panel button (header actions, icon-ish actions) */
-.panelBtnSm{
+.panelBtnSm {
   height: var(--panel-control-h);
   padding: 6px 8px;
   font-size: var(--panel-control-font);
 }
 
 /* Delete buttons that live in panel headers */
-.panelDelete{
+.panelDelete {
   border-color: var(--danger-border);
   color: var(--danger);
   font-size: var(--panel-control-font);
 }
-.panelDelete:hover{
+
+.panelDelete:hover {
   background: var(--danger-hover);
 }
 
@@ -1627,7 +1716,7 @@ label.settingsItem {
 .sessionSearch,
 .npcSearch,
 .partySearch,
-.locSearch{
+.locSearch {
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
@@ -1643,11 +1732,12 @@ label.settingsItem {
 /* Dropdowns used in panel headers */
 .panelSelect,
 .locFilter,
-button.panelSelectBtn{
+button.panelSelectBtn {
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
-  padding: 6px 30px 6px 8px; /* room for arrow */
+  padding: 6px 30px 6px 8px;
+  /* room for arrow */
   border-radius: 10px;
   height: var(--panel-control-h);
   font-size: var(--panel-control-font);
@@ -1675,9 +1765,9 @@ button.panelSelectBtn{
 
 .panelSelect:hover,
 .locFilter:hover,
-button.panelSelectBtn:hover{
-    background: var(--surface-3-hover);
-    /* SAME arrow system as mapSelect */
+button.panelSelectBtn:hover {
+  background: var(--surface-3-hover);
+  /* SAME arrow system as mapSelect */
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%),
@@ -1695,7 +1785,7 @@ button.panelSelectBtn:hover{
 
 /* Panel move buttons (top-right arrows) */
 .moveBtn,
-.panelMoveBtn{
+.panelMoveBtn {
   width: 30px;
   height: var(--panel-control-h);
   display: grid;
@@ -1711,18 +1801,18 @@ button.panelSelectBtn:hover{
 }
 
 .moveBtn:hover,
-.panelMoveBtn:hover{
+.panelMoveBtn:hover {
   color: var(--text);
   background: var(--surface-3-hover);
 }
 
 /* Any “header row” that is the first child of a panel gets the same gap */
-.panel > .panelHeader,
-.panel > .sessionHeader,
-.panel > .npcHeader,
-.panel > .partyHeader,
-.panel > .locHeader,
-.panel > .row {
+.panel>.panelHeader,
+.panel>.sessionHeader,
+.panel>.npcHeader,
+.panel>.partyHeader,
+.panel>.locHeader,
+.panel>.row {
   margin-bottom: var(--panel-header-gap);
 }
 
@@ -1732,10 +1822,11 @@ button.cardSelectBtn {
   width: 100%;
   border: 1px solid var(--border);
   background: var(--surface-2);
-  color: var(--text);
-  padding: 4px 36px 4px 6px;  /* space for arrow */
-  margin-bottom: 5px;
   border-radius: 10px;
+  color: var(--text);
+  padding: 4px 36px 4px 6px;
+  /* space for arrow */
+  margin-bottom: 5px;
   font: inherit;
 
   appearance: none;
@@ -1759,8 +1850,8 @@ button.cardSelectBtn {
 
 .cardSelect:hover,
 button.cardSelectBtn:hover {
-    background: var(--surface-3-hover);
-    /* SAME arrow system as mapSelect */
+  background: var(--surface-3-hover);
+  /* SAME arrow system as mapSelect */
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%),
@@ -1978,13 +2069,15 @@ div.mutedSmall {
 }
 
 .uiDialogHeader .modalTitle {
-  margin: 0;            /* remove any inherited margin */
+  margin: 0;
+  /* remove any inherited margin */
   padding: 0;
   font-size: 18px;
 }
 
 .uiDialogBody {
-  padding: 8px 2px;     /* tight, consistent */
+  padding: 8px 2px;
+  /* tight, consistent */
   color: var(--text);
   line-height: 1.35;
 }
@@ -1998,13 +2091,17 @@ div.mutedSmall {
 }
 
 #uiDialogMessage {
-  margin: 0 0 2px;      /* space under prompt text */
-  white-space: pre-wrap; /* moved here */
+  margin: 0 0 2px;
+  /* space under prompt text */
+  white-space: pre-wrap;
+  /* moved here */
 }
 
 #uiDialogInput {
-  margin: 0;            /* no extra air */
-  margin-top: 10px;      /* space above input */
+  margin: 0;
+  /* no extra air */
+  margin-top: 10px;
+  /* space above input */
 }
 
 .uiDialogFooter {
@@ -2129,12 +2226,17 @@ div.mutedSmall {
 }
 
 .npcCard {
-  position: relative;  /* anchors ::after */
-  border: 2px solid var(--border);  /* the frame */
-  border-radius: 16px;
-  overflow: visible;  /* allow dropdown menus to escape */
-  background: var(--card);  /* npc card background */
-  isolation: isolate;  /* prevents shadow bleeding */
+  position: relative;
+  /* anchors ::after */
+  border: 2px solid var(--border);
+  /* the frame */
+  border-radius: 17px;
+  overflow: visible;
+  /* allow dropdown menus to escape */
+  background: var(--card);
+  /* npc card background */
+  isolation: isolate;
+  /* prevents shadow bleeding */
   box-shadow:
     0 6px 16px var(--shadow-drop);
   overflow: hidden;
@@ -2151,18 +2253,18 @@ div.mutedSmall {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 14px;
+  border-radius: 15px;
+  box-shadow: var(--npcFrameShadow, inset 0 0 0 5.5px var(--frame-fill));
   pointer-events: none;
   z-index: 2;
-  box-shadow: inset 0 0 0 5.5px var(--frame-fill);
 }
 
 .npcCard::after {
   content: "";
   position: absolute;
   inset: 5px;
-  border: 1px solid var(--hairline);
   border-radius: 10px;
+  border: 1px solid var(--hairline);
   pointer-events: none;
   z-index: 3;
 }
@@ -2233,7 +2335,8 @@ select.npcField {
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
-  padding: 6px 36px 6px 8px;  /* space for arrow */
+  padding: 6px 36px 6px 8px;
+  /* space for arrow */
   border-radius: 10px;
   font: inherit;
 
@@ -2281,7 +2384,8 @@ select.npcField:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden; /* Clip the image to the card's rounded frame. The card itself uses overflow: visible so dropdown menus can escape. */
+  overflow: hidden;
+  /* Clip the image to the card's rounded frame. The card itself uses overflow: visible so dropdown menus can escape. */
   border-radius: 14px 14px 0 0;
   cursor: pointer;
   position: relative;
@@ -2415,14 +2519,15 @@ select.npcField:focus {
 }
 
 /* Give the first labeled row some breathing room */
-.npcCollapsible > .npcRowBlock:first-child {
+.npcCollapsible>.npcRowBlock:first-child {
   margin-top: 17px;
 }
 
 /* labels in row layout should be allowed to wrap */
 .npcRowBlock .npcMiniLabel {
   max-width: 70px;
-  white-space: normal;   /* allow wrapping */
+  white-space: normal;
+  /* allow wrapping */
   line-height: 1.1;
 }
 
@@ -2502,7 +2607,8 @@ select.npcField:focus {
 
   /* give shadows room so they don’t clip against the scroll box edges */
   padding: 12px;
-  padding-bottom: 20px; /* extra room for bottom shadows */
+  padding-bottom: 20px;
+  /* extra room for bottom shadows */
 
   /* prevents weird “stretching/squishing” behavior in some layouts */
   align-content: start;
@@ -2526,9 +2632,11 @@ select.npcField:focus {
   gap: 4px;
   margin-top: 4px;
 
- /* align-content: start;   prevents “stretch rows to fill height” */
-  align-items: start;  /* keeps items from stretching vertically */
-  grid-auto-rows: max-content;  /* ensures rows size to content */
+  /* align-content: start;   prevents “stretch rows to fill height” */
+  align-items: start;
+  /* keeps items from stretching vertically */
+  grid-auto-rows: max-content;
+  /* ensures rows size to content */
 
   overflow: hidden;
 }
@@ -2545,7 +2653,8 @@ select.npcField:focus {
   justify-self: start;
   text-align: left;
   padding: 6px 8px;
-  max-width: 100%;   /* ✅ prevents running out of the grid/panel */
+  max-width: 100%;
+  /* ✅ prevents running out of the grid/panel */
 }
 
 .charBasicsGrid input[type="number"].autosize {
@@ -2560,7 +2669,7 @@ select.npcField:focus {
 }
 
 /* Vitals tiles: pack tightly, no grid stretching */
-.charTiles{
+.charTiles {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -2574,7 +2683,7 @@ select.npcField:focus {
 }
 
 /* keep tiles at their natural size (don’t stretch) */
-.charTiles > .charTile{
+.charTiles>.charTile {
   flex: 0 0 auto;
 }
 
@@ -2624,7 +2733,7 @@ select.npcField:focus {
 }
 
 .charTileLabel {
-  font-weight:700;
+  font-weight: 700;
   font-size: 15px;
   margin-left: 2px;
 }
@@ -2638,8 +2747,8 @@ select.npcField:focus {
 }
 
 /* HP number inputs — override stepper default sizing */
-.saveOptTop .numWrap > input[type="number"],
-.charHpRow .numWrap > input[type="number"] {
+.saveOptTop .numWrap>input[type="number"],
+.charHpRow .numWrap>input[type="number"] {
   width: 40px;
   text-align: left;
   padding: 5px;
@@ -2658,7 +2767,7 @@ select.npcField:focus {
 }
 
 /* Resource title: same vibe as the campaign title (editable text, no input box) */
-.resourceTitle{
+.resourceTitle {
   margin-right: 4px;
   font-weight: 700;
   font-size: 15px;
@@ -2670,7 +2779,7 @@ select.npcField:focus {
 }
 
 /* Placeholder for empty contenteditable */
-.resourceTitle:empty::before{
+.resourceTitle:empty::before {
   content: attr(data-placeholder);
   color: var(--muted);
 }
@@ -2684,7 +2793,7 @@ select.npcField:focus {
 }
 
 /* Numbers should stay together and not wrap */
-.resourceFooterRow{
+.resourceFooterRow {
   display: flex;
   align-items: center;
   width: 100%;
@@ -2692,7 +2801,7 @@ select.npcField:focus {
 }
 
 /* Shrink-wrapped number group (inputs + slash) */
-.resourceNums{
+.resourceNums {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -2701,12 +2810,12 @@ select.npcField:focus {
 }
 
 /* Push the delete button to the far right within the footer row */
-.resourceFooterRow .resourceDeleteBtn{
+.resourceFooterRow .resourceDeleteBtn {
   margin-left: auto;
 }
 
 /* Resource number inputs are smaller than the default 78px vitals */
-.resourceNums input[type="number"]{
+.resourceNums input[type="number"] {
   text-align: left;
   padding: 5px 8px;
 }
@@ -2716,14 +2825,14 @@ select.npcField:focus {
 .charTile input[id="charProf"],
 .charTile input[id="charSpeed"],
 .charTile input[id="charInit"],
-.charTile input[id="charAC"]{
+.charTile input[id="charAC"] {
   text-align: left;
   padding: 5px;
   padding-right: var(--numWrapPadRight);
 }
 
 /* --- Attacks --- */
-.attackList{
+.attackList {
   /* Flex-wrap packs cards like the vitals tiles
      (avoids big empty space when a row has an empty grid cell). */
   display: flex;
@@ -2737,12 +2846,15 @@ select.npcField:focus {
   /* optional: prevents weird stretching in some cases */
   align-items: flex-start;
 }
-@media (max-width: 600px){
-  .attackList{ flex-direction: column; }
+
+@media (max-width: 600px) {
+  .attackList {
+    flex-direction: column;
+  }
 }
 
 /* Outer card: 2 columns, 3 rows */
-.attackRow{
+.attackRow {
   border: 2px solid var(--border);
   border-radius: 16px;
   padding: 6px 8px;
@@ -2758,14 +2870,15 @@ select.npcField:focus {
   align-items: start;
 
   flex: 0 0 auto;
-  min-width: 200px;        /* adjust to taste */
+  min-width: 200px;
+  /* adjust to taste */
   max-width: 100%;
 }
 
 /* Each section spans the full width (both columns) */
 .attackTop,
 .attackMiddle,
-.attackBottom{
+.attackBottom {
   grid-column: 1 / -1;
   display: grid;
   gap: 4px;
@@ -2773,30 +2886,43 @@ select.npcField:focus {
 }
 
 /* Explicit row placement (stable) */
-.attackTop{ grid-row: 1; }
-.attackMiddle{ grid-row: 2; }
-.attackBottom{ grid-row: 3; }
+.attackTop {
+  grid-row: 1;
+}
 
-.attackTop{
+.attackMiddle {
+  grid-row: 2;
+}
+
+.attackBottom {
+  grid-row: 3;
+}
+
+.attackTop {
   grid-template-columns: auto auto;
   justify-content: start;
 }
 
-.attackMiddle{
-  grid-template-columns: max-content max-content; /* or: auto auto */
-  column-gap: 4px;                               /* your desired gap */
-  justify-content: start;                        /* keep them left */
+.attackMiddle {
+  grid-template-columns: max-content max-content;
+  /* or: auto auto */
+  column-gap: 4px;
+  /* your desired gap */
+  justify-content: start;
+  /* keep them left */
   overflow: hidden;
 }
 
-.attackBottom{
-  grid-template-columns: max-content max-content max-content; /* ✅ adds column for X */
-  column-gap: 4px;                                           /* ✅ your desired gap */
+.attackBottom {
+  grid-template-columns: max-content max-content max-content;
+  /* ✅ adds column for X */
+  column-gap: 4px;
+  /* ✅ your desired gap */
   justify-content: start;
   overflow: hidden;
 }
 
-.attackMiddle .attackBonus{
+.attackMiddle .attackBonus {
   padding: 5px 6px;
 }
 
@@ -2812,14 +2938,14 @@ select.npcField:focus {
   padding: 5px 6px;
 }
 
-.attackActions{
+.attackActions {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
 /* keep delete from being absolutely positioned */
-.attackActions .danger{ 
+.attackActions .danger {
   position: static;
   padding: 4px 6px;
   width: 30px;
@@ -2827,20 +2953,23 @@ select.npcField:focus {
 }
 
 /* Attacks: keep Range/Type left, push ONLY the delete button to the far right */
-.attackRow .attackBottom{
+.attackRow .attackBottom {
   display: flex;
   align-items: center;
-  gap: 4px;          /* your desired spacing between Range and Type */
+  gap: 4px;
+  /* your desired spacing between Range and Type */
   justify-content: flex-start;
 }
 
 .attackRow .attackBottom .attackRange,
-.attackRow .attackBottom .attackType{
-  flex: 0 0 auto;    /* don't stretch */
+.attackRow .attackBottom .attackType {
+  flex: 0 0 auto;
+  /* don't stretch */
 }
 
-.attackRow .attackBottom .attackActions{
-  margin-left: auto; /* <-- this is the magic "flex-end" for only the delete button */
+.attackRow .attackBottom .attackActions {
+  margin-left: auto;
+  /* <-- this is the magic "flex-end" for only the delete button */
   display: inline-flex;
   align-items: center;
 }
@@ -2877,8 +3006,9 @@ select.npcField:focus {
   margin-top: 4px;
 }
 
-.moneyRow > * {
-  min-width: 0;            /* critical: lets grid children shrink */
+.moneyRow>* {
+  min-width: 0;
+  /* critical: lets grid children shrink */
 }
 
 @media (max-width: 600px) {
@@ -2953,7 +3083,8 @@ select.npcField:focus {
   border-bottom: 1px solid var(--border);
   background: var(--spell-level-header);
   cursor: pointer;
-  position: relative; /* anchors .abilityMoves */
+  position: relative;
+  /* anchors .abilityMoves */
 }
 
 .abilityTitle {
@@ -2965,11 +3096,13 @@ select.npcField:focus {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 50px; /* spacing between score / mod / save */
+  gap: 50px;
+  /* spacing between score / mod / save */
 }
 
 /* make the score box a predictable width */
-.abilityStats .abilityScore {            /* tweak if you want it bigger/smaller */
+.abilityStats .abilityScore {
+  /* tweak if you want it bigger/smaller */
   text-align: left;
   padding: 5px 8px;
   flex: 0 0 auto;
@@ -2986,7 +3119,8 @@ select.npcField:focus {
 
 .abilityStats input[type="checkbox"] {
   margin: 0;
-  transform: translateY(-1px);  /* tiny optical alignment */
+  transform: translateY(-1px);
+  /* tiny optical alignment */
 }
 
 .abilityStats input {
@@ -3000,7 +3134,7 @@ select.npcField:focus {
 }
 
 /* Ability Score box (the green-circled ones) AFTER steppers wrap it */
-.abilityStats .numWrap > input.abilityScore[type="number"] {
+.abilityStats .numWrap>input.abilityScore[type="number"] {
   width: 40px;
   text-align: left;
   padding: 5px;
@@ -3322,7 +3456,7 @@ select.npcField:focus {
   flex: 0 0 auto;
 }
 
-.spellMiniBtns .danger{
+.spellMiniBtns .danger {
   padding: 6px 8px;
 }
 
@@ -3393,16 +3527,18 @@ button.spellToggle.warn[aria-pressed="true"] {
 
 /* Restore native range slider look */
 input[type="range"] {
-  all: unset;                 /* nukes inherited input styles */
+  all: unset;
+  /* nukes inherited input styles */
   -webkit-appearance: slider-horizontal;
   appearance: auto;
-  width: 90%;               /* or 100% if you want it fluid */
+  width: 90%;
+  /* or 100% if you want it fluid */
   accent-color: var(--bg);
   background: var(--surface-3-hover);
 }
 
 /* Map toolbar: Size slider inline + vertically centered */
-.brushSizeLabel{
+.brushSizeLabel {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -3424,7 +3560,7 @@ input[type="range"] {
   max-width: 350px;
 }
 
-#locCards .npcCollapsible select.cardSelect + .selectDropdown.selectDropdownBlock {
+#locCards .npcCollapsible select.cardSelect+.selectDropdown.selectDropdownBlock {
   max-width: 100%;
 }
 
@@ -3546,8 +3682,10 @@ input[type="range"] {
 }
 
 #colorDropdownMenu.colorGrid {
-  place-content: center; /* replaces justify-content + align-content */
-  place-items: center;   /* centers items within their cells */
+  place-content: center;
+  /* replaces justify-content + align-content */
+  place-items: center;
+  /* centers items within their cells */
 }
 
 .colorSwatch {
@@ -3583,7 +3721,7 @@ input[type="range"] {
   border: 1px solid var(--swatch-color-preview);
 }
 
-.canvasWrap{
+.canvasWrap {
   width: 100%;
   overflow: auto;
   border-radius: 12px;
@@ -3600,12 +3738,12 @@ input[type="range"] {
 }
 
 /* ✅ while drawing, we block scrolling so strokes feel right */
-.canvasWrap.drawingMode{
+.canvasWrap.drawingMode {
   touch-action: none;
 }
 
 /* ✅ while a 2-finger gesture is active, we block browser handling */
-.canvasWrap.gestureMode{
+.canvasWrap.gestureMode {
   touch-action: none;
 }
 
@@ -3658,7 +3796,8 @@ button.mapSelectBtn {
   /* space for arrow */
   border-radius: 10px;
   font: inherit;
-  font-size: 0.85rem; /* match app button sizing */
+  font-size: 0.85rem;
+  /* match app button sizing */
   line-height: 1.2;
 
   appearance: none;
@@ -3683,8 +3822,8 @@ button.mapSelectBtn {
 
 select.mapSelect:hover,
 button.mapSelectBtn:hover {
-    background: var(--surface-3-hover);
-    /* SAME arrow system as mapSelect */
+  background: var(--surface-3-hover);
+  /* SAME arrow system as mapSelect */
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%),
@@ -3717,10 +3856,12 @@ button.mapToolDropDown {
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
-  padding: 6px 36px 6px 8px; /* space for arrow */
+  padding: 6px 36px 6px 8px;
+  /* space for arrow */
   border-radius: 10px;
   font: inherit;
-  font-size: 0.85rem;        /* keep consistent with app buttons */
+  font-size: 0.85rem;
+  /* keep consistent with app buttons */
   line-height: 1.2;
 
   /* Match the custom arrow used on the map <select> */
@@ -3741,7 +3882,7 @@ button.mapToolDropDown {
 
 button.mapToolDropDown:hover {
   background: var(--surface-3-hover);
-    /* SAME arrow system as mapSelect */
+  /* SAME arrow system as mapSelect */
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%),
@@ -3764,7 +3905,8 @@ button#colorBtn.dropdownBtn {
   color: var(--text);
 
   /* height + font match */
-  padding: 6px 36px 6px 8px; /* space for arrow */
+  padding: 6px 36px 6px 8px;
+  /* space for arrow */
   border-radius: 10px;
   font: inherit;
   font-size: 0.85rem;
@@ -3797,7 +3939,7 @@ button#colorBtn .caret {
 
 button#colorBtn:hover {
   background: var(--surface-3-hover);
-    /* SAME arrow system as mapSelect */
+  /* SAME arrow system as mapSelect */
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%),
@@ -3825,8 +3967,10 @@ button#colorBtn[aria-expanded="true"] {
 
 .calcBtn {
   /* match the settings button feel */
-  padding: 6px 8px;                 /* same as normal buttons */
-  min-width: 35px;                  /* keeps it "chip" sized like ⚙ */
+  padding: 6px 8px;
+  /* same as normal buttons */
+  min-width: 35px;
+  /* keeps it "chip" sized like ⚙ */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3841,7 +3985,7 @@ button#colorBtn[aria-expanded="true"] {
     style="--icon:url('path/to/icon.svg')"
   Then the icon color is controlled by --iconColor (defaults to var(--border)).
 */
-.iconMask{
+.iconMask {
   background: var(--iconColor, currentColor);
   -webkit-mask: var(--icon) no-repeat center / contain;
   mask: var(--icon) no-repeat center / contain;
@@ -3849,18 +3993,18 @@ button#colorBtn[aria-expanded="true"] {
 }
 
 /* Everything inside the dropdown menu uses the themed dice icon color */
-.diceMenu .iconMask{
+.diceMenu .iconMask {
   --iconColor: var(--diceIconColor);
 }
 
 /* Calculator button icon */
-.btnIcon{
+.btnIcon {
   width: 16px;
   height: 16px;
   display: block;
   pointer-events: none;
   transform: scale(1.15) translateY(-0.5px);
-  
+
 }
 
 .calcMenu {
@@ -3909,8 +4053,10 @@ button#colorBtn[aria-expanded="true"] {
 }
 
 .calcKeys button {
-  padding: 8px 6px;   /* sizing only */
-  min-height: 34px;   /* nicer touch target */
+  padding: 8px 6px;
+  /* sizing only */
+  min-height: 34px;
+  /* nicer touch target */
   font-size: 0.9rem;
 }
 
@@ -3955,6 +4101,7 @@ button#colorBtn[aria-expanded="true"] {
   cursor: pointer;
   opacity: 0.95;
 }
+
 .calcHistItem:hover {
   background: var(--surface-3-hover);
 }
@@ -3963,7 +4110,9 @@ button#colorBtn[aria-expanded="true"] {
 /* ======================
    Dice Roller dropdown
    ====================== */
-.diceDropdown { position: relative; }
+.diceDropdown {
+  position: relative;
+}
 
 .diceBtn {
   white-space: nowrap;
@@ -3985,12 +4134,13 @@ button#colorBtn[aria-expanded="true"] {
 }
 
 /* Match your dropdown look */
-.diceMenu{
-  position: fixed; /* positionMenuOnScreen() sets left/top */
+.diceMenu {
+  position: fixed;
+  /* positionMenuOnScreen() sets left/top */
   z-index: 999;
   display: flex;
   flex-direction: column;
-  
+
   /* match calc "card" look */
   width: 280px;
   padding: 10px;
@@ -4034,7 +4184,9 @@ button#colorBtn[aria-expanded="true"] {
 }
 
 @media (max-width: 600px) {
-  .diceRow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .diceRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .diceField input,
@@ -4048,7 +4200,9 @@ button#colorBtn[aria-expanded="true"] {
   margin-bottom: 8px;
 }
 
-.diceRollBtn { flex: 1; }
+.diceRollBtn {
+  flex: 1;
+}
 
 .dicePresets {
   display: flex;
@@ -4062,7 +4216,7 @@ button#colorBtn[aria-expanded="true"] {
   border-radius: 999px;
 }
 
-.diceHistoryWrap{
+.diceHistoryWrap {
   border-top: 1px solid var(--diceDivText);
   padding-top: 8px;
 }
@@ -4073,7 +4227,7 @@ button#colorBtn[aria-expanded="true"] {
   margin: 0 2px 6px;
 }
 
-.diceHistory{
+.diceHistory {
   max-height: 120px;
   overflow: auto;
   display: flex;
@@ -4097,7 +4251,7 @@ button#colorBtn[aria-expanded="true"] {
 }
 
 /* Big active die icon */
-.diceHero{
+.diceHero {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -4105,7 +4259,7 @@ button#colorBtn[aria-expanded="true"] {
   margin-bottom: 8px;
 }
 
-.diceActiveIcon{
+.diceActiveIcon {
   width: 70px;
   height: 70px;
   display: block;
@@ -4113,40 +4267,40 @@ button#colorBtn[aria-expanded="true"] {
 }
 
 /* 3-button roll row like your sketch */
-.diceRollRow{
+.diceRollRow {
   display: grid;
   grid-template-columns: 1fr 1.4fr 1fr;
   gap: 6px;
   margin: 6px 0 8px;
 }
 
-.diceAltBtn{
+.diceAltBtn {
   width: 100%;
 }
 
-.diceActions{
+.diceActions {
   display: flex;
   justify-content: center;
   margin-bottom: 8px;
 }
 
-.diceClearBtn{
+.diceClearBtn {
   width: min(160px, 60%);
 }
 
 /* Icon preset strip */
-.dicePresets{
+.dicePresets {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
-@media (max-width: 420px){
-  .dicePresets{
+@media (max-width: 420px) {
+  .dicePresets {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-.dicePreset{
+.dicePreset {
   padding: 4px 3px;
   border-radius: 12px;
   display: inline-flex;
@@ -4157,20 +4311,20 @@ button#colorBtn[aria-expanded="true"] {
   margin-bottom: 2px;
 }
 
-.dicePresetIcon{
+.dicePresetIcon {
   width: 30px;
   height: 30px;
   display: block;
 }
 
-.dicePresetPct{
+.dicePresetPct {
   font-weight: 800;
   font-size: 18px;
   line-height: 1;
 }
 
 /* (Optional) ensure the wrapper doesn't force max-content sizing inside the cell */
-#diceMenu .diceTopRow .diceField .numWrap{
+#diceMenu .diceTopRow .diceField .numWrap {
   width: auto;
 }
 
@@ -4187,62 +4341,76 @@ button#colorBtn[aria-expanded="true"] {
 }
 
 /* Dice top row: left | hero | right — symmetric spacing */
-#diceMenu .diceTopRow{
+#diceMenu .diceTopRow {
   display: grid;
   grid-template-columns: 1fr max-content 1fr;
   align-items: center;
   column-gap: 10px;
-  margin: 0 0 8px;      /* no auto-centering */
-  width: 100%;          /* IMPORTANT: give it real space */
+  margin: 0 0 8px;
+  /* no auto-centering */
+  width: 100%;
+  /* IMPORTANT: give it real space */
 }
 
 /* Hug hero using your stable classes */
-#diceMenu .diceTopRow .diceCountField{ justify-self: end; }
-#diceMenu .diceTopRow .diceModField{ justify-self: start; }
+#diceMenu .diceTopRow .diceCountField {
+  justify-self: end;
+}
 
-#diceMenu .diceTopRow .diceField{
+#diceMenu .diceTopRow .diceModField {
+  justify-self: start;
+}
+
+#diceMenu .diceTopRow .diceField {
   display: flex;
   flex-direction: column;
-  align-items: center; /* keeps label centered over input */
+  align-items: center;
+  /* keeps label centered over input */
   min-width: 56px;
 }
 
 /* Mod side: modWrap is often the clampHost, so give it the same minimum */
-#diceMenu .diceTopRow .modWrap{
+#diceMenu .diceTopRow .modWrap {
   width: auto;
-  min-width: 56px;   /* <-- key */
+  min-width: 56px;
+  /* <-- key */
 }
 
 /* Don't force 100% width on these top-row number inputs */
-#diceMenu .diceTopRow .diceField input{
+#diceMenu .diceTopRow .diceField input {
   width: auto;
 }
 
 /* Dice top row: nudge ONLY the left (# + count) stack toward the hero */
-#diceMenu .diceTopRow .diceCountField{
-  justify-self: end;      /* make sure it hugs inward */
-  margin-right: -25px;     /* move right; tweak -2px to -10px */
+#diceMenu .diceTopRow .diceCountField {
+  justify-self: end;
+  /* make sure it hugs inward */
+  margin-right: -25px;
+  /* move right; tweak -2px to -10px */
 }
 
-.modWrap{
+.modWrap {
   position: relative;
   width: 100%;
 }
 
 /* base input */
-.modWrap input{
+.modWrap input {
   width: 100%;
-  text-align: right;         /* makes signs feel natural */
-  padding-left: 5px;        /* normal */
+  text-align: right;
+  /* makes signs feel natural */
+  padding-left: 5px;
+  /* normal */
 }
 
 /* when + should show, we reserve space */
-.modWrap.showPlus input{
-  padding-left: 13px;        /* space for + */
+.modWrap.showPlus input {
+  padding-left: 13px;
+  /* space for + */
 }
 
 /* the + itself */
-.modPlus{
+.modPlus {
   position: absolute;
   left: 5px;
   top: 50%;
@@ -4253,17 +4421,20 @@ button#colorBtn[aria-expanded="true"] {
   transition: opacity .12s ease;
   z-index: 2;
 }
-.modWrap.showPlus .modPlus{
+
+.modWrap.showPlus .modPlus {
   opacity: 0.9;
 }
 
 /* IMPORTANT: your number input is wrapped by .numWrap.
    Don't try padding tricks on the input itself. */
-.modWrap .numWrap{
+.modWrap .numWrap {
   flex: 0 0 auto;
 }
 
-.diceMenu[hidden] { display: none !important; }
+.diceMenu[hidden] {
+  display: none !important;
+}
 
 /*  vvvvvv OVERRIDES vvvvvv  */
 
@@ -4338,26 +4509,30 @@ textarea {
   width: min(300px, 100%);
 }
 
-.dataPanelHeader{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
+.dataPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
-.dataPanelSection{
+
+.dataPanelSection {
   padding: 6px 4px;
 }
-.dataPanelLabel{
+
+.dataPanelLabel {
   font-weight: 700;
   margin: 2px 0 8px;
 }
-.dataPanelActions{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  align-items:center;
+
+.dataPanelActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
-.dangerLabel{
+
+.dangerLabel {
   color: var(--danger);
 }
 
@@ -4375,7 +4550,7 @@ textarea {
    - panelCollapseBtns: .panelCollapseBtn (alias: .collapseMini)
    ========================================================= */
 
-:root{
+:root {
   --collapse-card-size: 30px;
   --collapse-panel-size: 26px;
   --collapse-radius: 10px;
@@ -4388,7 +4563,7 @@ textarea {
 .spellCollapseBtn,
 .spellSpellCollapseBtn,
 .panelCollapseBtn,
-.collapseMini{
+.collapseMini {
   border: 1px solid var(--border);
   color: var(--muted);
   cursor: pointer;
@@ -4400,7 +4575,7 @@ textarea {
 
 /* Card collapse (NPC/Party/Location cards) */
 .cardCollapseBtn,
-.npcCollapseToggle{
+.npcCollapseToggle {
   width: var(--collapse-card-size);
   height: var(--collapse-card-size);
   display: grid;
@@ -4408,13 +4583,15 @@ textarea {
   border-radius: var(--collapse-radius);
   background: var(--surface-3);
 }
+
 .cardCollapseBtn:hover,
-.npcCollapseToggle:hover{
+.npcCollapseToggle:hover {
   color: var(--text);
   background: var(--surface-3-hover);
 }
+
 .cardCollapseBtn:active,
-.npcCollapseToggle:active{
+.npcCollapseToggle:active {
   transform: translateY(1px);
 }
 
@@ -4422,7 +4599,7 @@ textarea {
 .panelCollapseBtn,
 .collapseMini,
 .spellCollapseBtn,
-.spellSpellCollapseBtn{
+.spellSpellCollapseBtn {
   width: var(--collapse-panel-size);
   height: var(--collapse-panel-size);
   display: grid;
@@ -4435,47 +4612,54 @@ textarea {
 .spellCollapseBtn:hover,
 .spellSpellCollapseBtn:hover,
 .panelCollapseBtn:hover,
-.collapseMini:hover{
+.collapseMini:hover {
   background: var(--surface-3-hover);
 }
+
 .spellCollapseBtn:active,
 .spellSpellCollapseBtn:active,
 .panelCollapseBtn:active,
-.collapseMini:active{
+.collapseMini:active {
   transform: translateY(1px);
 }
 
 /* Click-to-collapse panels: header stays visible */
-.panelHeaderClickable{
+.panelHeaderClickable {
   cursor: pointer;
   user-select: none;
 }
-.panelHeaderClickable :is(button, input, select, textarea, label, a){
+
+.panelHeaderClickable :is(button, input, select, textarea, label, a) {
   cursor: default;
 }
 
 /* When collapsed, hide everything in the panel EXCEPT the header element.
    JS ensures the chosen header gets [data-panel-header]. */
-section.panel[data-collapsed="true"] > :not([data-panel-header]){
+section.panel[data-collapsed="true"]> :not([data-panel-header]) {
   display: none !important;
 }
 
 /* Ensure search highlight overlay can show through even for fields with their own background rules */
-.hlWrap .hlField{
+.hlWrap .hlField {
   background: transparent !important;
 }
 
 /* HP row: keep Cur/Max on one horizontal line (like character vitals) */
 .npcRowBlock.npcHpRow {
-  grid-template-columns: var(--npc-label-w, 40px)  minmax(0, 1fr); /* shrink-wrap numbers */
+  grid-template-columns: var(--npc-label-w, 40px) minmax(0, 1fr);
+  /* shrink-wrap numbers */
 }
 
 .npcHpWrap {
-  display: flex;          /* not inline-flex */
-  width: 100%;            /* take the cell width */
+  display: flex;
+  /* not inline-flex */
+  width: 100%;
+  /* take the cell width */
   align-items: center;
-  gap: 4px;               /* constant spacing around "/" */
-  flex-wrap: nowrap;      /* never stack */
+  gap: 4px;
+  /* constant spacing around "/" */
+  flex-wrap: nowrap;
+  /* never stack */
   min-width: 0;
   justify-content: flex-start;
 }
@@ -4486,21 +4670,25 @@ section.panel[data-collapsed="true"] > :not([data-panel-header]){
 
 /* HP row: keep / and Max stationary, but allow Cur/Max to shrink when constrained */
 .npcHpWrap .numWrap {
-  flex: 0 1 auto;                 /* DON'T grow; DO allow shrink */
-  min-width: 0;                   /* critical: allow shrinking in flex */
-  width: auto;                    /* override width:max-content behavior */
-  max-width: calc(50% - 10px);    /* prevents one box from hogging the row */
+  flex: 0 1 auto;
+  /* DON'T grow; DO allow shrink */
+  min-width: 0;
+  /* critical: allow shrinking in flex */
+  width: auto;
+  /* override width:max-content behavior */
+  max-width: calc(50% - 10px);
+  /* prevents one box from hogging the row */
 }
 
 /* Clamp the autosize width when the card shrinks */
-.npcHpWrap .numWrap > input[type="number"].npcHpInput {
+.npcHpWrap .numWrap>input[type="number"].npcHpInput {
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
 }
 
 /* Slash should never flex or wrap */
-.npcHpWrap > span.muted {
+.npcHpWrap>span.muted {
   flex: 0 0 auto;
   white-space: nowrap;
 }
@@ -4517,7 +4705,7 @@ section.panel[data-collapsed="true"] > :not([data-panel-header]){
 }
 
 #diceMenu .diceTopRow .diceCountLabel,
-#diceMenu .diceTopRow .diceModLabel{
+#diceMenu .diceTopRow .diceModLabel {
   width: 100%;
   text-align: left;
   display: block;
