@@ -271,14 +271,15 @@
 :root[data-theme="blue"] {
   --bg: var(--page-bg-metallic-blue);
   --page-bg-metallic-blue:
-linear-gradient(
-  135deg,
-  #8596a2 0%,
-  #b3c0ca 24%,
-  #eef3f7 50%,
-  #b3c0ca 76%,
-  #8596a2 100%
-);
+    linear-gradient(135deg,
+      #8596a2 0%,
+      #b3c0ca 24%,
+      #eef3f7 50%,
+      #b3c0ca 76%,
+      #8596a2 100%);
+  --page-vignette: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.25),
+      rgba(255, 255, 255, 0));
   --panel: #c1f6fa;
   /* light blue-glass panels */
   --card: linear-gradient(to bottom,
@@ -602,7 +603,18 @@ linear-gradient(
 
 /* Dark Copper theme */
 :root[data-theme="ember"] {
-  --bg: #1e120c;
+  --bg: var(--page-bg-metallic-copper);
+  --page-bg-metallic-copper:
+    linear-gradient(135deg,
+      #1a0d08 0%,
+      /* dark top-left */
+      #2b140c 20%,
+      #402214 50%,
+      /* centered soft sheen */
+      #2b140c 80%,
+      #1a0d08 100%
+      /* dark bottom-right */
+    );
   --panel: #2a1912;
   --card: linear-gradient(to bottom,
       rgba(255, 255, 255, 0.06),
@@ -714,16 +726,11 @@ body {
 }
 
 body::before {
-    content: "";
+  content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(
-      ellipse at center,
-      rgba(255,255,255,0.25),
-      rgba(0,0,0,0.18)
-    );
+  background: var(--page-vignette, none);
   z-index: -1;
 }
 

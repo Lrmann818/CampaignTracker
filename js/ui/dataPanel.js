@@ -238,7 +238,7 @@ function buildThemeOptions(select) {
     ["beige", "Parchment"],
     ["rose", "Blush"],
     ["teal", "Teal"],
-    ["blue", "Blue"],
+    ["blue", "Pondera Blue"],
   ];
 
   const dark = [
