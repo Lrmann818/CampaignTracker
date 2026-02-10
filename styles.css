@@ -66,6 +66,7 @@
       color-mix(in srgb, var(--bg) 90%, transparent),
       color-mix(in srgb, var(--bg) 70%, transparent));
   --diceDivText: var(--diceIconColor);
+  --dicePresetIconColor: var(--diceIconColor);
 
   /* unchanging variables can go here */
   --portrait-ratio: 3 / 4;
@@ -131,6 +132,7 @@
   --muted: #555;
   --border: #d0d0d6;
   --diceIconColor: #555;
+  --dicePresetIconColor: #555;
 
   --surface-2: #f0f0f3;
   /* inputs */
@@ -147,8 +149,14 @@
 
 /* Parchment theme */
 :root[data-theme="beige"] {
-  --bg: #c3b596;
-  /* warmer, slightly darker backdrop */
+  --bg: var(--page-bg-leather);
+  --page-bg-leather:
+    linear-gradient(135deg,
+      #2f2721 0%,
+      #40362d 22%,
+      #584b3f 50%,
+      #40362d 78%,
+      #2f2721 100%);
   --panel: #d6c7a9;
   /* parchment surface */
   --card: linear-gradient(to bottom,
@@ -163,10 +171,16 @@
   --spell-card: linear-gradient(to bottom,
       rgba(0, 0, 0, .1),
       rgba(0, 0, 0, 0.15));
+  --frame-fill: color-mix(in srgb, var(--border) 60%, transparent);
   --text: #221a11;
   --muted: #4b4030;
-  --border: #9a8a6b;
+  --border: #7e7157;
+  --calcBg: #b4a47f;
+  --calculatorBg: linear-gradient(to bottom,
+      color-mix(in srgb, var(--calcBg) 90%, transparent),
+      color-mix(in srgb, var(--calcBg) 70%, transparent));
   --diceIconColor: #4b4030;
+  --dicePresetIconColor: #4b4030;
 
   --surface-2: #ccbda0;
   /* inputs */
@@ -207,6 +221,7 @@
   --muted: #7a4a5a;
   --border: #d4a3b4;
   --diceIconColor: #7a4a5a;
+  --dicePresetIconColor: #7a4a5a;
 
   --surface-2: #f1d7df;
   /* inputs */
@@ -248,6 +263,7 @@
   --muted: #355b56;
   --border: #f05446;
   --diceIconColor: #ca3b2e;
+  --dicePresetIconColor: #992b21;
 
   --surface-2: #43be99;
   /* inputs */
@@ -280,7 +296,7 @@
   --page-vignette: linear-gradient(135deg,
       rgba(255, 255, 255, 0.25),
       rgba(255, 255, 255, 0));
-  --panel: #c1f6fa;
+  --panel: #aaf5fa;
   /* light blue-glass panels */
   --card: linear-gradient(to bottom,
       rgba(0, 0, 0, 0),
@@ -299,18 +315,19 @@
   /* Steel / iron structure */
   --border: #c3ccd2;
 
-  --diceIconColor: #4f6f75;
+  --diceIconColor: #c3ccd2;
+  --dicePresetIconColor: #4f6f75;
   --diceDivText: #2f4547;
   --calcBg: #74aaaf;
   --calculatorBg: linear-gradient(to bottom,
       color-mix(in srgb, var(--calcBg) 90%, transparent),
       color-mix(in srgb, var(--calcBg) 70%, transparent));
 
-  --surface-2: #c5e6ec;
+  --surface-2: #b3e4ec;
   /* inputs */
-  --surface-3: #c4e6ec;
+  --surface-3: #b0e3ec;
   /* buttons/tabs */
-  --surface-3-hover: #a6ccd3;
+  --surface-3-hover: #94cbd4;
 
   /* Cyan focus with steel restraint */
   --ring: rgba(30, 130, 157, 0.54);
@@ -349,6 +366,7 @@
   --muted: #c3b6dd;
   --border: #332146;
   --diceIconColor: #c3b6dd;
+  --dicePresetIconColor: #c3b6dd;
 
   --surface-2: #402758;
   /* inputs */
@@ -383,6 +401,7 @@
   --muted: #e0b3b3;
   --border: #6a2a2f;
   --diceIconColor: #e0b3b3;
+  --dicePresetIconColor: #e0b3b3;
 
   --surface-2: #451a1f;
   --surface-3: #4f2026;
@@ -417,6 +436,7 @@
   --surface-3: #4f2026;
   --surface-3-hover: #612a31;
   --diceIconColor: #7a6738;
+  --dicePresetIconColor: #7a6738;
 
   --ring: rgba(255, 205, 120, 0.55);
   --hairline: rgba(255, 200, 95, 0.30);
@@ -447,6 +467,7 @@
   --muted: #b7b0e0;
   --border: #3c3670;
   --diceIconColor: #b7b0e0;
+  --dicePresetIconColor: #b7b0e0;
 
   --surface-2: #24204a;
   /* inputs */
@@ -489,6 +510,7 @@
   /* buttons/tabs */
   --surface-3-hover: #382f6a;
   --diceIconColor: #7a6738;
+  --dicePresetIconColor: #7a6738;
 
   /* Gold rune accents (now unmistakable) */
   --ring: rgba(255, 205, 120, 0.55);
@@ -523,6 +545,7 @@
   --border: #1c5315;
   /* darker cousin of #0E6605 */
   --diceIconColor: #46C83C;
+  --dicePresetIconColor: #46C83C;
 
   --surface-2: #123c0f;
   /* inputs */
@@ -563,6 +586,7 @@
   --surface-3: #30363c;
   --surface-3-hover: #3a4148;
   --diceIconColor: #a6abb0;
+  --dicePresetIconColor: #a6abb0;
   --ring: rgba(180, 190, 200, 0.20);
   --hairline: rgba(180, 190, 200, 0.12);
   --shadow-inset: rgba(0, 0, 0, 0.45);
@@ -594,6 +618,7 @@
   --surface-3: #223a2b;
   --surface-3-hover: #2a4a36;
   --diceIconColor: #a9c2b2;
+  --dicePresetIconColor: #a9c2b2;
   --ring: rgba(110, 170, 130, 0.22);
   --hairline: rgba(110, 170, 130, 0.14);
   --shadow-inset: rgba(0, 0, 0, 0.55);
@@ -631,11 +656,16 @@
   --text: #fff0e6;
   --muted: #d0a88e;
   --border: #6a3a22;
+  --calcBg: #4a2f23;
+  --calculatorBg: linear-gradient(to bottom,
+      color-mix(in srgb, var(--calcBg) 90%, transparent),
+      color-mix(in srgb, var(--calcBg) 70%, transparent));
 
   --surface-2: #332017;
   --surface-3: #3d261c;
   --surface-3-hover: #4a2f23;
   --diceIconColor: #d0a88e;
+  --dicePresetIconColor: #d0a88e;
   --ring: rgba(255, 140, 80, 0.28);
   --hairline: rgba(255, 140, 80, 0.18);
   --shadow-inset: rgba(0, 0, 0, 0.55);
@@ -667,6 +697,7 @@
   --surface-3: #463b2e;
   --surface-3-hover: #524536;
   --diceIconColor: #c2b19a;
+  --dicePresetIconColor: #c2b19a;
   --ring: rgba(190, 160, 110, 0.26);
   --hairline: rgba(190, 160, 110, 0.16);
   --shadow-inset: rgba(0, 0, 0, 0.55);
@@ -1039,7 +1070,7 @@ input[type="range"].uiRange::-moz-range-thumb {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border: 2px solid color-mix(in srgb, var(--border) 55%, transparent);
   opacity: 0.95;
   background: color-mix(in srgb, var(--panel) 85%, black);
   color: var(--text);
@@ -4032,6 +4063,10 @@ button#colorBtn[aria-expanded="true"] {
 /* Everything inside the dropdown menu uses the themed dice icon color */
 .diceMenu .iconMask {
   --iconColor: var(--diceIconColor);
+}
+
+.diceMenu .iconMask.dicePresetIcon {
+  --iconColor: var(--dicePresetIconColor);
 }
 
 /* Calculator button icon */
