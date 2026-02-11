@@ -687,7 +687,28 @@
               <button type="button" class="panelCollapseBtn" data-collapse-target="charEquipment" aria-expanded="true"
                 title="Collapse/Expand">▾</button>
             </div>
-            <textarea id="charEquipment" data-persist-size placeholder="Equipment, items, treasures..."></textarea>
+            <div id="charEquipment">
+              <div class="sessionHeader">
+                <div class="fieldLabel">Pockets</div>
+
+                <div class="sessionControls panelControls">
+                  <button id="addInventoryBtn" class="panelBtn panelBtnSm" title="Add a new inventory item">+
+                    Pocket</button>
+                  <button id="renameInventoryBtn" class="panelBtn panelBtnSm"
+                    title="Rename current inventory item">Rename</button>
+                  <button id="deleteInventoryBtn" class="danger panelBtn panelBtnSm panelDelete"
+                    title="Delete current inventory item">Delete</button>
+                  <input id="inventorySearch" class="sessionSearch panelSearch" placeholder="Search inventory..." />
+                </div>
+              </div>
+
+              <div class="sessionTabsWrap" role="tablist" aria-label="Inventory">
+                <div id="inventoryTabs" class="sessionTabs"></div>
+              </div>
+
+              <textarea id="inventoryNotesBox" data-persist-size placeholder="Notes for this item..."></textarea>
+            </div>
+
 
             <div class="moneyRow">
               <div class="moneyTile">

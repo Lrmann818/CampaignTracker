@@ -5,7 +5,7 @@ export const STORAGE_KEY = "localCampaignTracker_v1";
 export const ACTIVE_TAB_KEY = "localCampaignTracker_activeTab";
 
 // Save schema versioning
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export const state = {
   // Used to migrate older saves/backups as the app evolves.
@@ -46,7 +46,7 @@ export const state = {
     proficiency: null,
     spellAttack: null,
     spellDC: null,
-    
+
 
     // New: multiple resource trackers in Vitals
     resources: [], // array of { id, name, cur, max }
@@ -74,6 +74,9 @@ export const state = {
       levels: []
     },
 
+    inventoryItems: [{ title: "Inventory", notes: "" }],
+    activeInventoryIndex: 0,
+    inventorySearch: "",
     equipment: "",
     money: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
 
@@ -205,6 +208,18 @@ export function migrateState(raw) {
     ensureObj(c, "skills");
     ensureObj(c, "ui");
     ensureObj(c.ui, "textareaHeights");
+    if (!Array.isArray(c.inventoryItems)) {
+      const legacy = typeof c.equipment === "string" ? c.equipment : "";
+      c.inventoryItems = [{ title: "Inventory", notes: legacy || "" }];
+    }
+    if (c.inventoryItems.length === 0) c.inventoryItems.push({ title: "Inventory", notes: "" });
+
+    if (typeof c.activeInventoryIndex !== "number") c.activeInventoryIndex = 0;
+    if (c.activeInventoryIndex < 0) c.activeInventoryIndex = 0;
+    if (c.activeInventoryIndex >= c.inventoryItems.length) c.activeInventoryIndex = c.inventoryItems.length - 1;
+
+    if (typeof c.inventorySearch !== "string") c.inventorySearch = "";
+
     // Spells v2 shape + legacy migration
     if (!c.spells || typeof c.spells !== "object") c.spells = { levels: [] };
     // If spells was stored in legacy shape (cantrips/lvl1/lvl2/lvl3), migrate once.
@@ -291,10 +306,34 @@ export function migrateState(raw) {
     }
   }
 
+  function migrateToV2() {
+    // Ensure inventoryItems exists even for v1 saves (schemaVersion already 1)
+    const c = data.character || (data.character = {});
+    if (!Array.isArray(c.inventoryItems) || c.inventoryItems.length === 0) {
+      const legacy = typeof c.equipment === "string" ? c.equipment : "";
+      c.inventoryItems = [{ title: "Inventory", notes: legacy || "" }];
+      return;
+    }
+    // If inventory exists but is empty AND legacy equipment has content, migrate it once.
+    const legacy = typeof c.equipment === "string" ? c.equipment : "";
+    const first = c.inventoryItems[0];
+    const hasAnyNotes = c.inventoryItems.some(it => (it && typeof it.notes === "string" && it.notes.trim()));
+    if (!hasAnyNotes && legacy && String(legacy).trim()) {
+      if (!first.notes || !String(first.notes).trim()) first.notes = legacy;
+      if (!first.title) first.title = "Inventory";
+    }
+  }
+
+
   while (v < CURRENT_SCHEMA_VERSION) {
     if (v === 0) {
       migrateToV1();
       v = 1;
+      continue;
+    }
+    if (v === 1) {
+      migrateToV2();
+      v = 2;
       continue;
     }
     // Safety: if we ever get an unknown version, stop trying to be clever.

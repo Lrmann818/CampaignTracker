@@ -2,6 +2,7 @@
 // Phase 3: Character page + Spells v2 extracted from app.js.
 
 import { enhanceSelectDropdown } from "../ui/selectDropdown.js";
+import { initInventoryUI } from "./inventory.js";
 
 export function initCharacterSheetUI(deps) {
   const {
@@ -1052,8 +1053,20 @@ export function initCharacterSheetUI(deps) {
     bindText("charToolProf", () => state.character.toolProf, v => state.character.toolProf = v);
     bindText("charLanguages", () => state.character.languages, v => state.character.languages = v);
 
-    // Equipment & money
-    bindText("charEquipment", () => state.character.equipment, v => state.character.equipment = v);
+    // Equipment (Inventory tabs) & money
+    initInventoryUI({
+      tabsEl: document.getElementById("inventoryTabs"),
+      notesBox: document.getElementById("inventoryNotesBox"),
+      searchEl: document.getElementById("inventorySearch"),
+      addBtn: document.getElementById("addInventoryBtn"),
+      renameBtn: document.getElementById("renameInventoryBtn"),
+      deleteBtn: document.getElementById("deleteInventoryBtn"),
+      SaveManager,
+      uiPrompt,
+      uiAlert,
+      uiConfirm,
+    });
+
 
     const bindMoney = (id, key) => bindNumber(id, () => state.character.money?.[key], v => {
       if (!state.character.money) state.character.money = { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };

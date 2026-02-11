@@ -1877,6 +1877,7 @@ button.panelSelectBtn:hover {
 /* Any “header row” that is the first child of a panel gets the same gap */
 .panel>.panelHeader,
 .panel>.sessionHeader,
+.panel>.trackerHeader,
 .panel>.npcHeader,
 .panel>.partyHeader,
 .panel>.locHeader,

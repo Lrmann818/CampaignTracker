@@ -66,6 +66,7 @@ export function renderNpcCards() {
 export function renderNpcCard(npc) {
   const card = document.createElement("div");
   card.className = "npcCard npcCardStack";
+  card.dataset.npcId = npc.id;
 
   const isCollapsed = !!npc.collapsed;
   card.classList.toggle("collapsed", isCollapsed);
@@ -139,7 +140,20 @@ export function renderNpcCard(npc) {
   toggle.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Preserve page scroll position. NPC re-render rebuilds the card DOM,
+    // which can cause the browser to jump to the top when the focused button disappears.
+    const x = window.scrollX;
+    const y = window.scrollY;
+
     _updateNpc(npc.id, { collapsed: !isCollapsed }, true);
+
+    requestAnimationFrame(() => {
+      window.scrollTo(x, y);
+      // Re-focus the new toggle button without scrolling.
+      const btn = _cardsEl?.querySelector(`.npcCard[data-npc-id="${npc.id}"] .cardCollapseBtn`);
+      try { btn?.focus({ preventScroll: true }); } catch { btn?.focus?.(); }
+    });
   });
 
   headerRow.appendChild(nameInput);
