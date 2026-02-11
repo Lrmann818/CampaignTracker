@@ -168,18 +168,43 @@ function wireHandlers() {
   });
 
   // Add item
-  _addBtn?.addEventListener("click", () => {
+  // Add item (prompt first, cancel aborts)
+  _addBtn?.addEventListener("click", async () => {
+    // Save current notes into active item before anything else
     const cur = state.character.inventoryItems?.[state.character.activeInventoryIndex];
     if (cur) cur.notes = _notesBox.value;
 
     const nextNum = (state.character.inventoryItems?.length || 0) + 1;
-    state.character.inventoryItems.push({ title: `Item ${nextNum}`, notes: "" });
-    state.character.activeInventoryIndex = state.character.inventoryItems.length - 1;
+    const defaultTitle = `Item ${nextNum}`;
+
+    // Ask for name BEFORE creating item
+    const proposed = await _uiPrompt?.("Name this item:", {
+      defaultValue: defaultTitle,
+      title: "New Inventory Item"
+    });
+
+    // If user cancels → abort entirely
+    if (proposed === null || proposed === undefined) {
+      return;
+    }
+
+    const name = String(proposed).trim();
+    const finalTitle = name || defaultTitle;
+
+    // Now create the item
+    state.character.inventoryItems.push({
+      title: finalTitle,
+      notes: ""
+    });
+
+    state.character.activeInventoryIndex =
+      state.character.inventoryItems.length - 1;
 
     markDirty();
     renderInventoryTabs();
     _notesBox.focus();
   });
+
 
   // Rename item
   _renameBtn?.addEventListener("click", async () => {
