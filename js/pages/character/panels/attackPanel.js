@@ -1,0 +1,184 @@
+// js/pages/character/panels/attackPanel.js
+// Attacks / Weapons panel (Character page)
+//
+// Production notes:
+// - This module should ONLY own the Attacks panel UI.
+// - It should not call other Character-page wiring helpers (reorder, abilities, etc).
+// - It must be safe if init is called more than once (guard + no double event listeners).
+import { state } from "../../../state.js";
+
+
+export function initAttacksPanelUI(deps = {}) {
+  const {
+    state,
+    SaveManager,
+    uiConfirm,
+    autoSizeInput,
+  } = deps;
+
+  if (!state || !SaveManager) {
+    console.warn("[attacksPanel] Missing deps: state/SaveManager.");
+    return;
+  }
+
+  if (!state.character) state.character = {};
+  if (!Array.isArray(state.character.attacks)) state.character.attacks = [];
+
+  const panelEl = document.getElementById("charAttacksPanel");
+  const listEl = document.getElementById("attackList");
+  const addBtn = document.getElementById("addAttackBtn");
+
+  if (!panelEl || !listEl || !addBtn) {
+    // Character page may not be mounted yet (or IDs changed).
+    return;
+  }
+
+  // Guard: avoid wiring twice if character page init runs again.
+  if (panelEl.dataset.attacksInit === "1") {
+    // Still re-render in case state changed.
+    renderAttacks();
+    return;
+  }
+  panelEl.dataset.attacksInit = "1";
+
+  function newAttackId() {
+    return "atk_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  function renderAttacks() {
+    listEl.innerHTML = "";
+
+    if (!state.character.attacks.length) {
+      const empty = document.createElement("div");
+      empty.className = "mutedSmall";
+      empty.textContent = "No weapons yet. Click “+ Weapon”.";
+      listEl.appendChild(empty);
+      return;
+    }
+
+    const frag = document.createDocumentFragment();
+    for (const a of state.character.attacks) frag.appendChild(renderAttackRow(a));
+    listEl.appendChild(frag);
+  }
+
+  function renderAttackRow(a) {
+    const row = document.createElement("div");
+    row.className = "attackRow";
+    row.dataset.attackId = a.id;
+
+    const top = document.createElement("div");
+    top.className = "attackTop";
+
+    const name = document.createElement("input");
+    name.className = "attackName";
+    name.placeholder = "Dagger";
+    name.value = a.name || "";
+    autoSizeInput?.(name, { min: 50, max: 200 });
+    name.addEventListener("input", () => patchAttack(a.id, { name: name.value }));
+    top.appendChild(name);
+
+    const middle = document.createElement("div");
+    middle.className = "attackMiddle";
+
+    const bonus = document.createElement("input");
+    bonus.className = "attackBonus";
+    bonus.placeholder = "+5";
+    bonus.value = a.bonus || "";
+    autoSizeInput?.(bonus, { min: 30, max: 60 });
+    bonus.addEventListener("input", () => patchAttack(a.id, { bonus: bonus.value }));
+
+    const dmg = document.createElement("input");
+    dmg.className = "attackDamage";
+    dmg.placeholder = "1d6+2";
+    dmg.value = a.damage || "";
+    autoSizeInput?.(dmg, { min: 40, max: 160 });
+    dmg.addEventListener("input", () => patchAttack(a.id, { damage: dmg.value }));
+
+    middle.appendChild(bonus);
+    middle.appendChild(dmg);
+
+    const bottom = document.createElement("div");
+    bottom.className = "attackBottom";
+
+    const range = document.createElement("input");
+    range.className = "attackRange";
+    range.placeholder = "80/320";
+    range.value = a.range || "";
+    autoSizeInput?.(range, { min: 50, max: 150 });
+    range.addEventListener("input", () => patchAttack(a.id, { range: range.value }));
+
+    const type = document.createElement("input");
+    type.className = "attackType";
+    type.placeholder = "Piercing";
+    type.value = a.type || "";
+    autoSizeInput?.(type, { min: 40, max: 150 });
+    type.addEventListener("input", () => patchAttack(a.id, { type: type.value }));
+
+    const actions = document.createElement("div");
+    actions.className = "attackActions";
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "danger";
+    del.textContent = "X";
+    del.title = "Delete weapon";
+    del.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await deleteAttack(a.id);
+    });
+
+    actions.appendChild(del);
+
+    bottom.appendChild(range);
+    bottom.appendChild(type);
+    bottom.appendChild(actions);
+
+    row.appendChild(top);
+    row.appendChild(middle);
+    row.appendChild(bottom);
+
+    return row;
+  }
+
+  function patchAttack(id, patch) {
+    const idx = state.character.attacks.findIndex((x) => x.id === id);
+    if (idx === -1) return;
+    state.character.attacks[idx] = { ...state.character.attacks[idx], ...patch };
+    SaveManager.markDirty();
+  }
+
+  async function deleteAttack(id) {
+    if (uiConfirm) {
+      const ok = await uiConfirm("Delete this weapon?", { title: "Delete Weapon", okText: "Delete" });
+      if (!ok) return;
+    }
+
+    state.character.attacks = state.character.attacks.filter((x) => x.id !== id);
+    SaveManager.markDirty();
+    renderAttacks();
+  }
+
+  function addAttack() {
+    state.character.attacks.unshift({
+      id: newAttackId(),
+      name: "",
+      notes: "",
+      bonus: "",
+      damage: "",
+      range: "",
+      type: "",
+    });
+    SaveManager.markDirty();
+    renderAttacks();
+  }
+
+  // Safe: we only wire once due to panel guard above.
+  addBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addAttack();
+  });
+
+  renderAttacks();
+}

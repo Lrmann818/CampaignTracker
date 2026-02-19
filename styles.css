@@ -1,0 +1,4791 @@
+/* ==============================================
+   styles.css organization
+   - Base + Theme (CSS variables + base elements)
+   - Global controls (scrollbars, inputs, steppers)
+   - Shared UI (panel spacing, modals)
+   - Page styles (Tracker, Character, Map)
+   - Widgets (Spells, Calculator, Dice)
+   ============================================== */
+
+/* ======================
+      Base / Dark Theme
+   ====================== */
+
+:root {
+  --bg: #0A0A0A;
+  --panel: #121212;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --frame-fill: color-mix(in srgb, var(--border) 60%, transparent);
+  --text: #f0f0f0;
+  --muted: #b9b9b9;
+  --border: #404040;
+  --diceIconColor: #b9b9b9;
+
+  --surface-2: #141414;
+  /* inputs */
+  --surface-3: #151515;
+  /* buttons/tabs */
+  --surface-3-hover: #222;
+  /* hover/active */
+  --ring: #ffffff22;
+  --hairline: #ffffff14;
+  --shadow-inset: #00000055;
+  --shadow-drop: #00000066;
+  --map-empty: #0f0f0f;
+
+  /* Unchanging Colors? */
+
+  --spell-toggle-bg: var(--surface-3);
+  --spell-toggle-on-border: var(--ring);
+  --divider: var(--hairline);
+  --divider-inset: var(--shadow-inset);
+  --warn: #FF8C00;
+  --warn-border: #ff8c0059;
+  --warn-hover: #ff8c001f;
+  --danger: #ff5a5a;
+  --danger-border: #ff5a5a59;
+  --danger-hover: #ff5a5a60;
+  --swatch-color-preview: #ffffff55;
+  --swatch-color-active-border: #ffffff33;
+  --color-swatch-border: #ffffff2e;
+  --color-swatch-hover: #ffffff59;
+  --spell-toggle-warn-on-border: #ff8c0099;
+  --skill-prof-dot: #3aa6ff;
+  --calculatorBg: linear-gradient(to bottom,
+      color-mix(in srgb, var(--bg) 90%, transparent),
+      color-mix(in srgb, var(--bg) 70%, transparent));
+  --diceDivText: var(--diceIconColor);
+  --dicePresetIconColor: var(--diceIconColor);
+
+  /* unchanging variables can go here */
+  --portrait-ratio: 3 / 4;
+  /* width / height   matches character portrait */
+  --tracker-list-max: 720px;
+
+  /* Scrollbars (theme-aware) */
+  --sb-track: color-mix(in srgb, var(--panel) 70%, transparent);
+  --sb-thumb: color-mix(in srgb, var(--border) 70%, transparent);
+  --sb-thumb-hover: color-mix(in srgb, var(--border) 92%, transparent);
+
+  /* Size variants (override default width) */
+  .num-xs {
+    width: 54px;
+  }
+
+  /* tips and such */
+  .num-sum {
+    width: 64px;
+  }
+
+  /* Ability scores (1–20) */
+  .num-md {
+    width: 72px;
+  }
+
+  /* Resources like CP / HP (0–999) */
+  .num-lg {
+    width: 88px;
+  }
+
+  /* Currency / larger counters */
+
+  /* Reusable: ring INSIDE the control (matches tabs) */
+  .ringInset {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring) inset;
+  }
+}
+
+/*=======================
+    Light Themes Below
+  =======================*/
+
+/* Light theme */
+:root[data-theme="light"] {
+  --bg: #f5f5f7;
+  --panel: #ffffff;
+  --card: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.0),
+      rgba(0, 0, 0, 0.02));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --spell-card: linear-gradient(to bottom,
+      rgba(0, 0, 0, .1),
+      rgba(0, 0, 0, 0.15));
+
+  --text: #1a1a1a;
+  --muted: #555;
+  --border: #d0d0d6;
+  --diceIconColor: #555;
+  --dicePresetIconColor: #555;
+
+  --surface-2: #f0f0f3;
+  /* inputs */
+  --surface-3: #e8e8ee;
+  /* buttons/tabs */
+  --surface-3-hover: #dadbe3;
+  /* hover/active */
+  --ring: #0000001f;
+  --hairline: #00000052;
+  --shadow-inset: #0000000f;
+  --shadow-drop: #0000001f;
+  --map-empty: #e9e9ee;
+}
+
+/* Parchment theme */
+:root[data-theme="beige"] {
+  --bg: var(--page-bg-leather);
+  --page-bg-leather:
+    linear-gradient(135deg,
+      #2f2721 0%,
+      #40362d 22%,
+      #584b3f 50%,
+      #40362d 78%,
+      #2f2721 100%);
+  --panel: #d6c7a9;
+  /* parchment surface */
+  --card: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.0),
+      rgba(0, 0, 0, 0.02));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --spell-card: linear-gradient(to bottom,
+      rgba(0, 0, 0, .1),
+      rgba(0, 0, 0, 0.15));
+  --frame-fill: color-mix(in srgb, var(--border) 60%, transparent);
+  --text: #221a11;
+  --muted: #4b4030;
+  --border: #7e7157;
+  --calcBg: #b4a47f;
+  --calculatorBg: linear-gradient(to bottom,
+      color-mix(in srgb, var(--calcBg) 90%, transparent),
+      color-mix(in srgb, var(--calcBg) 70%, transparent));
+  --diceIconColor: #4b4030;
+  --dicePresetIconColor: #4b4030;
+
+  --surface-2: #ccbda0;
+  /* inputs */
+  --surface-3: #c0b191;
+  /* buttons/tabs */
+  --surface-3-hover: #b4a47f;
+  --ring: rgba(96, 67, 28, 0.38);
+  --hairline: rgba(96, 67, 28, 0.26);
+  --shadow-inset: rgba(0, 0, 0, 0.18);
+  --shadow-drop: rgba(0, 0, 0, 0.38);
+  --map-empty: #b3a483;
+
+  --warn: #ce5402;
+  --warn-border: #a84300;
+  --warn-hover: #ff7b001f;
+  --spell-toggle-warn-on-border: #a84300;
+}
+
+/* Blush theme */
+:root[data-theme="rose"] {
+  --bg: #f2d6df;
+  /* soft blush background */
+  --panel: #f8e6ec;
+  /* light rose panels */
+  --card: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.0),
+      rgba(0, 0, 0, 0.02));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --spell-card: linear-gradient(to bottom,
+      rgba(0, 0, 0, .1),
+      rgba(0, 0, 0, 0.15));
+  --text: #3a1f2b;
+  --muted: #7a4a5a;
+  --border: #d4a3b4;
+  --diceIconColor: #7a4a5a;
+  --dicePresetIconColor: #7a4a5a;
+
+  --surface-2: #f1d7df;
+  /* inputs */
+  --surface-3: #e8c6d0;
+  /* buttons/tabs */
+  --surface-3-hover: #ddb5c2;
+  --danger-hover: #ff5a5a91;
+  --ring: rgba(180, 90, 120, 0.32);
+  --hairline: rgba(180, 90, 120, 0.20);
+  --shadow-inset: rgba(0, 0, 0, 0.10);
+  --shadow-drop: rgba(0, 0, 0, 0.28);
+  --map-empty: #e6bcc9;
+
+  --warn: #ce5402;
+  --warn-border: #a84300;
+  --warn-hover: #ff7b001f;
+  --spell-toggle-warn-on-border: #a84300;
+}
+
+/* Teal theme */
+:root[data-theme="teal"] {
+  --bg: #377771;
+  /* warmer deep turquoise backdrop */
+  --panel: #4ce0b3;
+  /* card surface */
+  --card: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.2));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.0),
+      rgba(0, 0, 0, 0.04));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.2));
+  --spell-card: linear-gradient(to bottom,
+      rgba(0, 0, 0, .2),
+      rgba(0, 0, 0, 0.3));
+  --text: #0a2421;
+  --muted: #355b56;
+  --border: #f05446;
+  --diceIconColor: #ca3b2e;
+  --dicePresetIconColor: #992b21;
+
+  --surface-2: #43be99;
+  /* inputs */
+  --surface-3: #39b48f;
+  /* buttons/tabs */
+  --surface-3-hover: #09b984;
+  --danger-hover: #ff5a5a91;
+  --ring: rgba(222, 76, 13, 0.687);
+  --hairline: rgba(213, 98, 41, 0.558);
+  --shadow-inset: rgba(0, 0, 0, 0.18);
+  --shadow-drop: rgba(0, 0, 0, 0.38);
+  --map-empty: #7ea8a1;
+
+  --warn: #ce5402;
+  --warn-border: #a84300;
+  --warn-hover: #ff7b001f;
+  --spell-toggle-warn-on-border: #a84300;
+}
+
+/* Blue theme */
+:root[data-theme="blue"] {
+  --bg: var(--page-bg-metallic-blue);
+  --page-bg-metallic-blue:
+    linear-gradient(135deg,
+      #8596a2 0%,
+      #b3c0ca 24%,
+      #eef3f7 50%,
+      #b3c0ca 76%,
+      #8596a2 100%);
+  --page-vignette: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.25),
+      rgba(255, 255, 255, 0));
+  --panel: #aaf5fa;
+  /* light blue-glass panels */
+  --card: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.0),
+      rgba(0, 0, 0, 0.02));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.1));
+  --spell-card: linear-gradient(to bottom,
+      rgba(0, 0, 0, .1),
+      rgba(0, 0, 0, 0.15));
+  --text: #081e22;
+  --muted: #4f6f75;
+  /* Steel / iron structure */
+  --border: #c3ccd2;
+
+  --diceIconColor: #c3ccd2;
+  --dicePresetIconColor: #4f6f75;
+  --diceDivText: #2f4547;
+  --calcBg: #74aaaf;
+  --calculatorBg: linear-gradient(to bottom,
+      color-mix(in srgb, var(--calcBg) 90%, transparent),
+      color-mix(in srgb, var(--calcBg) 70%, transparent));
+
+  --surface-2: #b3e4ec;
+  /* inputs */
+  --surface-3: #b0e3ec;
+  /* buttons/tabs */
+  --surface-3-hover: #94cbd4;
+
+  /* Cyan focus with steel restraint */
+  --ring: rgba(30, 130, 157, 0.54);
+  --hairline: rgba(120, 130, 138, 0.3);
+  --shadow-inset: rgba(0, 0, 0, 0.10);
+  --shadow-drop: rgba(0, 0, 0, 0.26);
+  --map-empty: #b8dde3;
+
+  --warn: #ce5402;
+  --warn-border: #a84300;
+  --warn-hover: #ff7b001f;
+  --spell-toggle-warn-on-border: #a84300;
+}
+
+/*======================
+    Dark Themes Below
+  ======================*/
+
+/* Purple theme */
+:root[data-theme="purple"] {
+  --bg: #391E54;
+  --panel: #4A3062;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.0356));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.29),
+      rgba(255, 255, 255, 0.0354));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.0356));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0356),
+      rgba(255, 255, 255, 0.0));
+  --text: #f3efff;
+  --muted: #c3b6dd;
+  --border: #332146;
+  --diceIconColor: #c3b6dd;
+  --dicePresetIconColor: #c3b6dd;
+
+  --surface-2: #402758;
+  /* inputs */
+  --surface-3: #3B2450;
+  /* buttons/tabs */
+  --surface-3-hover: #352148;
+  /* hover/active */
+  --ring: #e6d4ff38;
+  --hairline: #e6d4ff1f;
+  --shadow-inset: #0000008c;
+  --shadow-drop: #000000a8;
+  --map-empty: #100a18;
+}
+
+/* Crimson theme */
+:root[data-theme="red"] {
+  --bg: #2a0f12;
+  --panel: #3a1519;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --text: #ffecec;
+  --muted: #e0b3b3;
+  --border: #6a2a2f;
+  --diceIconColor: #e0b3b3;
+  --dicePresetIconColor: #e0b3b3;
+
+  --surface-2: #451a1f;
+  --surface-3: #4f2026;
+  --surface-3-hover: #612a31;
+  --ring: rgba(255, 120, 120, 0.22);
+  --hairline: rgba(255, 120, 120, 0.14);
+  --shadow-inset: rgba(0, 0, 0, 0.45);
+  --shadow-drop: rgba(0, 0, 0, 0.7);
+  --map-empty: #160708;
+}
+
+/* Royal Red theme */
+:root[data-theme="red-gold"] {
+  --bg: #2a0f12;
+  --panel: #3a1519;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --text: #ffecec;
+  --muted: #e0b3b3;
+  --border: #7a6738;
+  --surface-2: #451a1f;
+  --surface-3: #4f2026;
+  --surface-3-hover: #612a31;
+  --diceIconColor: #7a6738;
+  --dicePresetIconColor: #7a6738;
+
+  --ring: rgba(255, 205, 120, 0.55);
+  --hairline: rgba(255, 200, 95, 0.30);
+  --shadow-inset: rgba(0, 0, 0, 0.45);
+  --shadow-drop: rgba(0, 0, 0, 0.7);
+  --map-empty: #160708;
+}
+
+/* Arcane theme */
+:root[data-theme="arcane"] {
+  --bg: #14112a;
+  /* deep arcane void */
+  --panel: #1d1a3a;
+  /* spell-slate panels */
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --text: #f0ecff;
+  --muted: #b7b0e0;
+  --border: #3c3670;
+  --diceIconColor: #b7b0e0;
+  --dicePresetIconColor: #b7b0e0;
+
+  --surface-2: #24204a;
+  /* inputs */
+  --surface-3: #2b2660;
+  /* buttons/tabs */
+  --surface-3-hover: #362f78;
+  --ring: rgba(155, 140, 255, 0.32);
+  --hairline: rgba(155, 140, 255, 0.20);
+  --shadow-inset: rgba(0, 0, 0, 0.55);
+  --shadow-drop: rgba(0, 0, 0, 0.75);
+  --map-empty: #0b0a1a;
+}
+
+/* Arcane Gold theme */
+:root[data-theme="arcane-gold"] {
+  --bg: #120f24;
+  /* arcane void */
+  --panel: #1b1634;
+  /* spell-slate panels */
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --text: #f6f2ff;
+  --muted: #cfc6ee;
+
+  /* Violet structure with gold influence */
+  --border: #7a6738;
+  --surface-2: #231e44;
+  /* inputs */
+  --surface-3: #2b2554;
+  /* buttons/tabs */
+  --surface-3-hover: #382f6a;
+  --diceIconColor: #7a6738;
+  --dicePresetIconColor: #7a6738;
+
+  /* Gold rune accents (now unmistakable) */
+  --ring: rgba(255, 205, 120, 0.55);
+  --hairline: rgba(255, 200, 95, 0.35);
+
+  /* Shadows stay dark so gold pops */
+  --shadow-inset: rgba(0, 0, 0, 0.6);
+  --shadow-drop: rgba(0, 0, 0, 0.8);
+  --map-empty: #0a0916;
+}
+
+/* Toxic Core theme */
+:root[data-theme="green"] {
+  --bg: #091a07;
+  /* darker toxic green-black */
+  --panel: #0e2b0a;
+  /* deepened core surface */
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.0356));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.29),
+      rgba(255, 255, 255, 0.0354));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.0356));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0356),
+      rgba(255, 255, 255, 0.0));
+  --text: #e9ffe3;
+  --muted: #97cf8d;
+  --border: #1c5315;
+  /* darker cousin of #0E6605 */
+  --diceIconColor: #46C83C;
+  --dicePresetIconColor: #46C83C;
+
+  --surface-2: #123c0f;
+  /* inputs */
+  --surface-3: #174e13;
+  /* buttons/tabs */
+  --surface-3-hover: #1e6618;
+  /* toxic lift */
+
+  /* Toxic glow accents */
+  --ring: rgba(70, 200, 60, 0.38);
+  --hairline: rgba(70, 200, 60, 0.24);
+  --shadow-inset: rgba(0, 0, 0, 0.65);
+  --shadow-drop: rgba(0, 0, 0, 0.82);
+  --map-empty: #050f04;
+}
+
+/* Stone theme */
+:root[data-theme="slate"] {
+  --bg: #1c1f22;
+  --panel: #24282c;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.0356));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.29),
+      rgba(255, 255, 255, 0.0354));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.0356));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0356),
+      rgba(255, 255, 255, 0.0));
+  --text: #e6e8ea;
+  --muted: #a6abb0;
+  --border: #3a4046;
+
+  --surface-2: #2a2f34;
+  --surface-3: #30363c;
+  --surface-3-hover: #3a4148;
+  --diceIconColor: #a6abb0;
+  --dicePresetIconColor: #a6abb0;
+  --ring: rgba(180, 190, 200, 0.20);
+  --hairline: rgba(180, 190, 200, 0.12);
+  --shadow-inset: rgba(0, 0, 0, 0.45);
+  --shadow-drop: rgba(0, 0, 0, 0.65);
+  --map-empty: #16191c;
+}
+
+/* Forest theme */
+:root[data-theme="forest"] {
+  --bg: #0f1a13;
+  --panel: #16241b;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --text: #e9f3ec;
+  --muted: #a9c2b2;
+  --border: #2d4637;
+
+  --surface-2: #1c3024;
+  --surface-3: #223a2b;
+  --surface-3-hover: #2a4a36;
+  --diceIconColor: #a9c2b2;
+  --dicePresetIconColor: #a9c2b2;
+  --ring: rgba(110, 170, 130, 0.22);
+  --hairline: rgba(110, 170, 130, 0.14);
+  --shadow-inset: rgba(0, 0, 0, 0.55);
+  --shadow-drop: rgba(0, 0, 0, 0.75);
+  --map-empty: #0a120d;
+}
+
+/* Dark Copper theme */
+:root[data-theme="ember"] {
+  --bg: var(--page-bg-metallic-copper);
+  --page-bg-metallic-copper:
+    linear-gradient(135deg,
+      #1a0d08 0%,
+      /* dark top-left */
+      #2b140c 20%,
+      #402214 50%,
+      /* centered soft sheen */
+      #2b140c 80%,
+      #1a0d08 100%
+      /* dark bottom-right */
+    );
+  --panel: #2a1912;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.0177));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.0178));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0177),
+      rgba(255, 255, 255, 0.0));
+  --text: #fff0e6;
+  --muted: #d0a88e;
+  --border: #6a3a22;
+  --calcBg: #4a2f23;
+  --calculatorBg: linear-gradient(to bottom,
+      color-mix(in srgb, var(--calcBg) 90%, transparent),
+      color-mix(in srgb, var(--calcBg) 70%, transparent));
+
+  --surface-2: #332017;
+  --surface-3: #3d261c;
+  --surface-3-hover: #4a2f23;
+  --diceIconColor: #d0a88e;
+  --dicePresetIconColor: #d0a88e;
+  --ring: rgba(255, 140, 80, 0.28);
+  --hairline: rgba(255, 140, 80, 0.18);
+  --shadow-inset: rgba(0, 0, 0, 0.55);
+  --shadow-drop: rgba(0, 0, 0, 0.75);
+  --map-empty: #120805;
+}
+
+/* Sepia theme */
+:root[data-theme="sepia"] {
+  --bg: #2a231b;
+  --panel: #342c22;
+  --card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.0356));
+  --collapsedCard: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.29),
+      rgba(255, 255, 255, 0.0354));
+  --spell-level-header: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.0356));
+  --spell-card: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.0356),
+      rgba(255, 255, 255, 0.0));
+  --text: #f3eadc;
+  --muted: #c2b19a;
+  --border: #5c4d3b;
+
+  --surface-2: #3d3328;
+  --surface-3: #463b2e;
+  --surface-3-hover: #524536;
+  --diceIconColor: #c2b19a;
+  --dicePresetIconColor: #c2b19a;
+  --ring: rgba(190, 160, 110, 0.26);
+  --hairline: rgba(190, 160, 110, 0.16);
+  --shadow-inset: rgba(0, 0, 0, 0.55);
+  --shadow-drop: rgba(0, 0, 0, 0.75);
+  --map-empty: #1b160f;
+}
+
+/*========================
+    Theme Template Below
+  ========================*/
+
+/* ______ theme (theme template - fill in and uncomment)
+
+:root[data-theme="______"] {
+  --bg: #______;
+  --panel: #______;
+  --card: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0),                           /* change these as needed
+    rgba(0,0,0,0.1)                          /* change these as needed
+  );
+  --collapsedCard: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.12),               /* change these as needed
+    rgba(255, 255, 255, 0.0177)              /* change these as needed
+  );
+
+  --text: #______;
+  --muted: #______;
+  --border: #______;
+
+  --surface-2: #______;
+  --surface-3: #______;
+  --surface-3-hover: #______;
+
+  --ring: rgba(_,_,_,0.12);
+  --hairline: rgba(_,_,_,0.10);
+  --shadow-inset: rgba(_,_,_,0.06);
+  --shadow-drop: rgba(_,_,_,0.12);
+
+  --map-empty: #______;
+} */
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: var(--page-vignette, none);
+  z-index: -1;
+}
+
+
+/* ======================
+   Global scrollbar styling
+   ====================== */
+
+/* Firefox */
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb-thumb) var(--sb-track);
+}
+
+/* Chromium / Safari */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  /* horizontal scrollbars */
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--sb-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb);
+  border-radius: 999px;
+  border: 2px solid var(--sb-track);
+  /* makes it look “inset” & consistent */
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--sb-thumb-hover);
+}
+
+/* ======================
+   Search highlight (true in-field matches)
+   ====================== */
+
+.hlWrap {
+  position: relative;
+  width: 100%;
+}
+
+.hlOverlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: transparent;
+  /* hide overlay text, show only <mark> backgrounds */
+  border-radius: inherit;
+}
+
+.hlOverlay .searchMark {
+  background: #ffffff33;
+  color: transparent;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.hlField {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  /* let mark background show through */
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: auto;
+}
+
+/* Chrome / Edge / Safari */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--border);
+  /* or --ring if you want it brighter */
+  border-radius: 2px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ring);
+  border: 2px solid var(--surface-1);
+  margin-top: -5px;
+  /* centers thumb on the track */
+}
+
+/* Firefox */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ring);
+  border: 2px solid var(--surface-1);
+}
+
+button,
+input {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Theme the slider (track + thumb) */
+input[type="range"].uiRange {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  /* gives it a nice click/touch target */
+  background: transparent;
+  /* we draw the track ourselves */
+}
+
+/* WebKit track */
+input[type="range"].uiRange::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 75%, transparent);
+  box-shadow: 0 0 0 1px var(--shadow-inset) inset;
+}
+
+/* WebKit thumb */
+input[type="range"].uiRange::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: 0 0 0 1px var(--ring) inset;
+  margin-top: -5px;
+  /* centers thumb on 6px track */
+}
+
+/* Firefox track */
+input[type="range"].uiRange::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 75%, transparent);
+  box-shadow: 0 0 0 1px var(--shadow-inset) inset;
+}
+
+/* Firefox thumb */
+input[type="range"].uiRange::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+
+/* ======================
+   Number inputs: custom steppers styled like native
+   ====================== */
+
+.numWrap {
+  position: relative;
+  display: inline-block;
+  /* lets the input stay full width */
+  vertical-align: middle;
+  align-self: flex-start;
+  width: max-content;
+}
+
+:root {
+  --numWrapPadRight: 15px;
+  /* space reserved for ▲▼ */
+}
+
+/* make room on the right inside the input, where native spinners usually live */
+.numWrap>input[type="number"] {
+  padding: 5px;
+  padding-right: var(--numWrapPadRight);
+  /* space reserved for ▲▼ */
+  text-align: center;
+}
+
+/* place the stepper INSIDE the input area on the right */
+.numStepper {
+  position: absolute;
+  right: 1px;
+  top: 50%;
+  transform: translateY(-60%);
+  width: 16px;
+  height: 21px;
+
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+
+  /* remove "button box" visuals */
+  border: 0;
+  background: transparent;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+/* Show steppers on hover or focus (matches native behavior) */
+.numWrap:hover .numStepper,
+.numWrap:focus-within .numStepper {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* just the glyphs, no box */
+.numStepBtn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+
+  display: grid;
+  place-items: center;
+
+  color: var(--border);
+  /* match your border color */
+  opacity: 0.95;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 12px;
+
+  user-select: none;
+
+  /* 🔥 kill the circle */
+  outline: none;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* subtle hover so it still feels interactive */
+.numStepBtn:hover {
+  color: var(--text);
+  opacity: 1;
+}
+
+.numStepBtn:active {
+  transform: translateY(1px);
+  opacity: 0.85;
+}
+
+.numWrap:hover .numStepBtn,
+.numWrap:focus-within .numStepBtn {
+  opacity: 1;
+}
+
+.numStepBtn:focus,
+.numStepBtn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.topbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.titlewrap {
+  min-width: 0;
+}
+
+#campaignTitle {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Clock matches the same border/surface language as .tab/buttons */
+.clockChip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border: 2px solid color-mix(in srgb, var(--border) 55%, transparent);
+  opacity: 0.95;
+  background: color-mix(in srgb, var(--panel) 85%, black);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 5px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+  /* stable-width digits */
+}
+
+/* Optional: hide clock on *very* small widths if it ever crowds */
+@media (max-width: 420px) {
+  .clockChip {
+    display: none;
+  }
+}
+
+.topbarCenter {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 12px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+.tab.active {
+  /* outline: 2px solid var(--ring);
+  background: var(--surface-3-hover); */
+
+  outline: none;
+  background: var(--surface-3-hover);
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+button[aria-expanded="true"] {
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+main {
+  padding: 10px;
+}
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow:
+    0 6px 16px var(--shadow-inset);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mapPanel {
+  background: var(--panel);
+  /* map panel background */
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow:
+    0 0 0 1px var(--shadow-inset) inset,
+    0 6px 16px var(--shadow-drop);
+}
+
+.grid2 {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+
+.charColumns {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.charCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.trackerColumns {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.trackerCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  /* allow children to shrink */
+}
+
+@media (max-width: 600px) {
+  .charColumns {
+    grid-template-columns: 1fr;
+  }
+
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .trackerColumns {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* IMPORTANT: allow grid children to shrink instead of forcing page-wide overflow */
+.grid2>* {
+  min-width: 0;
+}
+
+textarea {
+  width: 100%;
+  min-height: 140px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 8px;
+  resize: vertical;
+}
+
+input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 8px;
+}
+
+/* Match all text fields site-wide */
+input,
+textarea {
+  font: inherit;
+}
+
+.row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Small utility helpers (used in HTML) */
+.between {
+  justify-content: space-between;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.items-end {
+  align-items: flex-end;
+}
+
+.m0 {
+  margin: 0;
+}
+
+button,
+.filebtn {
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+button:hover,
+.filebtn:hover {
+  background: var(--surface-3-hover);
+}
+
+button.danger {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+button.danger:hover {
+  background: var(--danger-hover);
+  color: var(--text);
+}
+
+button.warn {
+  border-color: var(--warn-border);
+  color: var(--warn);
+}
+
+button.warn:hover {
+  background: var(--warn-hover);
+}
+
+.filebtn input {
+  display: none;
+}
+
+.mapbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.maptools {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 0;
+}
+
+.mapSelectLabel {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.mapSelect {
+  min-width: 160px;
+  max-width: 240px;
+}
+
+.chip {
+  padding: 6px 8px;
+  border-radius: 999px;
+}
+
+.chip.active {
+  outline: none;
+  background: var(--surface-3-hover);
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+.mutedSmall {
+  padding-top: 6px 8px;
+  font-size: 12px;
+}
+
+.topbarRight {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Generic dropdown */
+.settingsDropdown {
+  position: relative;
+}
+
+.settingsBtn {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center
+}
+
+/* Settings button icon */
+.settingsBtnIcon {
+  width: 15px;
+  height: 15px;
+  display: block;
+  pointer-events: none;
+}
+
+.settingsMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 240px;
+  z-index: 999;
+
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px 8px;
+
+  box-shadow:
+    0 0 0 1px var(--shadow-inset) inset,
+    0 10px 22px var(--shadow-drop);
+  max-width: calc(100vw - 16px);
+  max-height: min(70vh, 520px);
+  overflow: auto;
+}
+
+.settingsSection {
+  display: grid;
+  gap: 4px;
+  padding: 6px 2px 8px;
+}
+
+.settingsLabel {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.settingsSelect {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 36px 6px 8px;
+  /* room for arrow */
+  border-radius: 10px;
+  font: inherit;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* =====================
+   Enhanced <select> buttons
+   =====================
+   We progressively enhance some native <select> elements into a custom Popovers
+   dropdown so we can style the OPEN menu consistently.
+   These button classes mimic the CLOSED <select> look + size so the UI doesn't shift.
+*/
+
+/* Settings-style selects (Theme, Save Mod To All, etc.) */
+button.settingsSelectBtn {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 36px 6px 8px;
+  /* room for arrow */
+  border-radius: 10px;
+  font: inherit;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+  text-align: left;
+}
+
+button.settingsSelectBtn:hover {
+  background: var(--surface-3-hover);
+  /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+button.settingsSelectBtn:focus-visible,
+button.settingsSelectBtn[aria-expanded="true"] {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+.settingsSelect:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+.settingsDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.settingsItem {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 8px;
+  margin: 6px 0;
+  cursor: pointer;
+}
+
+button.settingsItem,
+label.settingsItem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.settingsItem:hover {
+  background: var(--surface-3-hover);
+}
+
+.settingsItem.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* Make the Import label look like a button */
+.settingsFileItem {
+  display: block;
+}
+
+.settingsFileItem input[type="file"] {
+  display: none;
+}
+
+/* Ability saves options dropdown (Character page) */
+.saveOptionsDropdown {
+  position: relative;
+  margin-left: auto;
+}
+
+.saveOptionsMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: min(320px, calc(100vw - 16px));
+  z-index: 999;
+
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px 8px;
+
+  box-shadow:
+    0 0 0 1px var(--shadow-inset) inset,
+    0 10px 22px var(--shadow-drop);
+  max-width: calc(100vw - 16px);
+  max-height: min(70vh, 520px);
+  overflow: auto;
+}
+
+.saveOptionsTitle {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 2px 2px 4px;
+}
+
+.saveOptionsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.saveOpt {
+  text-align: center;
+}
+
+.saveOptTop input {
+  width: 100%;
+  text-align: center;
+}
+
+.saveOptLabel {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.saveOptionsRow {
+  display: grid;
+  gap: 4px;
+}
+
+.saveOptionsRowLabel {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Abilities header: title + ⋯ options chip */
+.abilitiesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1px;
+  /* ← this is the main knob to tweak */
+}
+
+/* Title takes the available space so the controls can sit on the right */
+.abilitiesHeader>h2 {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+/* Push the ⋯ + the injected move buttons to the far right */
+.abilitiesHeader #saveOptionsDropdown {
+  margin-left: auto;
+}
+
+/* ===== Topbar: mobile polish ===== */
+@media (max-width: 600px) {
+
+  /* Clock: never wrap "8:23 PM" into two lines */
+  .clockChip {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    gap: 0;
+    /* you don't need gap for a single text node */
+    padding: 6px 8px;
+    /* tighter; reduces that “extra space” feel */
+    font-size: 13px;
+  }
+
+  /* Clock container shouldn't steal space from the tabs on small screens */
+  .topbarCenter {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .tabs {
+    flex-wrap: nowrap;
+    /* keep Tracker/Character/Map on one row */
+    white-space: nowrap;
+    overflow-x: auto;
+    /* if it *still* can't fit, it scrolls instead of wrapping */
+    -webkit-overflow-scrolling: touch;
+    gap: 4px;
+    /* slightly tighter */
+  }
+
+  .tab {
+    padding: 6px 8px;
+    /* smaller buttons on mobile */
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    /* key change */
+    grid-template-rows: auto auto;
+    gap: 4px;
+    align-items: center;
+    padding: 8px 10px;
+  }
+
+  /* Title + status take the full width (both columns) */
+  .titlewrap {
+    grid-row: 1;
+    grid-column: 1 / -1;
+    /* key change */
+    min-width: 0;
+  }
+
+  /* Row 2: clock left, controls right */
+  .topbarCenter {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .topbarRight {
+    grid-row: 2;
+    grid-column: 2;
+    justify-content: flex-end;
+  }
+
+  /* Optional: give title a bit more breathing room on mobile */
+  #campaignTitle {
+    font-size: 18px;
+  }
+
+  /* Allow status text to wrap cleanly on narrow screens */
+  #statusText {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+/* ======================
+   Option B: universal panel header -> content spacing
+   ====================== */
+:root {
+  --panel-header-gap: 4px;
+  /* tweak this knob */
+}
+
+/* ======================
+   Shared panel controls (buttons, search, selects)
+   ====================== */
+:root {
+  --panel-control-gap: 4px;
+  --panel-control-h: 30px;
+  --panel-control-radius: 10px;
+  --panel-control-pad-x: 5px;
+  --panel-control-pad-y: 8px;
+  --panel-control-font: 0.85rem;
+  --panel-control-min-search: 80px;
+}
+
+/* Controls row in panel headers */
+.panelControls,
+.sessionControls,
+.npcControls,
+.partyControls,
+.locControls {
+  display: flex;
+  gap: var(--panel-control-gap);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Regular panel button */
+.panelBtn {
+  height: var(--panel-control-h);
+  padding: var(--panel-control-pad-y) var(--panel-control-pad-x);
+  border-radius: var(--panel-control-radius);
+  line-height: 1;
+  font-size: var(--panel-control-font);
+}
+
+/* Small panel button (header actions, icon-ish actions) */
+.panelBtnSm {
+  height: var(--panel-control-h);
+  padding: 6px 8px;
+  font-size: var(--panel-control-font);
+}
+
+/* Delete buttons that live in panel headers */
+.panelDelete {
+  border-color: var(--danger-border);
+  color: var(--danger);
+  font-size: var(--panel-control-font);
+}
+
+.panelDelete:hover {
+  background: var(--danger-hover);
+}
+
+/* Search inputs used in panel headers */
+.panelSearch,
+.sessionSearch,
+.npcSearch,
+.partySearch,
+.locSearch {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 10px;
+  min-width: var(--panel-control-min-search);
+  max-width: 150px;
+  width: auto;
+  height: var(--panel-control-h);
+  font-size: var(--panel-control-font);
+}
+
+/* Dropdowns used in panel headers */
+.panelSelect,
+.locFilter,
+button.panelSelectBtn {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 30px 6px 8px;
+  /* room for arrow */
+  border-radius: 10px;
+  height: var(--panel-control-h);
+  font-size: var(--panel-control-font);
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  /* arrow to mimic native select */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+  text-align: left;
+}
+
+.panelSelect:hover,
+.locFilter:hover,
+button.panelSelectBtn:hover {
+  background: var(--surface-3-hover);
+  /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* Panel move buttons (top-right arrows) */
+.moveBtn,
+.panelMoveBtn {
+  width: 30px;
+  height: var(--panel-control-h);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--muted);
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: var(--panel-control-font);
+}
+
+.moveBtn:hover,
+.panelMoveBtn:hover {
+  color: var(--text);
+  background: var(--surface-3-hover);
+}
+
+/* Any “header row” that is the first child of a panel gets the same gap */
+.panel>.panelHeader,
+.panel>.sessionHeader,
+.panel>.trackerHeader,
+.panel>.npcHeader,
+.panel>.partyHeader,
+.panel>.locHeader,
+.panel>.row {
+  margin-bottom: var(--panel-header-gap);
+}
+
+/* Card dropdowns (inside cards) */
+.cardSelect,
+button.cardSelectBtn {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 4px 36px 4px 6px;
+  /* space for arrow */
+  margin-bottom: 5px;
+  font: inherit;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+.cardSelect:hover,
+button.cardSelectBtn:hover {
+  background: var(--surface-3-hover);
+  /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+.cardSelect:focus,
+button.cardSelectBtn:focus-visible,
+button.cardSelectBtn[aria-expanded="true"] {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+.cardSelect,
+button.npcSmallBtn {
+  margin-bottom: 5.5px;
+}
+
+.cardSelect,
+div.mutedSmall {
+  margin-bottom: 5px;
+  color: var(--muted);
+}
+
+.sectionMoves {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.abilityMoves {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+}
+
+/* Abilities header: title + ⋯ grouped on the left, section move buttons stay right */
+#charAbilitiesPanel>.panelHeader {
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+#charAbilitiesPanel>.panelHeader .sectionMoves {
+  margin-left: auto;
+  /* pushes the injected move buttons back to the right */
+}
+
+/* Character portrait column layout */
+.charBasicsLayout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 4px;
+  margin-top: 4px;
+  align-items: stretch;
+}
+
+.charPortraitCard {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+.charPortraitTop {
+  flex: 1 1 auto;
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+}
+
+.portraitPlaceholder {
+  pointer-events: none;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 10px;
+  text-align: center;
+  opacity: 0.95;
+}
+
+/* Character portrait: if the image is showing, hide the placeholder text */
+#charPortraitImg:not([hidden])+#charPortraitPlaceholder {
+  display: none;
+}
+
+.charPortraitTop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center-top;
+  display: block;
+}
+
+@media (max-width: 700px) {
+  .charBasicsLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .charPortraitTop {
+    min-height: 220px;
+  }
+}
+
+
+/* ======================
+   Image crop modal
+   (used by cropImageModal in app.js)
+   ====================== */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.modalOverlay[hidden] {
+  display: none !important;
+}
+
+.modalPanel {
+  width: min(720px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow:
+    0 0 0 1px var(--shadow-inset) inset,
+    0 16px 40px var(--shadow-drop);
+}
+
+.modalTitle {
+  font-weight: 700;
+  /* margin: 4px 4px 10px; */
+}
+
+.cropWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--portrait-ratio);
+  max-height: calc(100dvh - 240px);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--map-empty);
+  border: 1px solid var(--hairline);
+  margin-bottom: 10px;
+}
+
+.cropCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  touch-action: none;
+  /* allows drag on mobile without scrolling */
+}
+
+.cropFrame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 2px var(--hairline) inset,
+    0 0 0 999px rgba(0, 0, 0, 0.18) inset;
+}
+
+.modalControls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px;
+}
+
+.modalLabel {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.modalRange {
+  width: 100%;
+}
+
+/* ======================
+   UI Confirm/Prompt modal
+   (CSP-safe replacement for window.confirm/prompt)
+   ====================== */
+
+.uiDialogPanel {
+  width: min(420px, 100%);
+  padding: 4px;
+}
+
+/* compact header/body/footer spacing */
+.uiDialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 2px 2px 6px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.uiDialogHeader .modalTitle {
+  margin: 0;
+  /* remove any inherited margin */
+  padding: 0;
+  font-size: 18px;
+}
+
+.uiDialogBody {
+  padding: 8px 2px;
+  /* tight, consistent */
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.uiDialogInput {
+  width: calc(100% - 8px);
+}
+
+.uiDialogActions {
+  justify-content: flex-end;
+}
+
+#uiDialogMessage {
+  margin: 0 0 2px;
+  /* space under prompt text */
+  white-space: pre-wrap;
+  /* moved here */
+}
+
+#uiDialogInput {
+  margin: 0;
+  /* no extra air */
+  margin-top: 10px;
+  /* space above input */
+}
+
+.uiDialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 6px 2px 2px;
+  border-top: 1px solid var(--hairline);
+}
+
+.modalBtnRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modalBtn {
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.modalBtn:hover {
+  background: var(--surface-3-hover);
+}
+
+.modalBtnPrimary {
+  background: var(--surface-3-hover);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+
+/* ======================
+   Tracker Page (Sessions / NPCs / Party / Locations)
+   ====================== */
+
+.sessionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+
+.sessionTabsWrap {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 4px;
+  overflow: auto;
+  max-width: 100%;
+}
+
+.sessionTabs {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  width: max-content;
+  /* so it scrolls horizontally on mobile */
+}
+
+.sessionTab {
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sessionTab.active {
+  background: var(--surface-3-hover);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+
+/* NPC Panel */
+.npcHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+
+
+.npcTabsWrap {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.npcTab {
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.npcTab.active {
+  background: var(--surface-3-hover);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+.npcCards {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.npcCard {
+  position: relative;
+  /* anchors ::after */
+  border: 2px solid var(--border);
+  /* the frame */
+  border-radius: 17px;
+  overflow: visible;
+  /* allow dropdown menus to escape */
+  background: var(--card);
+  /* npc card background */
+  isolation: isolate;
+  /* prevents shadow bleeding */
+  box-shadow:
+    0 6px 16px var(--shadow-drop);
+  overflow: hidden;
+}
+
+/* When a dropdown inside a card is open, raise the card above its siblings.
+   This prevents the open menu from rendering behind the next card in the grid. */
+.npcCard.popoverRaised {
+  z-index: 200;
+}
+
+/* Drop shadow layer (outside, clipped) */
+.npcCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 15px;
+  box-shadow: var(--npcFrameShadow, inset 0 0 0 5.5px var(--frame-fill));
+  pointer-events: none;
+  z-index: 2;
+}
+
+.npcCard::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 10px;
+  border: 1px solid var(--hairline);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.npcCard.collapsed {
+  background: var(--collapsedCard);
+  /* collapsed card background */
+}
+
+@media (max-width: 600px) {
+  .npcCards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* PARTY Panel (same vibe as NPC panel, but no group tabs) */
+.partyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+
+
+.partyCards {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+@media (max-width: 600px) {
+  .partyCards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.locHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+
+
+
+.locCards {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+@media (max-width: 600px) {
+  .locCards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Make select boxes match your textbox style (closed state) */
+
+select.npcField {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 36px 6px 8px;
+  /* space for arrow */
+  border-radius: 10px;
+  font: inherit;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  /* custom arrow */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+select.npcField:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+/* Allow autosized NPC fields to stop stretching in the header row */
+.npcHeaderRow .npcField.autosize {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+/* --- NPC Card: stacked layout --- */
+.npcCardStack {
+  display: flex;
+  flex-direction: column;
+}
+
+.npcPortraitTop {
+  width: 100%;
+  height: 160px;
+  background: var(--map-empty);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* Clip the image to the card's rounded frame. The card itself uses overflow: visible so dropdown menus can escape. */
+  border-radius: 14px 14px 0 0;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Full-area overlay button used for NPC/Party/Character portraits */
+.npcPortraitBtn {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  z-index: 1;
+  /* above the image, below card frame pseudo-elements */
+}
+
+.npcPortraitBtn:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-3-hover) 35%, transparent);
+}
+
+.npcPortraitBtn:focus {
+  outline: none;
+}
+
+.npcPortraitTop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center-top;
+  display: block;
+}
+
+.npcCardBodyStack {
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+/* Collapsible card header (name + toggle) */
+.npcHeaderRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.npcHeaderRow .npcField {
+  flex: 1;
+}
+
+.npcCollapseToggle {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--muted);
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.npcCollapseToggle:hover {
+  color: var(--text);
+  background: var(--surface-3-hover);
+}
+
+.npcCollapsible {
+  display: grid;
+  gap: 4px;
+}
+
+/* Make sure the HTML `hidden` attribute actually hides things */
+.npcCollapsible[hidden],
+.npcCardFooter[hidden] {
+  display: none !important;
+}
+
+.npcNameBig {
+  font-size: 18px;
+  font-weight: 800;
+  padding: 6px 8px;
+}
+
+.npcClass {
+  opacity: 0.95;
+}
+
+.npcMiniLabel {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 6px 2px;
+}
+
+.npcHpRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.npcHpInput {
+  width: auto;
+  text-align: center;
+  padding: 5px;
+  padding-right: var(--numWrapPadRight);
+  flex: 0 0 auto;
+}
+
+.npcBlock {
+  display: grid;
+  gap: 1px;
+}
+
+/* NEW: label on the left, field on the right */
+.npcRowBlock {
+  display: grid;
+  grid-template-columns: var(--npc-label-w, 40px) 1fr;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 1px;
+}
+
+/* Give the first labeled row some breathing room */
+.npcCollapsible>.npcRowBlock:first-child {
+  margin-top: 17px;
+}
+
+/* labels in row layout should be allowed to wrap */
+.npcRowBlock .npcMiniLabel {
+  max-width: 70px;
+  white-space: normal;
+  /* allow wrapping */
+  line-height: 1.1;
+}
+
+/* fields in row layout fill the remaining space */
+.npcRowBlock .npcField,
+.npcRowBlock .npcTextarea {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Notes: fixed height + internal scroll (like your sketch) */
+.npcNotesBox {
+  min-height: 110px;
+  max-height: 110px;
+  overflow: auto;
+  resize: none;
+}
+
+/* Footer actions separated from "in-world" content */
+.npcCardFooter {
+  padding: 4px 12px;
+  /* IMPORTANT:
+     Do NOT use transform here.
+     A transformed ancestor becomes the containing block for `position: fixed`.
+     Our dropdown menus are positioned with `position: fixed` (positioning.js).
+     The transform made footer dropdowns open but not be visible/clickable.
+     Use margin instead for the slight visual lift. */
+  margin-top: -6px;
+  border-top: 0;
+  position: relative;
+
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  align-content: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.npcFoeBtn {
+  margin-left: 4px;
+}
+
+/* inset divider that matches the card's inner border inset (5px) */
+.npcCardFooter::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  top: 0;
+  height: 1px;
+  background: var(--border);
+  pointer-events: none;
+}
+
+.npcField {
+  /* Use the same style as other inputs */
+  width: 100%;
+}
+
+.npcTextarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 8px;
+  resize: vertical;
+}
+
+#npcCards,
+#partyCards,
+#locCards {
+  max-height: var(--tracker-list-max);
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* give shadows room so they don’t clip against the scroll box edges */
+  padding: 12px;
+  padding-bottom: 20px;
+  /* extra room for bottom shadows */
+
+  /* prevents weird “stretching/squishing” behavior in some layouts */
+  align-content: start;
+  grid-auto-rows: max-content;
+}
+
+/* mobile: use a viewport-based cap */
+@media (max-width: 600px) {
+  :root {
+    --tracker-list-max: 78vh;
+  }
+}
+
+/* ======================
+   Character Sheet Page
+   ====================== */
+
+
+.charBasicsGrid {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+
+  /* align-content: start;   prevents “stretch rows to fill height” */
+  align-items: start;
+  /* keeps items from stretching vertically */
+  grid-auto-rows: max-content;
+  /* ensures rows size to content */
+
+  overflow: hidden;
+}
+
+.charTwo {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Only autosized fields should hug content */
+.charBasicsGrid input.autosize {
+  width: auto;
+  justify-self: start;
+  text-align: left;
+  padding: 6px 8px;
+  max-width: 100%;
+  /* ✅ prevents running out of the grid/panel */
+}
+
+.charBasicsGrid input[type="number"].autosize {
+  padding: 5px;
+  padding-right: var(--numWrapPadRight);
+}
+
+@media (max-width: 600px) {
+  .charTwo {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Vitals tiles: pack tightly, no grid stretching */
+.charTiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  /* pack from the left; leftover space stays on the right */
+  justify-content: flex-start;
+  align-content: flex-start;
+
+  /* optional: prevents weird stretching in some cases */
+  align-items: flex-start;
+}
+
+/* keep tiles at their natural size (don’t stretch) */
+.charTiles>.charTile {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 600px) {
+  .charTiles {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Vitals tile header (for reordering controls) */
+.vitalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.vitalHeader .charTileLabel {
+  margin-right: 4px;
+}
+
+.fieldLabel {
+  font-size: 16px;
+  color: var(--muted);
+  margin: 4px 0 4px 2px;
+  letter-spacing: 0.02em;
+}
+
+.vitalMoves {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.charTile {
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 6px 8px;
+  background: var(--card);
+  /* vitals tile background */
+  box-shadow: 0 6px 16px var(--shadow-drop);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.charTileLabel {
+  font-weight: 700;
+  font-size: 15px;
+  margin-left: 2px;
+}
+
+.charHpRow {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+
+/* HP number inputs — override stepper default sizing */
+.saveOptTop .numWrap>input[type="number"],
+.charHpRow .numWrap>input[type="number"] {
+  width: 40px;
+  text-align: left;
+  padding: 5px;
+  padding-right: var(--numWrapPadRight);
+  flex: 0 0 auto;
+  min-width: 30px;
+  max-width: 60px;
+}
+
+.resourceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* Resource title: same vibe as the campaign title (editable text, no input box) */
+.resourceTitle {
+  margin-right: 4px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Placeholder for empty contenteditable */
+.resourceTitle:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+}
+
+.iconBtn {
+  padding: 6px 8px;
+  border-radius: 10px;
+  line-height: 1;
+  width: 30px;
+  height: var(--panel-control-h);
+}
+
+/* Numbers should stay together and not wrap */
+.resourceFooterRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+}
+
+/* Shrink-wrapped number group (inputs + slash) */
+.resourceNums {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+/* Push the delete button to the far right within the footer row */
+.resourceFooterRow .resourceDeleteBtn {
+  margin-left: auto;
+}
+
+/* Resource number inputs are smaller than the default 78px vitals */
+.resourceNums input[type="number"] {
+  text-align: left;
+  padding: 5px;
+  padding-right: var(--numWrapPadRight);
+}
+
+.charTile input[id="charSpellDC"],
+.charTile input[id="charSpellAtk"],
+.charTile input[id="charProf"],
+.charTile input[id="charSpeed"],
+.charTile input[id="charInit"],
+.charTile input[id="charAC"] {
+  text-align: left;
+  padding: 5px;
+  padding-right: var(--numWrapPadRight);
+}
+
+/* --- Attacks --- */
+.attackList {
+  /* Flex-wrap packs cards like the vitals tiles
+     (avoids big empty space when a row has an empty grid cell). */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  /* pack from the left; leftover space stays on the right */
+  justify-content: flex-start;
+  align-content: flex-start;
+
+  /* optional: prevents weird stretching in some cases */
+  align-items: flex-start;
+}
+
+@media (max-width: 600px) {
+  .attackList {
+    flex-direction: column;
+  }
+}
+
+/* Outer card: 2 columns, 3 rows */
+.attackRow {
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 6px 8px;
+  background: var(--card);
+  box-shadow: 0 6px 16px var(--shadow-drop);
+
+  display: grid;
+  gap: 4px;
+
+  /* ✅ two columns only (so top/mid have “only two columns”) */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  align-items: start;
+
+  flex: 0 0 auto;
+  min-width: 200px;
+  /* adjust to taste */
+  max-width: 100%;
+}
+
+/* Each section spans the full width (both columns) */
+.attackTop,
+.attackMiddle,
+.attackBottom {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Explicit row placement (stable) */
+.attackTop {
+  grid-row: 1;
+}
+
+.attackMiddle {
+  grid-row: 2;
+}
+
+.attackBottom {
+  grid-row: 3;
+}
+
+.attackTop {
+  grid-template-columns: auto auto;
+  justify-content: start;
+}
+
+.attackMiddle {
+  grid-template-columns: max-content max-content;
+  /* or: auto auto */
+  column-gap: 4px;
+  /* your desired gap */
+  justify-content: start;
+  /* keep them left */
+  overflow: hidden;
+}
+
+.attackBottom {
+  grid-template-columns: max-content max-content max-content;
+  /* ✅ adds column for X */
+  column-gap: 4px;
+  /* ✅ your desired gap */
+  justify-content: start;
+  overflow: hidden;
+}
+
+.attackMiddle .attackBonus {
+  padding: 5px 6px;
+}
+
+.attackMiddle .attackDamage {
+  padding: 5px 6px;
+}
+
+.attackBottom .attackRange {
+  padding: 5px 6px;
+}
+
+.attackBottom .attackType {
+  padding: 5px 6px;
+}
+
+.attackActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* keep delete from being absolutely positioned */
+.attackActions .danger {
+  position: static;
+  padding: 4px 6px;
+  width: 30px;
+  height: var(--panel-control-h);
+}
+
+/* Attacks: keep Range/Type left, push ONLY the delete button to the far right */
+.attackRow .attackBottom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  /* your desired spacing between Range and Type */
+  justify-content: flex-start;
+}
+
+.attackRow .attackBottom .attackRange,
+.attackRow .attackBottom .attackType {
+  flex: 0 0 auto;
+  /* don't stretch */
+}
+
+.attackRow .attackBottom .attackActions {
+  margin-left: auto;
+  /* <-- this is the magic "flex-end" for only the delete button */
+  display: inline-flex;
+  align-items: center;
+}
+
+
+@media (max-width: 600px) {
+  .attackRow {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .attackTop,
+  .attackMiddle,
+  .attackBottom {
+    grid-column: 1;
+    grid-template-columns: 1fr;
+  }
+
+  .attackActions {
+    grid-column: 1;
+    grid-row: auto;
+    justify-content: flex-end;
+  }
+}
+
+.moneyRow {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 4px;
+}
+
+.moneyRow>* {
+  min-width: 0;
+  /* critical: lets grid children shrink */
+}
+
+@media (max-width: 600px) {
+  .moneyRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.moneyTile {
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 6px 8px;
+  background: var(--card);
+  /* currency background */
+  box-shadow: 0 6px 16px var(--shadow-drop);
+  display: grid;
+  gap: 4px;
+  text-align: center;
+  justify-items: center;
+  align-items: center;
+  align-content: center;
+  overflow: hidden;
+}
+
+.moneyLabel {
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.moneyTile input.autosize {
+  text-align: left;
+  padding: 5px;
+  padding-right: var(--numWrapPadRight);
+}
+
+.abilityGrid {
+  display: grid;
+
+  /* was: repeat(2, minmax(0, 1fr)); */
+  grid-template-columns: repeat(auto-fit, minmax(0, 400px));
+
+  gap: 4px;
+  align-items: start;
+
+  /* keeps the 400px columns from stretching across the full row */
+  justify-content: center;
+}
+
+.moneyTile .numWrap {
+  margin: 0 auto;
+}
+
+@media (max-width: 600px) {
+  .abilityGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.abilityBlock {
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 6px 16px var(--shadow-drop);
+  overflow: hidden;
+  width: 100%;
+  max-width: 400px;
+}
+
+.abilityHeader {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--spell-level-header);
+  cursor: pointer;
+  position: relative;
+  /* anchors .abilityMoves */
+}
+
+.abilityTitle {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.abilityStats {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 50px;
+  /* spacing between score / mod / save */
+}
+
+/* make the score box a predictable width */
+.abilityStats .abilityScore {
+  /* tweak if you want it bigger/smaller */
+  text-align: left;
+  padding: 5px 8px;
+  flex: 0 0 auto;
+}
+
+/* keeps Save text + checkbox aligned nicely */
+.abilityStats .abilityStat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.abilityStats input[type="checkbox"] {
+  margin: 0;
+  transform: translateY(-1px);
+  /* tiny optical alignment */
+}
+
+.abilityStats input {
+  text-align: center;
+}
+
+.abilityStat {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Ability Score box (the green-circled ones) AFTER steppers wrap it */
+.abilityStats .numWrap>input.abilityScore[type="number"] {
+  width: 40px;
+  text-align: left;
+  padding: 5px;
+  padding-right: var(--numWrapPadRight);
+  flex: 0 0 auto;
+  min-width: 30px;
+  max-width: 60px;
+}
+
+.abilitySkills {
+  padding: 6px 8px;
+  background: var(--spell-card);
+}
+
+.skillRow span:last-child {
+  font-weight: 600;
+}
+
+.skillsGrid {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 600px) {
+  .skillsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.skillBlock {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px 8px;
+  background: var(--surface-2);
+}
+
+.skillHeader {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.skillRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.skillRow span {
+  font-size: 14px;
+}
+
+.skillRow input {
+  width: 70px;
+  text-align: center;
+}
+
+.skillRow input[type="checkbox"],
+.abilityStat input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.skillRow input[type="checkbox"]:checked,
+.abilityStat input[type="checkbox"]:checked {
+  background: var(--skill-prof-dot);
+  border-color: var(--skill-prof-dot);
+}
+
+/* Skill proficiency options button (replaces the old dot checkbox) */
+.skillProfBtn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+/* Skill dropdown menu layout */
+.skillProfMenu {
+  min-width: 220px;
+}
+
+.skillMenuRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.skillMenuRow:hover {
+  background: var(--surface-3-hover);
+}
+
+.skillMenuRow input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
+.skillProfMenu hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 8px 6px;
+}
+
+.skillMenuMisc {
+  display: grid;
+  gap: 4px;
+  padding: 6px 8px;
+}
+
+.skillMenuLabel {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.skillMiscInput {
+  width: 100%;
+  text-align: center;
+}
+
+/* Panel header row (used for reorder controls on simple panels) */
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.headerAddBtn {
+  /* justify-content: flex-end; */
+  margin-left: auto;
+}
+
+/* ======================
+   Spells v2 (layout)
+   ====================== */
+
+.spellLevels {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.spellLevel {
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  /* background: var(--card);   /* affects both level header and spell body*/
+  box-shadow: 0 6px 16px var(--shadow-drop);
+  overflow: hidden;
+}
+
+.spellLevelHeader {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  position: relative;
+  background: var(--spell-level-header);
+}
+
+.spellLevelLeft {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 80px;
+  max-width: 350px;
+}
+
+.spellLevelTitle {
+  min-width: 0;
+  max-width: 350px;
+}
+
+.spellLevelTitle input {
+  max-width: 350px;
+}
+
+.spellLevelRight {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 6px 0;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.spellLevelRight .danger {
+  margin-left: 0;
+  padding: 6px 8px;
+}
+
+.spellSlots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.spellSlots input {
+  width: 55px;
+  text-align: left;
+  padding: 5px 4px;
+  flex: 0 0 auto;
+  min-width: 30px;
+  max-width: 40px;
+}
+
+.spellLevelActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.spellCollapseBtn,
+.spellSpellCollapseBtn {
+  padding: 6px 6px;
+  border-radius: 12px;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.spellBody {
+  padding: 0 8px 8px;
+  position: relative;
+  background: var(--spell-card);
+}
+
+.spellBody::before {
+  content: "";
+  display: block;
+  height: 2px;
+  background: var(--divider);
+  margin-bottom: 6px;
+}
+
+/* If collapsed via [hidden], divider disappears automatically */
+.spellBody[hidden]::before {
+  display: none;
+}
+
+.spellRow {
+  border-top: 2px solid var(--divider);
+  padding-top: 5px;
+  margin-top: 5px;
+}
+
+.spellRow:first-child {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.spellRowTop {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.spellName {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 240px;
+}
+
+.spellToggles {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.spellToggle {
+  padding: 6px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--spell-toggle-bg);
+  color: var(--text);
+  line-height: 1;
+}
+
+.spellToggle.on {
+  border: 2px solid var(--spell-toggle-on-border);
+  box-shadow: 0 0 0 1px var(--shadow-inset) inset;
+}
+
+.spellToggle.warn.on {
+  border: 2px solid var(--spell-toggle-warn-on-border);
+}
+
+.spellMiniBtns {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 6px 0;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.spellMiniBtns .danger {
+  padding: 6px 8px;
+}
+
+.spellMiniBtns .moveBtn {
+  justify-self: flex-end;
+}
+
+.spellMoveBtn {
+  padding: 4px 4px;
+  gap: 4px;
+  border-radius: 12px;
+  line-height: 1;
+}
+
+.spellNotes {
+  margin-top: 6px;
+}
+
+.spellNotes textarea {
+  width: 100%;
+}
+
+.spellToggle[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+button.spellToggle.warn[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--warn-border) inset;
+}
+
+@media (max-width: 750px) {
+  .spellLevelHeader {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .spellLevelRight {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .spellRowTop {
+    flex-wrap: wrap;
+  }
+
+  .spellToggles,
+  .spellMiniBtns {
+    flex-wrap: wrap;
+  }
+}
+
+/* Spells v2: fix inputs forcing buttons to wrap on desktop */
+@media (min-width: 751px) {
+  .spellRowTop {
+    flex-wrap: nowrap;
+  }
+
+  .spellName {
+    width: auto;
+  }
+}
+
+
+/* ======================
+   Map Page
+   ====================== */
+
+/* Restore native range slider look */
+input[type="range"] {
+  all: unset;
+  /* nukes inherited input styles */
+  -webkit-appearance: slider-horizontal;
+  appearance: auto;
+  width: 90%;
+  /* or 100% if you want it fluid */
+  accent-color: var(--bg);
+  background: var(--surface-3-hover);
+}
+
+/* Map toolbar: Size slider inline + vertically centered */
+.brushSizeLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* Enhanced <select> wrappers that should NOT shrink to content.
+   (Used for settings rows, card footers, and panel header selects.) */
+/* Enhanced <select> wrappers that should fill their container.
+   (Cards, card footers, settings rows, and other block-style selects.) */
+.selectDropdown.selectDropdownBlock {
+  display: block;
+  min-width: 50px;
+  max-width: 350px;
+}
+
+#locCards .npcCollapsible select.cardSelect+.selectDropdown.selectDropdownBlock {
+  max-width: 100%;
+}
+
+/* Optional: clamp some block-style selects (toolbar filters, settings rows)
+   so they don't become comically wide on large screens. */
+.selectDropdown.selectDropdownClamp {
+  max-width: 200px;
+}
+
+.dropdownBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dropdownBtn .caret {
+  opacity: 0.85;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 120px;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: 0 12px 28px var(--shadow-drop);
+  max-width: calc(100vw - 16px);
+  max-height: min(60vh, 420px);
+  overflow: auto;
+}
+
+.swatchOption {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.swatchOption:hover {
+  background: var(--surface-3-hover);
+  border-color: var(--hairline);
+}
+
+.swatchOption.active {
+  background: var(--surface-3-hover);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+.colorSwatch[data-color="teal"] {
+  --swatch-color: #35d0d6;
+}
+
+.colorSwatch[data-color="red"] {
+  --swatch-color: #e04b4b;
+}
+
+.colorSwatch[data-color="blue"] {
+  --swatch-color: #3aa6ff;
+}
+
+.colorSwatch[data-color="green"] {
+  --swatch-color: #34c97b;
+}
+
+.colorSwatch[data-color="black"] {
+  --swatch-color: #111111;
+}
+
+.colorSwatch[data-color="white"] {
+  --swatch-color: #f0f0f0;
+}
+
+.colorSwatch[data-color="yellow"] {
+  --swatch-color: #f2c94c;
+}
+
+.colorSwatch[data-color="purple"] {
+  --swatch-color: #9b7bff;
+}
+
+.colorSwatch[data-color="grey"] {
+  --swatch-color: #8c8c8c;
+}
+
+/* De-emphasize color control when eraser is selected */
+.dropdown.disabled {
+  opacity: 0.55;
+}
+
+.dropdown.disabled .dropdownBtn {
+  cursor: not-allowed;
+}
+
+.dropdown.disabled .dropdownBtn:hover {
+  background: var(--surface-3);
+}
+
+/* --- Color grid dropdown --- */
+.colorGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 36px);
+  gap: 4px;
+  padding: 4px;
+
+  justify-content: center;
+  align-content: center;
+}
+
+#colorDropdownMenu.colorGrid {
+  place-content: center;
+  /* replaces justify-content + align-content */
+  place-items: center;
+  /* centers items within their cells */
+}
+
+.colorSwatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1px solid var(--color-swatch-border);
+  background: var(--swatch-color);
+  box-sizing: border-box;
+  transition:
+    transform 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.colorSwatch:hover {
+  transform: scale(1.08);
+  border-color: var(--color-swatch-hover);
+}
+
+.colorSwatch.active {
+  border-color: white;
+  box-shadow: 0 0 0 2px var(--swatch-color-active-border);
+}
+
+/* Preview circle in the button */
+.colorPreview {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--swatch-color);
+  border: 1px solid var(--swatch-color-preview);
+}
+
+.canvasWrap {
+  width: 100%;
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow:
+    0 0 0 1px var(--shadow-inset) inset,
+    0 6px 16px var(--shadow-drop);
+
+  /* ✅ default: allow normal 1-finger panning/scrolling */
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ✅ while drawing, we block scrolling so strokes feel right */
+.canvasWrap.drawingMode {
+  touch-action: none;
+}
+
+/* ✅ while a 2-finger gesture is active, we block browser handling */
+.canvasWrap.gestureMode {
+  touch-action: none;
+}
+
+#mapCanvas {
+  display: block;
+  max-width: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Make the HTML `hidden` attribute always win (fix stuck-open dropdowns) */
+.dropdownMenu[hidden] {
+  display: none !important;
+}
+
+/* Hide native selects that have been enhanced into custom dropdowns.
+   Keep them in the DOM so existing JS that reads/writes .value keeps working. */
+select.nativeSelectHidden {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+}
+
+.dropdownGroupLabel {
+  padding: 6px 8px 4px;
+  font-size: 0.78rem;
+  opacity: 0.85;
+  color: var(--muted);
+  user-select: none;
+}
+
+/* In settings panels, we generally want the dropdown button to span the row. */
+.settingsDropDownBtn {
+  width: 100%;
+}
+
+/* Make Map dropdown match the styled selects */
+select.mapSelect,
+button.mapSelectBtn {
+  width: auto;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 36px 6px 8px;
+  /* space for arrow */
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  /* match app button sizing */
+  line-height: 1.2;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  /* custom arrow */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+select.mapSelect:hover,
+button.mapSelectBtn:hover {
+  background: var(--surface-3-hover);
+  /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+select.mapSelect:focus,
+button.mapSelectBtn:focus-visible,
+button.mapSelectBtn[aria-expanded="true"] {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+/* Map tool dropdown: looks like the map select, but sizes to content (not 160px wide) */
+button.mapToolDropDown {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  white-space: nowrap;
+
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 36px 6px 8px;
+  /* space for arrow */
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  /* keep consistent with app buttons */
+  line-height: 1.2;
+
+  /* Match the custom arrow used on the map <select> */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+button.mapToolDropDown:hover {
+  background: var(--surface-3-hover);
+  /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* Map color dropdown — EXACT match to map select / tool dropdown */
+button#colorBtn.dropdownBtn {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+
+  /* height + font match */
+  padding: 6px 36px 6px 8px;
+  /* space for arrow */
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.2;
+
+  width: auto;
+  min-width: 44px;
+  white-space: nowrap;
+
+  /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* Hide the old caret so it doesn't affect height */
+button#colorBtn .caret {
+  display: none;
+}
+
+button#colorBtn:hover {
+  background: var(--surface-3-hover);
+  /* SAME arrow system as mapSelect */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+button#colorBtn:focus-visible,
+button#colorBtn[aria-expanded="true"] {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+/* ======================
+   Calculator dropdown
+   ====================== */
+
+.calcBtn {
+  /* match the settings button feel */
+  padding: 6px 8px;
+  /* same as normal buttons */
+  min-width: 35px;
+  /* keeps it "chip" sized like ⚙ */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ======================
+   Theme-aware SVG icons
+   ====================== */
+/*
+  We use CSS masks so icons can be tinted with theme colors.
+  Any element with .iconMask needs a CSS variable:
+    style="--icon:url('path/to/icon.svg')"
+  Then the icon color is controlled by --iconColor (defaults to var(--border)).
+*/
+.iconMask {
+  background: var(--iconColor, currentColor);
+  -webkit-mask: var(--icon) no-repeat center / contain;
+  mask: var(--icon) no-repeat center / contain;
+  display: inline-block;
+}
+
+/* Everything inside the dropdown menu uses the themed dice icon color */
+.diceMenu .iconMask {
+  --iconColor: var(--diceIconColor);
+}
+
+.diceMenu .iconMask.dicePresetIcon {
+  --iconColor: var(--dicePresetIconColor);
+}
+
+/* Calculator button icon */
+.btnIcon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  pointer-events: none;
+  transform: scale(1.15) translateY(-0.5px);
+
+}
+
+.calcMenu {
+  width: 280px;
+  padding: 10px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  background: var(--calculatorBg);
+  box-shadow: 0 10px 24px var(--shadow-drop);
+  z-index: 50;
+}
+
+.calcTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.calcTitle {
+  font-weight: 700;
+}
+
+.calcClose {
+  border: 2px solid var(--border);
+  background: var(--card);
+  border-radius: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.calcDisplay {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  text-align: right;
+  font-size: 18px;
+}
+
+.calcKeys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.calcKeys button {
+  padding: 8px 6px;
+  /* sizing only */
+  min-height: 34px;
+  /* nicer touch target */
+  font-size: 0.9rem;
+}
+
+.calcKeys button.wide {
+  grid-column: span 2;
+}
+
+.calcKeys button.equals {
+  grid-column: span 2;
+  font-weight: 800;
+}
+
+.calcHistoryWrap {
+  border-top: 1px solid var(--diceDivText);
+  padding-top: 8px;
+}
+
+.calcHistoryTitle {
+  font-size: 12px;
+  margin-bottom: 6px;
+  color: var(--diceDivText);
+}
+
+.calcHistory {
+  max-height: 120px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calcHistory .mutedSmall {
+  color: var(--diceDivText);
+}
+
+.calcHistItem {
+  font-size: 12px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  cursor: pointer;
+  opacity: 0.95;
+}
+
+.calcHistItem:hover {
+  background: var(--surface-3-hover);
+}
+
+
+/* ======================
+   Dice Roller dropdown
+   ====================== */
+.diceDropdown {
+  position: relative;
+}
+
+.diceBtn {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diceIcon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Dice icon in top bar */
+.diceIconImg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* Match your dropdown look */
+.diceMenu {
+  position: fixed;
+  /* positionMenuOnScreen() sets left/top */
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+
+  /* match calc "card" look */
+  width: 280px;
+  padding: 10px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  background: var(--calculatorBg);
+  box-shadow: 0 10px 24px var(--shadow-drop);
+
+  /* critical: DO NOT let the whole menu scroll */
+  overflow: hidden;
+
+  /* still keep it from going off-screen on mobile */
+  max-width: calc(100vw - 16px);
+  max-height: min(70vh, 520px);
+
+
+}
+
+.diceTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.diceTitle {
+  font-weight: 700;
+}
+
+.diceClose {
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.diceRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 600px) {
+  .diceRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.diceField input,
+.diceSelect {
+  width: 100%;
+}
+
+.diceActions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.diceRollBtn {
+  flex: 1;
+}
+
+.dicePresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.dicePreset {
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.diceHistoryWrap {
+  border-top: 1px solid var(--diceDivText);
+  padding-top: 8px;
+}
+
+.diceHistoryTitle {
+  font-size: 12px;
+  color: var(--diceDivText);
+  margin: 0 2px 6px;
+}
+
+.diceHistory {
+  max-height: 120px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 2px;
+}
+
+.diceHistory .mutedSmall {
+  color: var(--diceDivText);
+}
+
+.diceHistRow {
+  font-size: 12px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  cursor: pointer;
+  opacity: 0.95;
+}
+
+/* Big active die icon */
+.diceHero {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px 0 2px;
+  margin-bottom: 8px;
+}
+
+.diceActiveIcon {
+  width: 70px;
+  height: 70px;
+  display: block;
+  opacity: 0.95;
+}
+
+/* 3-button roll row like your sketch */
+.diceRollRow {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  gap: 6px;
+  margin: 6px 0 8px;
+}
+
+.diceAltBtn {
+  width: 100%;
+}
+
+.diceActions {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.diceClearBtn {
+  width: min(160px, 60%);
+}
+
+/* Icon preset strip */
+.dicePresets {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+@media (max-width: 420px) {
+  .dicePresets {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.dicePreset {
+  padding: 4px 3px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.dicePresetIcon {
+  width: 30px;
+  height: 30px;
+  display: block;
+}
+
+.dicePresetPct {
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* (Optional) ensure the wrapper doesn't force max-content sizing inside the cell */
+#diceMenu .diceTopRow .diceField .numWrap {
+  width: auto;
+}
+
+.diceTop,
+.diceTopRow,
+.diceRollRow,
+.diceActions,
+.dicePresets {
+  flex: 0 0 auto;
+}
+
+.diceHistory::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* Dice top row: left | hero | right — symmetric spacing */
+#diceMenu .diceTopRow {
+  display: grid;
+  grid-template-columns: 1fr max-content 1fr;
+  align-items: center;
+  column-gap: 10px;
+  margin: 0 0 8px;
+  /* no auto-centering */
+  width: 100%;
+  /* IMPORTANT: give it real space */
+}
+
+/* Hug hero using your stable classes */
+#diceMenu .diceTopRow .diceCountField {
+  justify-self: end;
+}
+
+#diceMenu .diceTopRow .diceModField {
+  justify-self: start;
+}
+
+#diceMenu .diceTopRow .diceField {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* keeps label centered over input */
+  min-width: 56px;
+}
+
+/* Mod side: modWrap is often the clampHost, so give it the same minimum */
+#diceMenu .diceTopRow .modWrap {
+  width: auto;
+  min-width: 56px;
+  /* <-- key */
+}
+
+/* Don't force 100% width on these top-row number inputs */
+#diceMenu .diceTopRow .diceField input {
+  width: auto;
+}
+
+/* Dice top row: nudge ONLY the left (# + count) stack toward the hero */
+#diceMenu .diceTopRow .diceCountField {
+  justify-self: end;
+  /* make sure it hugs inward */
+  margin-right: -25px;
+  /* move right; tweak -2px to -10px */
+}
+
+.modWrap {
+  position: relative;
+  width: 100%;
+}
+
+/* base input */
+.modWrap input {
+  width: 100%;
+  text-align: right;
+  /* makes signs feel natural */
+  padding-left: 5px;
+  /* normal */
+}
+
+/* when + should show, we reserve space */
+.modWrap.showPlus input {
+  padding-left: 13px;
+  /* space for + */
+}
+
+/* the + itself */
+.modPlus {
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-weight: 300;
+  opacity: 0;
+  transition: opacity .12s ease;
+  z-index: 2;
+}
+
+.modWrap.showPlus .modPlus {
+  opacity: 0.9;
+}
+
+/* IMPORTANT: your number input is wrapped by .numWrap.
+   Don't try padding tricks on the input itself. */
+.modWrap .numWrap {
+  flex: 0 0 auto;
+}
+
+.diceMenu[hidden] {
+  display: none !important;
+}
+
+/*  vvvvvv OVERRIDES vvvvvv  */
+
+.fieldLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.collapseMini {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 4px 4px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.collapseMini:active {
+  transform: translateY(1px);
+}
+
+/* Number stepper buttons must NOT inherit global button styling */
+.numStepper .numStepBtn {
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+
+  /* mobile tap highlight */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* also kill any “pressed” fill some browsers add */
+.numStepper .numStepBtn:active,
+.numStepper .numStepBtn:focus,
+.numStepper .numStepBtn:focus-visible {
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+button:focus-visible,
+.filebtn:focus-visible,
+.modalBtn:focus-visible,
+.settingsItem:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+#npcCards,
+#partyCards,
+#locCards,
+textarea {
+  scrollbar-gutter: stable;
+}
+
+#npcCards,
+#partyCards,
+#locCards {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Data & Settings modal */
+.dataPanelPanel {
+  width: min(300px, 100%);
+}
+
+.dataPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dataPanelSection {
+  padding: 6px 4px;
+}
+
+.dataPanelLabel {
+  font-weight: 700;
+  margin: 2px 0 8px;
+}
+
+.dataPanelActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.dangerLabel {
+  color: var(--danger);
+}
+
+/* Settings modal: let the Theme dropdown span the same full width as the
+   other buttons in this modal, without changing card/panel selects. */
+#dataPanelPanel .selectDropdown.selectDropdownBlock {
+  width: 100%;
+  max-width: none;
+}
+
+/* =========================================================
+   Collapse Buttons (centralized)
+   - cardCollapseBtns: .cardCollapseBtn  (alias: .npcCollapseToggle)
+   - spellCollapseBtns: .spellCollapseBtn / .spellSpellCollapseBtn
+   - panelCollapseBtns: .panelCollapseBtn (alias: .collapseMini)
+   ========================================================= */
+
+:root {
+  --collapse-card-size: 30px;
+  --collapse-panel-size: 26px;
+  --collapse-radius: 10px;
+  --collapse-font-size: 0.85rem;
+}
+
+/* shared base */
+.cardCollapseBtn,
+.npcCollapseToggle,
+.spellCollapseBtn,
+.spellSpellCollapseBtn,
+.panelCollapseBtn,
+.collapseMini {
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: var(--collapse-font-size);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Card collapse (NPC/Party/Location cards) */
+.cardCollapseBtn,
+.npcCollapseToggle {
+  width: var(--collapse-card-size);
+  height: var(--collapse-card-size);
+  display: grid;
+  place-items: center;
+  border-radius: var(--collapse-radius);
+  background: var(--surface-3);
+}
+
+.cardCollapseBtn:hover,
+.npcCollapseToggle:hover {
+  color: var(--text);
+  background: var(--surface-3-hover);
+}
+
+.cardCollapseBtn:active,
+.npcCollapseToggle:active {
+  transform: translateY(1px);
+}
+
+/* Panel/section collapse (character sheet mini chevrons) */
+.panelCollapseBtn,
+.collapseMini,
+.spellCollapseBtn,
+.spellSpellCollapseBtn {
+  width: var(--collapse-panel-size);
+  height: var(--collapse-panel-size);
+  display: grid;
+  place-items: center;
+  border-radius: var(--collapse-radius);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.spellCollapseBtn:hover,
+.spellSpellCollapseBtn:hover,
+.panelCollapseBtn:hover,
+.collapseMini:hover {
+  background: var(--surface-3-hover);
+}
+
+.spellCollapseBtn:active,
+.spellSpellCollapseBtn:active,
+.panelCollapseBtn:active,
+.collapseMini:active {
+  transform: translateY(1px);
+}
+
+/* Click-to-collapse panels: header stays visible */
+.panelHeaderClickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.panelHeaderClickable :is(button, input, select, textarea, label, a) {
+  cursor: default;
+}
+
+/* When collapsed, hide everything in the panel EXCEPT the header element.
+   JS ensures the chosen header gets [data-panel-header]. */
+section.panel[data-collapsed="true"]> :not([data-panel-header]) {
+  display: none !important;
+}
+
+/* Ensure search highlight overlay can show through even for fields with their own background rules */
+.hlWrap .hlField {
+  background: transparent !important;
+}
+
+/* HP row: keep Cur/Max on one horizontal line (like character vitals) */
+.npcRowBlock.npcHpRow {
+  grid-template-columns: var(--npc-label-w, 40px) minmax(0, 1fr);
+  /* shrink-wrap numbers */
+}
+
+.npcHpWrap {
+  display: flex;
+  /* not inline-flex */
+  width: 100%;
+  /* take the cell width */
+  align-items: center;
+  gap: 4px;
+  /* constant spacing around "/" */
+  flex-wrap: nowrap;
+  /* never stack */
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+.npcField.npcHpInput {
+  background: transparent;
+}
+
+/* HP row: keep / and Max stationary, but allow Cur/Max to shrink when constrained */
+.npcHpWrap .numWrap {
+  flex: 0 1 auto;
+  /* DON'T grow; DO allow shrink */
+  min-width: 0;
+  /* critical: allow shrinking in flex */
+  width: auto;
+  /* override width:max-content behavior */
+  max-width: calc(50% - 10px);
+  /* prevents one box from hogging the row */
+}
+
+/* Clamp the autosize width when the card shrinks */
+.npcHpWrap .numWrap>input[type="number"].npcHpInput {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Slash should never flex or wrap */
+.npcHpWrap>span.muted {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Status Effects input: autosize until constrained, then clamp + truncate */
+.statusInput {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#diceMenu .diceTopRow .diceCountLabel,
+#diceMenu .diceTopRow .diceModLabel {
+  width: 100%;
+  text-align: left;
+  display: block;
+  margin-left: 8px;
+}
+
+#diceMenu .diceTopRow .diceCountLabel {
+  margin-left: 25px;
+}

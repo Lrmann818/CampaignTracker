@@ -1,0 +1,46 @@
+// @ts-nocheck
+
+/**
+ * Creates a lightweight status line helper and installs global error handlers.
+ *
+ * @param {{ statusEl?: HTMLElement|null }} opts
+ */
+export function createStatus(opts = {}) {
+  const statusEl = opts.statusEl || null;
+
+  function setStatus(msg) {
+    if (!statusEl) return;
+    statusEl.textContent = msg || "";
+  }
+
+  function installGlobalErrorHandlers() {
+    // JS/runtime errors
+    window.addEventListener("error", (event) => {
+      // event.error is often the actual Error object (not always present)
+      console.error("Global error:", event.error || event.message, event);
+      setStatus("Something went wrong. Check console for details.");
+    });
+
+    window.addEventListener("unhandledrejection", (event) => {
+      console.error("Unhandled promise rejection:", event.reason, event);
+      setStatus("Something went wrong. Check console for details.");
+    });
+
+    // CSP violations are not normal JS errors, so capture them explicitly
+    document.addEventListener("securitypolicyviolation", (e) => {
+      console.error("CSP violation:", {
+        blockedURI: e.blockedURI,
+        violatedDirective: e.violatedDirective,
+        effectiveDirective: e.effectiveDirective,
+        sourceFile: e.sourceFile,
+        lineNumber: e.lineNumber,
+        columnNumber: e.columnNumber
+      });
+
+      // Friendly message in your UI
+      setStatus(`Blocked by security policy: ${e.effectiveDirective || e.violatedDirective}`);
+    });
+  }
+
+  return { setStatus, installGlobalErrorHandlers };
+}
