@@ -2886,7 +2886,8 @@ select.npcField:focus {
 /* Resource number inputs are smaller than the default 78px vitals */
 .resourceNums input[type="number"] {
   text-align: left;
-  padding: 5px 8px;
+  padding: 5px;
+  padding-right: var(--numWrapPadRight);
 }
 
 .charTile input[id="charSpellDC"],

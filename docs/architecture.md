@@ -50,19 +50,18 @@ This doc captures the intended long-term module boundaries so future refactors a
 - Reusable helpers (image picking/cropping flow, autosize, etc.).
 - Should not assume a specific page/section; take dependencies as parameters.
 
-### `js/features-ui/*`
-- One module per UI section/page:
-  - `partyCards.js`, `npcCards.js`, `locationCards.js`, `sessions.js`
-  - `mapPage.js`, `characterSheet.js`
-- Each module:
-  - exports `initXxx(deps)` to receive the functions/state it needs
-  - exports `renderXxx()` when a section needs external rerenders
+### `js/pages/*`
+Page-specific UI logic, organized by page.
+Examples:
+- `js/pages/tracker/*`
+- `js/pages/character/*`
+- `js/pages/map/*`
 
 ## Adding a new page/section
 
 1. Add markup section in `index.html` (e.g. `#page-foo`).
 2. Add a tab/button in the nav with matching `data-tab="foo"`.
-3. Create a new module in `js/features-ui/foo.js` exporting `initFoo(deps)` (+ optional render).
+3. Create a new module in js/pages/<page-name>/foo.js exporting `initFoo(deps)` (+ optional render).
 4. Import + wire it in `app.js`.
 
 No storage or other feature modules should require changes.

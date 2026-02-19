@@ -75,9 +75,9 @@ import { initTopbarUI } from "./js/ui/topbar.js";
 import { createThemeManager } from "./js/ui/theme.js";
 
 import { setupSettingsPanel } from "./js/ui/settingsPanel.js";
-import { initTrackerPage } from "./js/features-ui/trackerPage.js";
+import { initTrackerPage } from "./js/pages/tracker/trackerPage.js";
 
-import { setupMapPage } from "./js/features-ui/mapPage.js";
+import { setupMapPage } from "./js/pages/map/mapPage.js";
 
 // Status line + global error surface
 const StatusApi = {
@@ -123,7 +123,13 @@ const Theme = createThemeManager({
   }
 });
 
-
+// Disable autocomplete globally (prevent password managers from hijacking our custom dialogs)
+function disableAutocompleteGlobally(root = document) {
+  const fields = root.querySelectorAll('input, textarea, select');
+  fields.forEach(el => {
+    el.setAttribute('autocomplete', 'off');
+  });
+}
 
 /************************ Boot ***********************/
 (async () => {

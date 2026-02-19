@@ -29,7 +29,7 @@ Modules:
 - `js/storage/*` – persistence, IndexedDB, backups/import/export
 - `js/ui/*` – dialogs, navigation, theme, topbar, popovers, data panel
 - `js/features/*` – reusable feature helpers (autosize, image picker/cropper/flow)
-- `js/features-ui/*` – UI sections/pages (party, NPCs, locations, sessions, map, character sheet)
+- `js/pages/*` – Page-specific UI logic. (party, NPCs, locations, sessions, map, character sheet)
 
 ## Notes
 
