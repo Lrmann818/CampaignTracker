@@ -16,10 +16,8 @@ export function initAttacksPanelUI(deps = {}) {
   } = deps;
   _state = deps.state;
 
-  if (!_state || !SaveManager) {
-    console.warn("[attacksPanel] Missing deps: state/SaveManager.");
-    return;
-  }
+  if (!_state) throw new Error("initAttacksPanelUI requires state");
+  if (!SaveManager) throw new Error("initAttacksPanelUI requires SaveManager");
 
   if (!_state.character) _state.character = {};
   if (!Array.isArray(_state.character.attacks)) _state.character.attacks = [];

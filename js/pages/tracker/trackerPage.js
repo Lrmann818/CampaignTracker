@@ -117,6 +117,8 @@ export function initTrackerPage(deps) {
     putBlob,
     cropImageModal,
     getPortraitAspect,
+    blobIdToObjectUrl,
+    autoSizeInput,
   });
 
   const partyApi = initPartyUI({
@@ -136,6 +138,8 @@ export function initTrackerPage(deps) {
     cropImageModal,
     getPortraitAspect,
     setStatus,
+    blobIdToObjectUrl,
+    autoSizeInput,
   });
 
   initLocationsUI({
@@ -153,6 +157,8 @@ export function initTrackerPage(deps) {
     cropImageModal,
     getPortraitAspect,
     setStatus,
+    blobIdToObjectUrl,
+    autoSizeInput,
   });
 
   // ----- Character sheet UI -----

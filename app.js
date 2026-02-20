@@ -81,8 +81,8 @@ import { setupMapPage } from "./js/pages/map/mapPage.js";
 
 // Status line + global error surface
 const StatusApi = {
-  setStatus: () => {},
-  installGlobalErrorHandlers: () => {}
+  setStatus: () => { },
+  installGlobalErrorHandlers: () => { }
 };
 
 /************************ Shared file picker ************************/
@@ -183,7 +183,7 @@ function disableAutocompleteGlobally(root = document) {
       STORAGE_KEY,
       afterImport: async () => {
         // simplest + safest: refresh the UI after importing
-        try { location.reload(); } catch (_) {}
+        try { location.reload(); } catch (_) { }
       }
     }),
     resetAll: () => _resetAll({
@@ -228,7 +228,7 @@ function disableAutocompleteGlobally(root = document) {
   });
   autosizeAllNumbers();
   setupTextareaSizing({ state, markDirty: SaveManager.markDirty, saveAll, setStatus: StatusApi.setStatus });
-  setupMapPage({ state, SaveManager, setStatus: StatusApi.setStatus, positionMenuOnScreen, popovers: Popovers, ensureMapManager, getActiveMap, newMapEntry, blobIdToObjectUrl, putBlob, deleteBlob, uiPrompt, uiConfirm });
+  setupMapPage({ state, SaveManager, setStatus: StatusApi.setStatus, positionMenuOnScreen, Popovers, ensureMapManager, getActiveMap, newMapEntry, blobIdToObjectUrl, putBlob, deleteBlob, uiPrompt, uiAlert, uiConfirm });
   // If migrations or initial setup changed state, persist once, then show clean status.
   await SaveManager.flush();
   SaveManager.init();

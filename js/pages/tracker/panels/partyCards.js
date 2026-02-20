@@ -2,13 +2,13 @@
 // This module renders party member cards. It relies on a few helpers that still
 // live in app.js; those are injected via initPartyCards().
 
-import { blobIdToObjectUrl } from "../../../storage/blobs.js";
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
-import { autoSizeInput } from "../../../features/autosize.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 
 let _cardsEl = null;
 let _state = null;
+let _blobIdToObjectUrl = null;
+let _autoSizeInput = null;
 
 // Optional: Popovers manager, used to enhance native <select> open menus.
 let _Popovers = null;
@@ -87,7 +87,7 @@ function renderPartyCard(m) {
     img.alt = m.name || "Party Member Portrait";
     portrait.appendChild(img);
 
-    blobIdToObjectUrl(m.imgBlobId).then(url => {
+    _blobIdToObjectUrl(m.imgBlobId).then(url => {
       if (url) img.src = url;
     });
   } else {
@@ -168,7 +168,7 @@ function renderPartyCard(m) {
   classInput.placeholder = "Class / Role";
   classInput.value = m.className || "";
   classInput.classList.add("autosize");
-  autoSizeInput(classInput, { min: 60, max: 200 });
+  _autoSizeInput(classInput, { min: 60, max: 200 });
   classInput.addEventListener("input", () => _updateParty(m.id, { className: classInput.value }, false));
 
   classRow.appendChild(classLabel);
@@ -191,8 +191,8 @@ function renderPartyCard(m) {
   hpCur.type = "number";
   hpCur.placeholder = "Cur";
   hpCur.value = m.hpCurrent ?? "";
-  autoSizeInput(hpCur, { min: 30, max: 70 });
-  hpCur.addEventListener("input", () => { autoSizeInput(hpCur, { min: 30, max: 70 }); _updateParty(m.id, { hpCurrent: numberOrNull(hpCur.value) }, false); });
+  _autoSizeInput(hpCur, { min: 30, max: 70 });
+  hpCur.addEventListener("input", () => { _autoSizeInput(hpCur, { min: 30, max: 70 }); _updateParty(m.id, { hpCurrent: numberOrNull(hpCur.value) }, false); });
 
   const slash = document.createElement("span");
   slash.className = "muted";
@@ -205,8 +205,8 @@ function renderPartyCard(m) {
   hpMax.type = "number";
   hpMax.placeholder = "Max";
   hpMax.value = m.hpMax ?? "";
-  autoSizeInput(hpMax, { min: 30, max: 70 });
-  hpMax.addEventListener("input", () => { autoSizeInput(hpMax, { min: 30, max: 70 }); _updateParty(m.id, { hpMax: numberOrNull(hpMax.value) }, false); });
+  _autoSizeInput(hpMax, { min: 30, max: 70 });
+  hpMax.addEventListener("input", () => { _autoSizeInput(hpMax, { min: 30, max: 70 }); _updateParty(m.id, { hpMax: numberOrNull(hpMax.value) }, false); });
 
   hpWrap.appendChild(hpCur);
   hpWrap.appendChild(slash);
@@ -227,7 +227,7 @@ function renderPartyCard(m) {
   statusInput.classList.add("statusInput");
   statusInput.placeholder = "Poisoned, Charmed…";
   statusInput.value = m.status || "";
-  autoSizeInput(statusInput, { min: 60, max: 300 });
+  _autoSizeInput(statusInput, { min: 60, max: 300 });
   statusInput.addEventListener("input", () => _updateParty(m.id, { status: statusInput.value }, false));
 
   statusRow.appendChild(statusLabel);
@@ -353,9 +353,15 @@ export function initPartyUI(deps = {}) {
     cropImageModal,
     getPortraitAspect,
     setStatus,
+    blobIdToObjectUrl,
+    autoSizeInput,
   } = deps;
   _state = deps.state;
-  if (!_state) throw new Error("initPartyUI: missing state");
+  _blobIdToObjectUrl = blobIdToObjectUrl || _blobIdToObjectUrl;
+  _autoSizeInput = autoSizeInput || _autoSizeInput;
+  if (!_state) throw new Error("initPartyUI requires state");
+  if (!_blobIdToObjectUrl) throw new Error("initPartyUI requires blobIdToObjectUrl");
+  if (!_autoSizeInput) throw new Error("initPartyUI requires autoSizeInput");
   if (!SaveManager) throw new Error("initPartyUI: missing SaveManager");
   if (!makePartyMember) throw new Error("initPartyUI: missing makePartyMember");
 

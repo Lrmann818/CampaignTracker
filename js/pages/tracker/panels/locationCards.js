@@ -2,12 +2,12 @@
 // This module renders Location cards. A few location helpers still live in app.js
 // and are injected via initLocationCards().
 
-import { blobIdToObjectUrl } from "../../../storage/blobs.js";
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 
 let _cardsEl = null;
 let _state = null;
+let _blobIdToObjectUrl = null;
 
 // Optional: Popovers manager, used to enhance native <select> open menus.
 let _Popovers = null;
@@ -138,7 +138,7 @@ export function renderLocationCard(loc) {
     portrait.appendChild(img);
 
     // Load async
-    blobIdToObjectUrl(loc.imgBlobId).then(url => {
+    _blobIdToObjectUrl(loc.imgBlobId).then(url => {
       if (url) img.src = url;
     });
   } else {
@@ -353,9 +353,12 @@ export function initLocationsUI(deps = {}) {
     cropImageModal,
     getPortraitAspect,
     setStatus,
+    blobIdToObjectUrl,
   } = deps;
   _state = deps.state;
-  if (!_state) throw new Error("initLocationsUI: missing state");
+  _blobIdToObjectUrl = blobIdToObjectUrl || _blobIdToObjectUrl;
+  if (!_state) throw new Error("initLocationsUI requires state");
+  if (!_blobIdToObjectUrl) throw new Error("initLocationsUI requires blobIdToObjectUrl");
   if (!SaveManager) throw new Error("initLocationsUI: missing SaveManager");
   if (!makeLocation) throw new Error("initLocationsUI: missing makeLocation");
 

@@ -2,14 +2,14 @@
 // This module renders NPC cards. It relies on a few helpers that still live in app.js;
 // those are injected via initNpcCards().
 
-import { blobIdToObjectUrl } from "../../../storage/blobs.js";
-import { autoSizeInput } from "../../../features/autosize.js";
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 
 let _cardsEl = null;
 let _Popovers = null;
 let _state = null;
+let _blobIdToObjectUrl = null;
+let _autoSizeInput = null;
 
 // Injected helpers (still in app.js for now)
 let _matchesSearch = null;
@@ -84,7 +84,7 @@ function renderNpcCard(npc) {
     portrait.appendChild(img);
 
     // Load async
-    blobIdToObjectUrl(npc.imgBlobId).then(url => {
+    _blobIdToObjectUrl(npc.imgBlobId).then(url => {
       if (url) img.src = url;
     });
   } else {
@@ -179,7 +179,7 @@ function renderNpcCard(npc) {
   classInput.placeholder = "Class / Role";
   classInput.value = npc.className || "";
   classInput.classList.add("autosize");
-  autoSizeInput(classInput, { min: 60, max: 200 });
+  _autoSizeInput(classInput, { min: 60, max: 200 });
   classInput.addEventListener("input", () => _updateNpc(npc.id, { className: classInput.value }, false));
 
   const classBlock = document.createElement("div");
@@ -205,8 +205,8 @@ function renderNpcCard(npc) {
   hpCur.type = "number";
   hpCur.placeholder = "Cur";
   hpCur.value = npc.hpCurrent ?? "";
-  autoSizeInput(hpCur, { min: 30, max: 70 });
-  hpCur.addEventListener("input", () =>{ autoSizeInput(hpCur, { min: 30, max: 70 }); _updateNpc(npc.id, { hpCurrent: _numberOrNull(hpCur.value) }, false); });
+  _autoSizeInput(hpCur, { min: 30, max: 70 });
+  hpCur.addEventListener("input", () =>{ _autoSizeInput(hpCur, { min: 30, max: 70 }); _updateNpc(npc.id, { hpCurrent: _numberOrNull(hpCur.value) }, false); });
 
   const slash = document.createElement("span");
   slash.className = "muted";
@@ -219,8 +219,8 @@ function renderNpcCard(npc) {
   hpMax.type = "number";
   hpMax.placeholder = "Max";
   hpMax.value = npc.hpMax ?? "";
-  autoSizeInput(hpMax, { min: 30, max: 70 });
-  hpMax.addEventListener("input", () => { autoSizeInput(hpMax, { min: 30, max: 70 }); _updateNpc(npc.id, { hpMax: _numberOrNull(hpMax.value) }, false); });
+  _autoSizeInput(hpMax, { min: 30, max: 70 });
+  hpMax.addEventListener("input", () => { _autoSizeInput(hpMax, { min: 30, max: 70 }); _updateNpc(npc.id, { hpMax: _numberOrNull(hpMax.value) }, false); });
 
   hpWrap.appendChild(hpCur);
   hpWrap.appendChild(slash);
@@ -242,7 +242,7 @@ function renderNpcCard(npc) {
   statusInput.classList.add("statusInput");
   statusInput.placeholder = "Poisoned, Charmed…";
   statusInput.value = npc.status || "";
-  autoSizeInput(statusInput, { min: 60, max: 300 });
+  _autoSizeInput(statusInput, { min: 60, max: 300 });
   statusInput.addEventListener("input", () => _updateNpc(npc.id, { status: statusInput.value }, false));
 
   statusBlock.appendChild(statusLabel);
@@ -370,9 +370,15 @@ export function initNpcsUI(deps = {}) {
     putBlob,
     cropImageModal,
     getPortraitAspect,
+    blobIdToObjectUrl,
+    autoSizeInput,
   } = deps;
   _state = deps.state;
-  if (!_state) throw new Error("initNpcsUI: missing state");
+  _blobIdToObjectUrl = blobIdToObjectUrl || _blobIdToObjectUrl;
+  _autoSizeInput = autoSizeInput || _autoSizeInput;
+  if (!_state) throw new Error("initNpcsUI requires state");
+  if (!_blobIdToObjectUrl) throw new Error("initNpcsUI requires blobIdToObjectUrl");
+  if (!_autoSizeInput) throw new Error("initNpcsUI requires autoSizeInput");
   if (!SaveManager) throw new Error("initNpcsUI: missing SaveManager");
   if (!makeNpc) throw new Error("initNpcsUI: missing makeNpc");
 

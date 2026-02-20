@@ -21,10 +21,8 @@ export function initSpellsPanelUI(deps) {
     } = deps || {};
     _state = deps?.state;
 
-    if (!_state || !SaveManager) {
-        console.warn("initSpellsPanelUI: missing deps state/SaveManager.");
-        return;
-    }
+    if (!_state) throw new Error("initSpellsPanelUI requires state");
+    if (!SaveManager) throw new Error("initSpellsPanelUI requires SaveManager");
 
     // ---------- Spells v2 UI (dynamic levels + spells) ----------
     const _spellNotesCache = new Map(); // spellId -> text

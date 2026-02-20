@@ -1,6 +1,5 @@
 // js/pages/map/mapPage.js
 
-import { uiAlert } from "../../ui/dialogs.js";
 import { enhanceSelectDropdown } from "../../ui/selectDropdown.js";
 import { createMapCanvases, renderMap, getCanvasPoint } from "./mapCanvas.js";
 
@@ -21,12 +20,14 @@ import {
 } from "./mapDrawing.js";
 import { createMapGestures } from "./mapGestures.js";
 
+let _uiAlert = null;
+
 export function setupMapPage({
   state,
   SaveManager,
   setStatus,
   positionMenuOnScreen,
-  popovers,
+  Popovers,
   // map manager + storage helpers
   ensureMapManager,
   getActiveMap,
@@ -36,8 +37,12 @@ export function setupMapPage({
   deleteBlob,
   // dialogs
   uiPrompt,
+  uiAlert,
   uiConfirm
 }) {
+  _uiAlert = uiAlert;
+  if (!_uiAlert) throw new Error("setupMapPage requires uiAlert");
+
   /************************ Map page ***********************/
   let canvas, ctx;
   let drawLayer, drawCtx;
@@ -237,7 +242,7 @@ export function setupMapPage({
       } catch (err) {
         console.error("Failed to save map image blob:", err);
         setStatus("Could not save map image. Consider exporting a backup.");
-        await uiAlert("Could not save that map image (storage may be full).", { title: "Save Failed" });
+        await _uiAlert("Could not save that map image (storage may be full).", { title: "Save Failed" });
         return;
       }
 
@@ -288,10 +293,10 @@ export function setupMapPage({
 
     // Enhance the Map <select> so the OPEN menu matches the Map Tools dropdown.
     // Closed control keeps the same sizing/style as the original select.
-    if (mapSelect && popovers && !mapSelect.dataset.dropdownEnhanced) {
+    if (mapSelect && Popovers && !mapSelect.dataset.dropdownEnhanced) {
       enhanceSelectDropdown({
         select: mapSelect,
-        Popovers: popovers,
+        Popovers,
         buttonClass: "mapSelectBtn",
         optionClass: "swatchOption",
         groupLabelClass: "dropdownGroupLabel",
@@ -315,8 +320,8 @@ export function setupMapPage({
 
     // (mapSelect enhancement handled above)
     // Centralized popover registrations (outside click + Escape + resize reposition)
-    const toolPopover = (popovers && toolBtn && toolMenu)
-      ? popovers.register({
+    const toolPopover = (Popovers && toolBtn && toolMenu)
+      ? Popovers.register({
         button: toolBtn,
         menu: toolMenu,
         preferRight: false,
@@ -331,8 +336,8 @@ export function setupMapPage({
       })
       : null;
 
-    const colorPopover = (popovers && colorBtn && colorMenu)
-      ? popovers.register({
+    const colorPopover = (Popovers && colorBtn && colorMenu)
+      ? Popovers.register({
         button: colorBtn,
         menu: colorMenu,
         preferRight: false,
@@ -458,7 +463,7 @@ export function setupMapPage({
 
     deleteMapBtn?.addEventListener("click", async () => {
       if (state.map.maps.length <= 1) {
-        await uiAlert("You must keep at least one map.", { title: "Notice" });
+        await _uiAlert("You must keep at least one map.", { title: "Notice" });
         return;
       }
       const mp = getActiveMap();
