@@ -80,7 +80,7 @@ export function initSessionsUI(deps) {
   renderSessionTabs();
 }
 
-export function renderSessionTabs() {
+function renderSessionTabs() {
   if (!_tabsEl || !_notesBox) return;
 
   _tabsEl.innerHTML = "";

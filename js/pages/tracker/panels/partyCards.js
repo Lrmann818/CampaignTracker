@@ -23,7 +23,7 @@ let _deleteParty = null;
 let _numberOrNull = null;
 let _renderPartyTabs = null;
 
-export function initPartyCards(deps) {
+function initPartyCards(deps) {
   _cardsEl = deps.cardsEl;
   _matchesSearch = deps.matchesSearch;
   _enhanceNumberSteppers = deps.enhanceNumberSteppers;

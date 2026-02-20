@@ -31,7 +31,7 @@ let _deleteLoc = null;
  * @param {Function} opts.markDirty
  * @param {Function} opts.render
  */
-export function initLocationsToolbar({ addBtn, searchEl, filterEl, state: injectedState, makeLocation, markDirty, render, renderTabs }) {
+function initLocationsToolbar({ addBtn, searchEl, filterEl, state: injectedState, makeLocation, markDirty, render, renderTabs }) {
   const s = injectedState || state;
   if (!s?.tracker) return;
 
@@ -72,7 +72,7 @@ export function initLocationsToolbar({ addBtn, searchEl, filterEl, state: inject
   });
 }
 
-export function initLocationCards(deps) {
+function initLocationCards(deps) {
   _cardsEl = deps.cardsEl;
   _pickLocImage = deps.pickLocImage;
   _updateLoc = deps.updateLoc;

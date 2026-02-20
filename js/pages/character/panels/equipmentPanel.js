@@ -44,7 +44,7 @@ function _highlightInline(text, query) {
   return safe.replace(re, (m) => `<mark class="searchMark">${m}</mark>`);
 }
 
-export function initInventoryUI(deps) {
+function initInventoryUI(deps) {
   _tabsEl = deps.tabsEl;
   _notesBox = deps.notesBox;
   _searchEl = deps.searchEl;
@@ -75,7 +75,7 @@ export function initInventoryUI(deps) {
   renderInventoryTabs();
 }
 
-export function renderInventoryTabs() {
+function renderInventoryTabs() {
   if (!_tabsEl || !_notesBox) return;
 
   _tabsEl.innerHTML = "";

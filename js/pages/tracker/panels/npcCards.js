@@ -21,7 +21,7 @@ let _moveNpc = null;
 let _deleteNpc = null;
 let _numberOrNull = null;
 
-export function initNpcCards(deps) {
+function initNpcCards(deps) {
   _cardsEl = deps.cardsEl;
   _matchesSearch = deps.matchesSearch;
   _enhanceNumberSteppers = deps.enhanceNumberSteppers;
@@ -33,7 +33,7 @@ export function initNpcCards(deps) {
   _numberOrNull = deps.numberOrNull;
 }
 
-export function renderNpcCards() {
+function renderNpcCards() {
   const prevScroll = _cardsEl.scrollTop; // ✅ keep scroll position
 
   const sectionId = state.tracker.npcActiveSectionId;
@@ -63,7 +63,7 @@ export function renderNpcCards() {
   _cardsEl.scrollTop = prevScroll; // ✅ restore after DOM rebuild
 }
 
-export function renderNpcCard(npc) {
+function renderNpcCard(npc) {
   const card = document.createElement("div");
   card.className = "npcCard npcCardStack";
   card.dataset.npcId = npc.id;
