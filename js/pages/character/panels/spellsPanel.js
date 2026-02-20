@@ -1,9 +1,8 @@
-import { state } from "../../../state.js";
+let _state = null;
 
 
 export function initSpellsPanelUI(deps) {
     const {
-        state,
         SaveManager,
 
         // Spells notes storage
@@ -20,6 +19,12 @@ export function initSpellsPanelUI(deps) {
         uiPrompt,
         setStatus
     } = deps || {};
+    _state = deps?.state;
+
+    if (!_state || !SaveManager) {
+        console.warn("initSpellsPanelUI: missing deps state/SaveManager.");
+        return;
+    }
 
     // ---------- Spells v2 UI (dynamic levels + spells) ----------
     const _spellNotesCache = new Map(); // spellId -> text
@@ -30,10 +35,10 @@ export function initSpellsPanelUI(deps) {
     }
 
     function ensureSpellsV2Shape() {
-        if (!state.character.spells || typeof state.character.spells !== "object") {
-            state.character.spells = { levels: [] };
+        if (!_state.character.spells || typeof _state.character.spells !== "object") {
+            _state.character.spells = { levels: [] };
         }
-        if (!Array.isArray(state.character.spells.levels)) state.character.spells.levels = [];
+        if (!Array.isArray(_state.character.spells.levels)) _state.character.spells.levels = [];
     }
 
     function newSpellLevel(label, hasSlots = true) {
@@ -60,8 +65,8 @@ export function initSpellsPanelUI(deps) {
         if (!container || !addLevelBtn) return;
 
         ensureSpellsV2Shape();
-        if (!state.character.spells.levels.length) {
-            state.character.spells.levels = [
+        if (!_state.character.spells.levels.length) {
+            _state.character.spells.levels = [
                 newSpellLevel('Cantrips', false),
                 newSpellLevel('1st Level', true),
                 newSpellLevel('2nd Level', true),
@@ -82,7 +87,7 @@ export function initSpellsPanelUI(deps) {
         addLevelBtn.addEventListener('click', async () => {
             const suggested = (() => {
                 // Find the highest numbered "<n>th Level" and suggest the next one.
-                const levels = (state.character?.spells?.levels || []).map(l => String(l.label || ""));
+                const levels = (_state.character?.spells?.levels || []).map(l => String(l.label || ""));
                 let max = 0;
                 for (const lab of levels) {
                     const m = lab.match(/\b(\d+)\s*(st|nd|rd|th)?\s*level\b/i);
@@ -102,7 +107,7 @@ export function initSpellsPanelUI(deps) {
             const label = ((await uiPrompt('New spell level name:', { defaultValue: suggested, title: 'New Spell Level' })) || '').trim();
             if (!label) return;
             const isCantrip = label.toLowerCase().includes('cantrip');
-            state.character.spells.levels.push(newSpellLevel(label, !isCantrip));
+            _state.character.spells.levels.push(newSpellLevel(label, !isCantrip));
             SaveManager.markDirty();
             render();
         });
@@ -115,7 +120,7 @@ export function initSpellsPanelUI(deps) {
 
         function render() {
             container.innerHTML = '';
-            const levels = state.character.spells.levels;
+            const levels = _state.character.spells.levels;
             if (!levels.length) {
                 const empty = document.createElement('div');
                 empty.className = 'mutedSmall';
@@ -237,7 +242,7 @@ export function initSpellsPanelUI(deps) {
                     _spellNotesCache.delete(sp.id);
                     await deleteText(textKey_spellNotes(sp.id));
                 }
-                state.character.spells.levels.splice(levelIndex, 1);
+                _state.character.spells.levels.splice(levelIndex, 1);
                 SaveManager.markDirty();
                 render();
             });

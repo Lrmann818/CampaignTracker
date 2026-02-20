@@ -1,7 +1,6 @@
 // Phase 3: Sessions UI extracted from app.js
 // Renders the Sessions tab strip + notes box and wires the toolbar buttons.
 
-import { state } from "../../../state.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 
 let _tabsEl = null;
@@ -17,6 +16,7 @@ let _SaveManager = null;
 let _uiPrompt = null;
 let _uiAlert = null;
 let _uiConfirm = null;
+let _state = null;
 
 let _wired = false;
 
@@ -48,7 +48,8 @@ function _highlightInline(text, query) {
  *   SaveManager, uiPrompt, uiAlert, uiConfirm
  * }
  */
-export function initSessionsUI(deps) {
+export function initSessionsUI(deps = {}) {
+  _state = deps.state;
   _tabsEl = deps.tabsEl;
   _notesBox = deps.notesBox;
   _searchEl = deps.searchEl;
@@ -61,6 +62,11 @@ export function initSessionsUI(deps) {
   _uiAlert = deps.uiAlert;
   _uiConfirm = deps.uiConfirm;
 
+  if (!_state) {
+    console.warn("Sessions UI: missing required dependency (state).");
+    return;
+  }
+
   if (!_tabsEl || !_notesBox) {
     console.warn("Sessions UI: missing required elements (tabsEl/notesBox).");
     return;
@@ -69,7 +75,7 @@ export function initSessionsUI(deps) {
   ensureSessionDefaults();
 
   // True in-field highlight inside the session notes box
-  _notesHl = attachSearchHighlightOverlay(_notesBox, () => (state.tracker.sessionSearch || ""));
+  _notesHl = attachSearchHighlightOverlay(_notesBox, () => (_state.tracker.sessionSearch || ""));
 
   // Wire handlers only once (setupTracker can run more than once in some refactors)
   if (!_wired) {
@@ -85,10 +91,10 @@ function renderSessionTabs() {
 
   _tabsEl.innerHTML = "";
 
-  const query = (state.tracker.sessionSearch || "").trim().toLowerCase();
+  const query = (_state.tracker.sessionSearch || "").trim().toLowerCase();
 
   // Decide which sessions to show in the tab strip
-  const sessionsToShow = (state.tracker.sessions || [])
+  const sessionsToShow = (_state.tracker.sessions || [])
     .map((s, idx) => ({ s, idx }))
     .filter(({ s }) => {
       if (!query) return true;
@@ -99,15 +105,15 @@ function renderSessionTabs() {
 
   sessionsToShow.forEach(({ s, idx }) => {
     const btn = document.createElement("button");
-    btn.className = "sessionTab" + (idx === state.tracker.activeSessionIndex ? " active" : "");
+    btn.className = "sessionTab" + (idx === _state.tracker.activeSessionIndex ? " active" : "");
     btn.type = "button";
-    btn.innerHTML = _highlightInline((s.title || `Session ${idx + 1}`), state.tracker.sessionSearch || "");
+    btn.innerHTML = _highlightInline((s.title || `Session ${idx + 1}`), _state.tracker.sessionSearch || "");
     btn.addEventListener("click", () => switchSession(idx));
     _tabsEl.appendChild(btn);
   });
 
   // Load current notes into box
-  const current = state.tracker.sessions?.[state.tracker.activeSessionIndex];
+  const current = _state.tracker.sessions?.[_state.tracker.activeSessionIndex];
   _notesBox.value = current?.notes || "";
   if (_notesHl) _notesHl.update();
 
@@ -122,15 +128,15 @@ function renderSessionTabs() {
 }
 
 function ensureSessionDefaults() {
-  if (!Array.isArray(state.tracker.sessions) || state.tracker.sessions.length === 0) {
-    state.tracker.sessions = [{ title: "Session 1", notes: "" }];
+  if (!Array.isArray(_state.tracker.sessions) || _state.tracker.sessions.length === 0) {
+    _state.tracker.sessions = [{ title: "Session 1", notes: "" }];
   }
-  if (typeof state.tracker.activeSessionIndex !== "number") {
-    state.tracker.activeSessionIndex = 0;
+  if (typeof _state.tracker.activeSessionIndex !== "number") {
+    _state.tracker.activeSessionIndex = 0;
   }
-  if (state.tracker.activeSessionIndex < 0) state.tracker.activeSessionIndex = 0;
-  if (state.tracker.activeSessionIndex >= state.tracker.sessions.length) {
-    state.tracker.activeSessionIndex = state.tracker.sessions.length - 1;
+  if (_state.tracker.activeSessionIndex < 0) _state.tracker.activeSessionIndex = 0;
+  if (_state.tracker.activeSessionIndex >= _state.tracker.sessions.length) {
+    _state.tracker.activeSessionIndex = _state.tracker.sessions.length - 1;
   }
 }
 
@@ -145,9 +151,9 @@ function markDirty() {
 function wireHandlers() {
   // Search
   if (_searchEl) {
-    _searchEl.value = state.tracker.sessionSearch || "";
+    _searchEl.value = _state.tracker.sessionSearch || "";
     _searchEl.addEventListener("input", () => {
-      state.tracker.sessionSearch = _searchEl.value;
+      _state.tracker.sessionSearch = _searchEl.value;
       markDirty();
       renderSessionTabs();
     });
@@ -155,7 +161,7 @@ function wireHandlers() {
 
   // Notes typing saves into active session
   _notesBox.addEventListener("input", () => {
-    const cur = state.tracker.sessions?.[state.tracker.activeSessionIndex];
+    const cur = _state.tracker.sessions?.[_state.tracker.activeSessionIndex];
     if (!cur) return;
     cur.notes = _notesBox.value;
     markDirty();
@@ -164,12 +170,12 @@ function wireHandlers() {
   // Add session
   _addBtn?.addEventListener("click", () => {
     // Save current first
-    const cur = state.tracker.sessions?.[state.tracker.activeSessionIndex];
+    const cur = _state.tracker.sessions?.[_state.tracker.activeSessionIndex];
     if (cur) cur.notes = _notesBox.value;
 
-    const nextNum = (state.tracker.sessions?.length || 0) + 1;
-    state.tracker.sessions.push({ title: `Session ${nextNum}`, notes: "" });
-    state.tracker.activeSessionIndex = state.tracker.sessions.length - 1;
+    const nextNum = (_state.tracker.sessions?.length || 0) + 1;
+    _state.tracker.sessions.push({ title: `Session ${nextNum}`, notes: "" });
+    _state.tracker.activeSessionIndex = _state.tracker.sessions.length - 1;
 
     markDirty();
     renderSessionTabs();
@@ -178,7 +184,7 @@ function wireHandlers() {
 
   // Rename session
   _renameBtn?.addEventListener("click", async () => {
-    const cur = state.tracker.sessions?.[state.tracker.activeSessionIndex];
+    const cur = _state.tracker.sessions?.[_state.tracker.activeSessionIndex];
     if (!cur) return;
 
     const proposed = await _uiPrompt?.("Rename session tab to:", {
@@ -187,14 +193,14 @@ function wireHandlers() {
     });
     if (proposed === null || proposed === undefined) return; // cancelled
 
-    cur.title = String(proposed).trim() || cur.title || `Session ${state.tracker.activeSessionIndex + 1}`;
+    cur.title = String(proposed).trim() || cur.title || `Session ${_state.tracker.activeSessionIndex + 1}`;
     markDirty();
     renderSessionTabs();
   });
 
   // Delete session
   _deleteBtn?.addEventListener("click", async (e) => {
-    if ((state.tracker.sessions?.length || 0) <= 1) {
+    if ((_state.tracker.sessions?.length || 0) <= 1) {
       await _uiAlert?.("You need at least one session.", { title: "Notice" });
       // (legacy) some handlers tried to clear inputs; keep harmless
       if (e?.target && "value" in e.target) e.target.value = "";
@@ -207,9 +213,9 @@ function wireHandlers() {
     });
     if (!ok) return;
 
-    const idx = state.tracker.activeSessionIndex;
-    state.tracker.sessions.splice(idx, 1);
-    state.tracker.activeSessionIndex = Math.max(0, idx - 1);
+    const idx = _state.tracker.activeSessionIndex;
+    _state.tracker.sessions.splice(idx, 1);
+    _state.tracker.activeSessionIndex = Math.max(0, idx - 1);
 
     markDirty();
     renderSessionTabs();
@@ -218,10 +224,10 @@ function wireHandlers() {
 
 function switchSession(newIndex) {
   // Save current notes before switching
-  const cur = state.tracker.sessions?.[state.tracker.activeSessionIndex];
+  const cur = _state.tracker.sessions?.[_state.tracker.activeSessionIndex];
   if (cur) cur.notes = _notesBox.value;
 
-  state.tracker.activeSessionIndex = newIndex;
+  _state.tracker.activeSessionIndex = newIndex;
   markDirty();
   renderSessionTabs();
 }

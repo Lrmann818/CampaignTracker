@@ -2,12 +2,12 @@
 // This module renders Location cards. A few location helpers still live in app.js
 // and are injected via initLocationCards().
 
-import { state } from "../../../state.js";
 import { blobIdToObjectUrl } from "../../../storage/blobs.js";
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 
 let _cardsEl = null;
+let _state = null;
 
 // Optional: Popovers manager, used to enhance native <select> open menus.
 let _Popovers = null;
@@ -26,13 +26,12 @@ let _deleteLoc = null;
  * @param {HTMLElement} opts.addBtn
  * @param {HTMLInputElement} opts.searchEl
  * @param {HTMLSelectElement} opts.filterEl
- * @param {Object} [opts.state]
  * @param {Function} opts.makeLocation
  * @param {Function} opts.markDirty
  * @param {Function} opts.render
  */
-function initLocationsToolbar({ addBtn, searchEl, filterEl, state: injectedState, makeLocation, markDirty, render, renderTabs }) {
-  const s = injectedState || state;
+function initLocationsToolbar({ addBtn, searchEl, filterEl, makeLocation, markDirty, render, renderTabs }) {
+  const s = _state;
   if (!s?.tracker) return;
 
   // Defaults for persisted toolbar state
@@ -72,7 +71,8 @@ function initLocationsToolbar({ addBtn, searchEl, filterEl, state: injectedState
   });
 }
 
-function initLocationCards(deps) {
+function initLocationCards(deps = {}) {
+  _state = deps.state || _state;
   _cardsEl = deps.cardsEl;
   _pickLocImage = deps.pickLocImage;
   _updateLoc = deps.updateLoc;
@@ -91,13 +91,14 @@ function matchesSearch(loc, q) {
 
 export function renderLocationCards() {
   if (!_cardsEl) return;
+  if (!_state) return;
 
   const prevScroll = _cardsEl.scrollTop; // keep scroll position
-  const sectionId = state.tracker.locActiveSectionId;
-  const q = (state.tracker.locSearch || "").trim();
-  const typeFilter = state.tracker.locFilter || "all";
+  const sectionId = _state.tracker.locActiveSectionId;
+  const q = (_state.tracker.locSearch || "").trim();
+  const typeFilter = _state.tracker.locFilter || "all";
 
-  const list = state.tracker.locationsList
+  const list = _state.tracker.locationsList
     .filter(l => !sectionId ? true : ((l.sectionId || "") === sectionId))
     .filter(l => typeFilter === "all" ? true : ((l.type || "town") === typeFilter))
     .filter(l => matchesSearch(l, q));
@@ -274,13 +275,13 @@ sectionLabel.textContent = "Section";
 const sectionSelect = document.createElement("select");
 sectionSelect.className = "cardSelect";
 sectionSelect.title = "Move to section";
-(state.tracker.locSections || []).forEach(sec => {
+(_state.tracker.locSections || []).forEach(sec => {
   const opt = document.createElement("option");
   opt.value = sec.id;
   opt.textContent = sec.name || "Section";
   sectionSelect.appendChild(opt);
 });
-sectionSelect.value = loc.sectionId || state.tracker.locActiveSectionId;
+sectionSelect.value = loc.sectionId || _state.tracker.locActiveSectionId;
 sectionSelect.addEventListener("change", () => {
   _updateLoc(loc.id, { sectionId: sectionSelect.value }, true);
   if (typeof window.renderLocationTabs === "function") window.renderLocationTabs();
@@ -326,7 +327,7 @@ const del = document.createElement("button");
 
   
     // True in-field search highlight (every occurrence)
-    const _getLocQuery = () => (state.tracker.locSearch || "");
+    const _getLocQuery = () => (_state.tracker.locSearch || "");
     card.querySelectorAll("input, textarea").forEach(el => {
       attachSearchHighlightOverlay(el, _getLocQuery);
     });
@@ -336,22 +337,25 @@ return card;
 
 
 // Phase 3 polish: Locations init + CRUD helpers moved out of app.js
-export function initLocationsUI({
-  SaveManager,
-  Popovers,
-  uiPrompt,
-  uiAlert,
-  uiConfirm,
-  makeLocation,
-  // portrait flow deps
-  pickCropStorePortrait,
-  ImagePicker,
-  deleteBlob,
-  putBlob,
-  cropImageModal,
-  getPortraitAspect,
-  setStatus,
-} = {}) {
+export function initLocationsUI(deps = {}) {
+  const {
+    SaveManager,
+    Popovers,
+    uiPrompt,
+    uiAlert,
+    uiConfirm,
+    makeLocation,
+    // portrait flow deps
+    pickCropStorePortrait,
+    ImagePicker,
+    deleteBlob,
+    putBlob,
+    cropImageModal,
+    getPortraitAspect,
+    setStatus,
+  } = deps;
+  _state = deps.state;
+  if (!_state) throw new Error("initLocationsUI: missing state");
   if (!SaveManager) throw new Error("initLocationsUI: missing SaveManager");
   if (!makeLocation) throw new Error("initLocationsUI: missing makeLocation");
 
@@ -359,33 +363,33 @@ export function initLocationsUI({
   _Popovers = Popovers || null;
 
   // migrate old textarea into a location card (only once)
-  if (!Array.isArray(state.tracker.locationsList)) state.tracker.locationsList = [];
-  if (typeof state.tracker.locSearch !== "string") state.tracker.locSearch = "";
-  if (typeof state.tracker.locFilter !== "string") state.tracker.locFilter = "all";
+  if (!Array.isArray(_state.tracker.locationsList)) _state.tracker.locationsList = [];
+  if (typeof _state.tracker.locSearch !== "string") _state.tracker.locSearch = "";
+  if (typeof _state.tracker.locFilter !== "string") _state.tracker.locFilter = "all";
 
   // Location sections (like Party)
-  if (!Array.isArray(state.tracker.locSections) || state.tracker.locSections.length === 0) {
-    state.tracker.locSections = [{
+  if (!Array.isArray(_state.tracker.locSections) || _state.tracker.locSections.length === 0) {
+    _state.tracker.locSections = [{
       id: "locsec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
       name: "Main"
     }];
   }
-  if (typeof state.tracker.locActiveSectionId !== "string" || !state.tracker.locActiveSectionId) {
-    state.tracker.locActiveSectionId = state.tracker.locSections[0].id;
+  if (typeof _state.tracker.locActiveSectionId !== "string" || !_state.tracker.locActiveSectionId) {
+    _state.tracker.locActiveSectionId = _state.tracker.locSections[0].id;
   }
-  if (!state.tracker.locSections.some(s => s.id === state.tracker.locActiveSectionId)) {
-    state.tracker.locActiveSectionId = state.tracker.locSections[0].id;
+  if (!_state.tracker.locSections.some(s => s.id === _state.tracker.locActiveSectionId)) {
+    _state.tracker.locActiveSectionId = _state.tracker.locSections[0].id;
   }
   // Ensure all locations belong to a section
-  const defaultSectionId = state.tracker.locSections[0].id;
-  state.tracker.locationsList.forEach(l => {
+  const defaultSectionId = _state.tracker.locSections[0].id;
+  _state.tracker.locationsList.forEach(l => {
     if (!l.sectionId) l.sectionId = defaultSectionId;
   });
 
-  if (typeof state.tracker.locations === "string") {
-    const old = state.tracker.locations.trim();
-    if (old && state.tracker.locationsList.length === 0) {
-      state.tracker.locationsList.push(makeLocation({ title: "Imported Locations", notes: old }));
+  if (typeof _state.tracker.locations === "string") {
+    const old = _state.tracker.locations.trim();
+    if (old && _state.tracker.locationsList.length === 0) {
+      _state.tracker.locationsList.push(makeLocation({ title: "Imported Locations", notes: old }));
     }
   }
 
@@ -426,19 +430,19 @@ export function initLocationsUI({
   }
 
   function updateLoc(id, patch, rerender = true) {
-    const idx = state.tracker.locationsList.findIndex(l => l.id === id);
+    const idx = _state.tracker.locationsList.findIndex(l => l.id === id);
     if (idx === -1) return;
-    state.tracker.locationsList[idx] = { ...state.tracker.locationsList[idx], ...patch };
+    _state.tracker.locationsList[idx] = { ..._state.tracker.locationsList[idx], ...patch };
     SaveManager.markDirty();
     if (rerender) renderLocationCards();
   }
 
   function moveLocCard(id, dir) {
-    const sectionId = state.tracker.locActiveSectionId;
-    const q = (state.tracker.locSearch || "").trim();
-    const typeFilter = state.tracker.locFilter || "all";
+    const sectionId = _state.tracker.locActiveSectionId;
+    const q = (_state.tracker.locSearch || "").trim();
+    const typeFilter = _state.tracker.locFilter || "all";
 
-    const visible = state.tracker.locationsList
+    const visible = _state.tracker.locationsList
       .filter(l => (l.sectionId || "") === sectionId)
       .filter(l => typeFilter === "all" ? true : ((l.type || "town") === typeFilter))
       .filter(l => matchesSearch(l, q));
@@ -450,20 +454,20 @@ export function initLocationsUI({
     const aId = visible[pos].id;
     const bId = visible[newPos].id;
 
-    const aIdx = state.tracker.locationsList.findIndex(l => l.id === aId);
-    const bIdx = state.tracker.locationsList.findIndex(l => l.id === bId);
+    const aIdx = _state.tracker.locationsList.findIndex(l => l.id === aId);
+    const bIdx = _state.tracker.locationsList.findIndex(l => l.id === bId);
     if (aIdx === -1 || bIdx === -1) return;
 
-    const tmp = state.tracker.locationsList[aIdx];
-    state.tracker.locationsList[aIdx] = state.tracker.locationsList[bIdx];
-    state.tracker.locationsList[bIdx] = tmp;
+    const tmp = _state.tracker.locationsList[aIdx];
+    _state.tracker.locationsList[aIdx] = _state.tracker.locationsList[bIdx];
+    _state.tracker.locationsList[bIdx] = tmp;
 
     SaveManager.markDirty();
     renderLocationCards();
   }
 
   async function pickLocImage(id) {
-    const loc = state?.tracker?.locationsList?.find(l => l.id === id);
+    const loc = _state?.tracker?.locationsList?.find(l => l.id === id);
     if (!loc) return;
 
     if (!pickCropStorePortrait || !ImagePicker || !cropImageModal || !getPortraitAspect || !deleteBlob || !putBlob) {
@@ -486,7 +490,7 @@ export function initLocationsUI({
   }
 
   async function deleteLoc(id) {
-    const loc = state.tracker.locationsList.find(l => l.id === id);
+    const loc = _state.tracker.locationsList.find(l => l.id === id);
     if (!loc) return;
 
     if (uiConfirm) {
@@ -499,7 +503,7 @@ export function initLocationsUI({
       catch (err) { console.warn("Failed to delete location image blob:", err); }
     }
 
-    state.tracker.locationsList = state.tracker.locationsList.filter(l => l.id !== id);
+    _state.tracker.locationsList = _state.tracker.locationsList.filter(l => l.id !== id);
     SaveManager.markDirty();
     renderLocationCards();
   }
@@ -513,7 +517,7 @@ export function initLocationsUI({
   });
 
   function setActiveSection(sectionId) {
-    state.tracker.locActiveSectionId = sectionId;
+    _state.tracker.locActiveSectionId = sectionId;
     SaveManager.markDirty();
     renderLocTabs();
     renderLocationCards();
@@ -522,16 +526,16 @@ export function initLocationsUI({
   function renderLocTabs() {
     tabsEl.innerHTML = "";
 
-    const query = (state.tracker.locSearch || "").trim().toLowerCase();
-    const typeFilter = state.tracker.locFilter || "all";
-    const sections = state.tracker.locSections || [];
-    const activeId = state.tracker.locActiveSectionId;
+    const query = (_state.tracker.locSearch || "").trim().toLowerCase();
+    const typeFilter = _state.tracker.locFilter || "all";
+    const sections = _state.tracker.locSections || [];
+    const activeId = _state.tracker.locActiveSectionId;
 
     let toShow = sections.filter(sec => {
       if (!query) return true;
       const nameMatch = (sec.name || "").toLowerCase().includes(query);
       if (nameMatch) return true;
-      return state.tracker.locationsList.some(l => {
+      return _state.tracker.locationsList.some(l => {
         if (l.sectionId !== sec.id) return false;
         if (typeFilter !== "all" && (l.type || "town") !== typeFilter) return false;
         return matchesSearch(l, query);
@@ -572,7 +576,7 @@ export function initLocationsUI({
       await uiAlert?.("This action needs the in-app prompt dialog, but it isn't available.", { title: "Missing Dialog" });
       return;
     }
-    const nextNum = (state.tracker.locSections?.length || 0) + 1;
+    const nextNum = (_state.tracker.locSections?.length || 0) + 1;
     const proposed = await uiPrompt("New section name:", { defaultValue: `Section ${nextNum}`, title: "New Location Section" });
     if (proposed === null) return;
 
@@ -581,15 +585,15 @@ export function initLocationsUI({
       id: "locsec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
       name
     };
-    state.tracker.locSections.push(sec);
-    state.tracker.locActiveSectionId = sec.id;
+    _state.tracker.locSections.push(sec);
+    _state.tracker.locActiveSectionId = sec.id;
     SaveManager.markDirty();
     renderLocTabs();
     renderLocationCards();
   });
 
   renameSectionBtn.addEventListener("click", async () => {
-    const sec = state.tracker.locSections.find(s => s.id === state.tracker.locActiveSectionId);
+    const sec = _state.tracker.locSections.find(s => s.id === _state.tracker.locActiveSectionId);
     if (!sec) return;
 
     if (!uiPrompt) {
@@ -606,12 +610,12 @@ export function initLocationsUI({
   });
 
   deleteSectionBtn.addEventListener("click", async () => {
-    if ((state.tracker.locSections?.length || 0) <= 1) {
+    if ((_state.tracker.locSections?.length || 0) <= 1) {
       await uiAlert?.("You need at least one section.", { title: "Notice" });
       return;
     }
 
-    const sec = state.tracker.locSections.find(s => s.id === state.tracker.locActiveSectionId);
+    const sec = _state.tracker.locSections.find(s => s.id === _state.tracker.locActiveSectionId);
     if (!sec) return;
 
     if (!uiConfirm) {
@@ -623,13 +627,13 @@ export function initLocationsUI({
     if (!ok) return;
 
     const deleteId = sec.id;
-    state.tracker.locSections = state.tracker.locSections.filter(s => s.id !== deleteId);
+    _state.tracker.locSections = _state.tracker.locSections.filter(s => s.id !== deleteId);
 
-    const fallbackId = state.tracker.locSections[0].id;
-    state.tracker.locationsList.forEach(l => {
+    const fallbackId = _state.tracker.locSections[0].id;
+    _state.tracker.locationsList.forEach(l => {
       if (l.sectionId === deleteId) l.sectionId = fallbackId;
     });
-    state.tracker.locActiveSectionId = fallbackId;
+    _state.tracker.locActiveSectionId = fallbackId;
 
     SaveManager.markDirty();
     renderLocTabs();
@@ -641,7 +645,6 @@ export function initLocationsUI({
     addBtn,
     searchEl,
     filterEl,
-    state,
     makeLocation,
     markDirty: () => SaveManager.markDirty(),
     renderTabs: () => renderLocTabs(),

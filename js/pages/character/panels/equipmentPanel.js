@@ -6,9 +6,9 @@
 //   activeInventoryIndex: number
 //   inventorySearch: string
 
-import { state } from "../../../state.js";
 import { bindNumber } from "../../../ui/bindings.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
+let _state = null;
 
 let _tabsEl = null;
 let _notesBox = null;
@@ -44,7 +44,14 @@ function _highlightInline(text, query) {
   return safe.replace(re, (m) => `<mark class="searchMark">${m}</mark>`);
 }
 
-function initInventoryUI(deps) {
+function initInventoryUI(deps = {}) {
+  _state = deps.state ?? _state;
+
+  if (!_state) {
+    console.warn("Inventory UI: missing required dependency (state).");
+    return;
+  }
+
   _tabsEl = deps.tabsEl;
   _notesBox = deps.notesBox;
   _searchEl = deps.searchEl;
@@ -65,7 +72,7 @@ function initInventoryUI(deps) {
   ensureInventoryDefaults();
 
   // True in-field highlight inside the notes box
-  _notesHl = attachSearchHighlightOverlay(_notesBox, () => (state.character.inventorySearch || ""));
+  _notesHl = attachSearchHighlightOverlay(_notesBox, () => (_state.character.inventorySearch || ""));
 
   if (!_wired) {
     wireHandlers();
@@ -80,9 +87,9 @@ function renderInventoryTabs() {
 
   _tabsEl.innerHTML = "";
 
-  const query = (state.character.inventorySearch || "").trim().toLowerCase();
+  const query = (_state.character.inventorySearch || "").trim().toLowerCase();
 
-  const items = Array.isArray(state.character.inventoryItems) ? state.character.inventoryItems : [];
+  const items = Array.isArray(_state.character.inventoryItems) ? _state.character.inventoryItems : [];
   const itemsToShow = items
     .map((it, idx) => ({ it, idx }))
     .filter(({ it }) => {
@@ -94,14 +101,14 @@ function renderInventoryTabs() {
 
   itemsToShow.forEach(({ it, idx }) => {
     const btn = document.createElement("button");
-    btn.className = "sessionTab" + (idx === state.character.activeInventoryIndex ? " active" : "");
+    btn.className = "sessionTab" + (idx === _state.character.activeInventoryIndex ? " active" : "");
     btn.type = "button";
-    btn.innerHTML = _highlightInline((it.title || `Item ${idx + 1}`), state.character.inventorySearch || "");
+    btn.innerHTML = _highlightInline((it.title || `Item ${idx + 1}`), _state.character.inventorySearch || "");
     btn.addEventListener("click", () => switchInventoryItem(idx));
     _tabsEl.appendChild(btn);
   });
 
-  const current = items[state.character.activeInventoryIndex];
+  const current = items[_state.character.activeInventoryIndex];
   _notesBox.value = current?.notes || "";
   if (_notesHl) _notesHl.update();
 
@@ -115,7 +122,7 @@ function renderInventoryTabs() {
 }
 
 function ensureInventoryDefaults() {
-  const c = state.character;
+  const c = _state.character;
 
   // Migrate legacy single textarea into first tab, once.
   if (!Array.isArray(c.inventoryItems)) {
@@ -152,9 +159,9 @@ function markDirty() {
 function wireHandlers() {
   // Search
   if (_searchEl) {
-    _searchEl.value = state.character.inventorySearch || "";
+    _searchEl.value = _state.character.inventorySearch || "";
     _searchEl.addEventListener("input", () => {
-      state.character.inventorySearch = _searchEl.value;
+      _state.character.inventorySearch = _searchEl.value;
       markDirty();
       renderInventoryTabs();
     });
@@ -162,7 +169,7 @@ function wireHandlers() {
 
   // Notes typing saves into active item
   _notesBox.addEventListener("input", () => {
-    const cur = state.character.inventoryItems?.[state.character.activeInventoryIndex];
+    const cur = _state.character.inventoryItems?.[_state.character.activeInventoryIndex];
     if (!cur) return;
     cur.notes = _notesBox.value;
     markDirty();
@@ -172,10 +179,10 @@ function wireHandlers() {
   // Add item (prompt first, cancel aborts)
   _addBtn?.addEventListener("click", async () => {
     // Save current notes into active item before anything else
-    const cur = state.character.inventoryItems?.[state.character.activeInventoryIndex];
+    const cur = _state.character.inventoryItems?.[_state.character.activeInventoryIndex];
     if (cur) cur.notes = _notesBox.value;
 
-    const nextNum = (state.character.inventoryItems?.length || 0) + 1;
+    const nextNum = (_state.character.inventoryItems?.length || 0) + 1;
     const defaultTitle = `Item ${nextNum}`;
 
     // Ask for name BEFORE creating item
@@ -193,13 +200,13 @@ function wireHandlers() {
     const finalTitle = name || defaultTitle;
 
     // Now create the item
-    state.character.inventoryItems.push({
+    _state.character.inventoryItems.push({
       title: finalTitle,
       notes: ""
     });
 
-    state.character.activeInventoryIndex =
-      state.character.inventoryItems.length - 1;
+    _state.character.activeInventoryIndex =
+      _state.character.inventoryItems.length - 1;
 
     markDirty();
     renderInventoryTabs();
@@ -209,7 +216,7 @@ function wireHandlers() {
 
   // Rename item
   _renameBtn?.addEventListener("click", async () => {
-    const cur = state.character.inventoryItems?.[state.character.activeInventoryIndex];
+    const cur = _state.character.inventoryItems?.[_state.character.activeInventoryIndex];
     if (!cur) return;
 
     const proposed = await _uiPrompt?.("Rename item tab to:", {
@@ -218,14 +225,14 @@ function wireHandlers() {
     });
     if (proposed === null || proposed === undefined) return;
 
-    cur.title = String(proposed).trim() || cur.title || `Item ${state.character.activeInventoryIndex + 1}`;
+    cur.title = String(proposed).trim() || cur.title || `Item ${_state.character.activeInventoryIndex + 1}`;
     markDirty();
     renderInventoryTabs();
   });
 
   // Delete item
   _deleteBtn?.addEventListener("click", async (e) => {
-    if ((state.character.inventoryItems?.length || 0) <= 1) {
+    if ((_state.character.inventoryItems?.length || 0) <= 1) {
       await _uiAlert?.("You need at least one inventory item.", { title: "Notice" });
       if (e?.target && "value" in e.target) e.target.value = "";
       return;
@@ -237,9 +244,9 @@ function wireHandlers() {
     });
     if (!ok) return;
 
-    const idx = state.character.activeInventoryIndex;
-    state.character.inventoryItems.splice(idx, 1);
-    state.character.activeInventoryIndex = Math.max(0, idx - 1);
+    const idx = _state.character.activeInventoryIndex;
+    _state.character.inventoryItems.splice(idx, 1);
+    _state.character.activeInventoryIndex = Math.max(0, idx - 1);
 
     markDirty();
     renderInventoryTabs();
@@ -247,11 +254,11 @@ function wireHandlers() {
 }
 
 function switchInventoryItem(idx) {
-  const items = state.character.inventoryItems || [];
-  const current = items[state.character.activeInventoryIndex];
+  const items = _state.character.inventoryItems || [];
+  const current = items[_state.character.activeInventoryIndex];
   if (current) current.notes = _notesBox.value;
 
-  state.character.activeInventoryIndex = idx;
+  _state.character.activeInventoryIndex = idx;
 
   markDirty();
   renderInventoryTabs();
@@ -266,6 +273,12 @@ export function initEquipmentPanelUI(deps) {
     uiConfirm, 
     autoSizeInput 
   } = deps || {};
+  _state = deps?.state;
+
+  if (!_state) {
+    console.warn("initEquipmentPanelUI: missing state");
+    return;
+  }
 
   // ---- Inventory tabs UI ----
   initInventoryUI({
@@ -283,8 +296,8 @@ export function initEquipmentPanelUI(deps) {
 
   // ---- Money tiles ----
   const ensureMoney = () => {
-    if (!state?.character) return;
-    if (!state.character.money) state.character.money = { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
+    if (!_state?.character) return;
+    if (!_state.character.money) _state.character.money = { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
   };
 
   ensureMoney();
@@ -292,10 +305,10 @@ export function initEquipmentPanelUI(deps) {
   const bindMoney = (id, key) =>
     bindNumber({
       id,
-      get: () => state.character.money?.[key],
+      get: () => _state.character.money?.[key],
       set: (v) => {
         ensureMoney();
-        state.character.money[key] = (v ?? 0);
+        _state.character.money[key] = (v ?? 0);
       },
       SaveManager,
       autoSizeInput,

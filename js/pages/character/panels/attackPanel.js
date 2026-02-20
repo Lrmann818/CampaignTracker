@@ -5,24 +5,24 @@
 // - This module should ONLY own the Attacks panel UI.
 // - It should not call other Character-page wiring helpers (reorder, abilities, etc).
 // - It must be safe if init is called more than once (guard + no double event listeners).
-import { state } from "../../../state.js";
+let _state = null;
 
 
 export function initAttacksPanelUI(deps = {}) {
   const {
-    state,
     SaveManager,
     uiConfirm,
     autoSizeInput,
   } = deps;
+  _state = deps.state;
 
-  if (!state || !SaveManager) {
+  if (!_state || !SaveManager) {
     console.warn("[attacksPanel] Missing deps: state/SaveManager.");
     return;
   }
 
-  if (!state.character) state.character = {};
-  if (!Array.isArray(state.character.attacks)) state.character.attacks = [];
+  if (!_state.character) _state.character = {};
+  if (!Array.isArray(_state.character.attacks)) _state.character.attacks = [];
 
   const panelEl = document.getElementById("charAttacksPanel");
   const listEl = document.getElementById("attackList");
@@ -48,7 +48,7 @@ export function initAttacksPanelUI(deps = {}) {
   function renderAttacks() {
     listEl.innerHTML = "";
 
-    if (!state.character.attacks.length) {
+    if (!_state.character.attacks.length) {
       const empty = document.createElement("div");
       empty.className = "mutedSmall";
       empty.textContent = "No weapons yet. Click “+ Weapon”.";
@@ -57,7 +57,7 @@ export function initAttacksPanelUI(deps = {}) {
     }
 
     const frag = document.createDocumentFragment();
-    for (const a of state.character.attacks) frag.appendChild(renderAttackRow(a));
+    for (const a of _state.character.attacks) frag.appendChild(renderAttackRow(a));
     listEl.appendChild(frag);
   }
 
@@ -142,9 +142,9 @@ export function initAttacksPanelUI(deps = {}) {
   }
 
   function patchAttack(id, patch) {
-    const idx = state.character.attacks.findIndex((x) => x.id === id);
+    const idx = _state.character.attacks.findIndex((x) => x.id === id);
     if (idx === -1) return;
-    state.character.attacks[idx] = { ...state.character.attacks[idx], ...patch };
+    _state.character.attacks[idx] = { ..._state.character.attacks[idx], ...patch };
     SaveManager.markDirty();
   }
 
@@ -154,13 +154,13 @@ export function initAttacksPanelUI(deps = {}) {
       if (!ok) return;
     }
 
-    state.character.attacks = state.character.attacks.filter((x) => x.id !== id);
+    _state.character.attacks = _state.character.attacks.filter((x) => x.id !== id);
     SaveManager.markDirty();
     renderAttacks();
   }
 
   function addAttack() {
-    state.character.attacks.unshift({
+    _state.character.attacks.unshift({
       id: newAttackId(),
       name: "",
       notes: "",

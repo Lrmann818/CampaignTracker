@@ -86,6 +86,7 @@ export function initTrackerPage(deps) {
 
   // ----- Sessions UI -----
   initSessionsUI({
+    state,
     tabsEl: document.getElementById("sessionTabs"),
     notesBox: document.getElementById("sessionNotesBox"),
     searchEl: document.getElementById("sessionSearch"),
@@ -100,6 +101,7 @@ export function initTrackerPage(deps) {
 
   // ----- Cards UIs -----
   initNpcsUI({
+    state,
     SaveManager,
     Popovers,
     uiPrompt,
@@ -118,6 +120,7 @@ export function initTrackerPage(deps) {
   });
 
   const partyApi = initPartyUI({
+    state,
     SaveManager,
     Popovers,
     uiPrompt,
@@ -136,6 +139,7 @@ export function initTrackerPage(deps) {
   });
 
   initLocationsUI({
+    state,
     SaveManager,
     Popovers,
     uiPrompt,

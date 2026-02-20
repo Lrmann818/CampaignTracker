@@ -2,7 +2,6 @@
 // This module renders NPC cards. It relies on a few helpers that still live in app.js;
 // those are injected via initNpcCards().
 
-import { state } from "../../../state.js";
 import { blobIdToObjectUrl } from "../../../storage/blobs.js";
 import { autoSizeInput } from "../../../features/autosize.js";
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
@@ -10,6 +9,7 @@ import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay
 
 let _cardsEl = null;
 let _Popovers = null;
+let _state = null;
 
 // Injected helpers (still in app.js for now)
 let _matchesSearch = null;
@@ -21,7 +21,8 @@ let _moveNpc = null;
 let _deleteNpc = null;
 let _numberOrNull = null;
 
-function initNpcCards(deps) {
+function initNpcCards(deps = {}) {
+  _state = deps.state || _state;
   _cardsEl = deps.cardsEl;
   _matchesSearch = deps.matchesSearch;
   _enhanceNumberSteppers = deps.enhanceNumberSteppers;
@@ -34,12 +35,13 @@ function initNpcCards(deps) {
 }
 
 function renderNpcCards() {
+  if (!_state) return;
   const prevScroll = _cardsEl.scrollTop; // ✅ keep scroll position
 
-  const sectionId = state.tracker.npcActiveSectionId;
-  const q = (state.tracker.npcSearch || "").trim();
+  const sectionId = _state.tracker.npcActiveSectionId;
+  const q = (_state.tracker.npcSearch || "").trim();
 
-  const list = state.tracker.npcs
+  const list = _state.tracker.npcs
     .filter(n => (n.sectionId || "") === sectionId)
     .filter(n => _matchesSearch(n, q));
 
@@ -282,13 +284,13 @@ function renderNpcCard(npc) {
   const sectionSelect = document.createElement("select");
   sectionSelect.className = "cardSelect";
   sectionSelect.title = "Move to section";
-  (state.tracker.npcSections || []).forEach(sec => {
+  (_state.tracker.npcSections || []).forEach(sec => {
     const opt = document.createElement("option");
     opt.value = sec.id;
     opt.textContent = sec.name || "Section";
     sectionSelect.appendChild(opt);
   });
-  sectionSelect.value = npc.sectionId || state.tracker.npcActiveSectionId;
+  sectionSelect.value = npc.sectionId || _state.tracker.npcActiveSectionId;
   sectionSelect.addEventListener("change", () => {
     _updateNpc(npc.id, { sectionId: sectionSelect.value }, true);
     // If tabs are search-filtered like Party, ensure they stay accurate.
@@ -337,7 +339,7 @@ function renderNpcCard(npc) {
 
 
   // True in-field search highlight (every occurrence)
-  const _getNpcQuery = () => (state.tracker.npcSearch || "");
+  const _getNpcQuery = () => (_state.tracker.npcSearch || "");
   // Search highlight: exclude HP inputs entirely (cur/max) so numeric HP never gets marked.
   card.querySelectorAll("input:not(.npcHpInput), textarea").forEach(el => {
     attachSearchHighlightOverlay(el, _getNpcQuery);
@@ -350,24 +352,27 @@ function renderNpcCard(npc) {
 
 
 // Phase 3 polish: NPC init + CRUD helpers moved out of app.js
-export function initNpcsUI({
-  SaveManager,
-  Popovers,
-  uiPrompt,
-  uiAlert,
-  uiConfirm,
-  setStatus,
-  makeNpc,
-  enhanceNumberSteppers,
-  numberOrNull,
-  // portrait flow deps
-  pickCropStorePortrait,
-  ImagePicker,
-  deleteBlob,
-  putBlob,
-  cropImageModal,
-  getPortraitAspect,
-} = {}) {
+export function initNpcsUI(deps = {}) {
+  const {
+    SaveManager,
+    Popovers,
+    uiPrompt,
+    uiAlert,
+    uiConfirm,
+    setStatus,
+    makeNpc,
+    enhanceNumberSteppers,
+    numberOrNull,
+    // portrait flow deps
+    pickCropStorePortrait,
+    ImagePicker,
+    deleteBlob,
+    putBlob,
+    cropImageModal,
+    getPortraitAspect,
+  } = deps;
+  _state = deps.state;
+  if (!_state) throw new Error("initNpcsUI: missing state");
   if (!SaveManager) throw new Error("initNpcsUI: missing SaveManager");
   if (!makeNpc) throw new Error("initNpcsUI: missing makeNpc");
 
@@ -375,20 +380,20 @@ export function initNpcsUI({
 
   // Migrate old npc textarea string into first NPC note (if any old data exists)
   // Only runs if npcs is not an array.
-  if (!Array.isArray(state.tracker.npcs)) {
-    const old = String(state.tracker.npcs || "").trim();
-    state.tracker.npcs = [];
+  if (!Array.isArray(_state.tracker.npcs)) {
+    const old = String(_state.tracker.npcs || "").trim();
+    _state.tracker.npcs = [];
     if (old) {
-      state.tracker.npcs.push(makeNpc({ group: "undecided", name: "Imported NPC Notes", notes: old }));
+      _state.tracker.npcs.push(makeNpc({ group: "undecided", name: "Imported NPC Notes", notes: old }));
     }
   }
 
-  if (typeof state.tracker.npcSearch !== "string") state.tracker.npcSearch = "";
+  if (typeof _state.tracker.npcSearch !== "string") _state.tracker.npcSearch = "";
 
   // --- NPC Sections (migrate older group-based saves safely) ---
   // Older versions used fixed groups: friendly/undecided/foe.
   // Newer versions use dynamic sections with add/rename/delete.
-  if (!Array.isArray(state.tracker.npcSections) || state.tracker.npcSections.length === 0) {
+  if (!Array.isArray(_state.tracker.npcSections) || _state.tracker.npcSections.length === 0) {
     const mk = (name) => ({
       id: "npcsec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
       name
@@ -396,7 +401,7 @@ export function initNpcsUI({
     const friendly = mk("Friendly");
     const undecided = mk("Undecided");
     const foe = mk("Foe");
-    state.tracker.npcSections = [friendly, undecided, foe];
+    _state.tracker.npcSections = [friendly, undecided, foe];
 
     const groupToSecId = {
       friendly: friendly.id,
@@ -404,27 +409,27 @@ export function initNpcsUI({
       foe: foe.id,
     };
     // Migrate existing NPCs into the matching section
-    (state.tracker.npcs || []).forEach(n => {
+    (_state.tracker.npcs || []).forEach(n => {
       if (!n.sectionId) n.sectionId = groupToSecId[n.group] || friendly.id;
     });
 
     // If older saves had npcActiveGroup, map it over
-    if (typeof state.tracker.npcActiveGroup === "string") {
-      state.tracker.npcActiveSectionId = groupToSecId[state.tracker.npcActiveGroup] || friendly.id;
+    if (typeof _state.tracker.npcActiveGroup === "string") {
+      _state.tracker.npcActiveSectionId = groupToSecId[_state.tracker.npcActiveGroup] || friendly.id;
     }
   }
 
   // Ensure active section exists
-  if (typeof state.tracker.npcActiveSectionId !== "string" || !state.tracker.npcActiveSectionId) {
-    state.tracker.npcActiveSectionId = state.tracker.npcSections[0].id;
+  if (typeof _state.tracker.npcActiveSectionId !== "string" || !_state.tracker.npcActiveSectionId) {
+    _state.tracker.npcActiveSectionId = _state.tracker.npcSections[0].id;
   }
-  if (!state.tracker.npcSections.some(s => s.id === state.tracker.npcActiveSectionId)) {
-    state.tracker.npcActiveSectionId = state.tracker.npcSections[0].id;
+  if (!_state.tracker.npcSections.some(s => s.id === _state.tracker.npcActiveSectionId)) {
+    _state.tracker.npcActiveSectionId = _state.tracker.npcSections[0].id;
   }
 
   // If any NPC lacks a sectionId, put it in the first section
-  const defaultSectionId = state.tracker.npcSections[0].id;
-  (state.tracker.npcs || []).forEach(n => {
+  const defaultSectionId = _state.tracker.npcSections[0].id;
+  (_state.tracker.npcs || []).forEach(n => {
     if (!n.sectionId) n.sectionId = defaultSectionId;
   });
 
@@ -452,19 +457,19 @@ export function initNpcsUI({
   }
 
   function updateNpc(id, patch, rerender = true) {
-    const idx = state.tracker.npcs.findIndex(n => n.id === id);
+    const idx = _state.tracker.npcs.findIndex(n => n.id === id);
     if (idx === -1) return;
-    state.tracker.npcs[idx] = { ...state.tracker.npcs[idx], ...patch };
+    _state.tracker.npcs[idx] = { ..._state.tracker.npcs[idx], ...patch };
     SaveManager.markDirty();
     if (rerender) renderNpcCards();
   }
 
   function moveNpcCard(id, dir) {
-    const sectionId = state.tracker.npcActiveSectionId;
-    const q = (state.tracker.npcSearch || "").trim();
+    const sectionId = _state.tracker.npcActiveSectionId;
+    const q = (_state.tracker.npcSearch || "").trim();
 
     // Build the same visible list logic as renderNpcCards()
-    const visible = state.tracker.npcs
+    const visible = _state.tracker.npcs
       .filter(n => (n.sectionId || "") === sectionId)
       .filter(n => matchesSearch(n, q));
 
@@ -475,21 +480,21 @@ export function initNpcsUI({
     const aId = visible[pos].id;
     const bId = visible[newPos].id;
 
-    const aIdx = state.tracker.npcs.findIndex(n => n.id === aId);
-    const bIdx = state.tracker.npcs.findIndex(n => n.id === bId);
+    const aIdx = _state.tracker.npcs.findIndex(n => n.id === aId);
+    const bIdx = _state.tracker.npcs.findIndex(n => n.id === bId);
     if (aIdx === -1 || bIdx === -1) return;
 
     // Swap in the master array
-    const tmp = state.tracker.npcs[aIdx];
-    state.tracker.npcs[aIdx] = state.tracker.npcs[bIdx];
-    state.tracker.npcs[bIdx] = tmp;
+    const tmp = _state.tracker.npcs[aIdx];
+    _state.tracker.npcs[aIdx] = _state.tracker.npcs[bIdx];
+    _state.tracker.npcs[bIdx] = tmp;
 
     SaveManager.markDirty();
     renderNpcCards();
   }
 
   async function pickNpcImage(npcId) {
-    const npc = state?.tracker?.npcs?.find(n => n.id === npcId);
+    const npc = _state?.tracker?.npcs?.find(n => n.id === npcId);
     if (!npc) return;
 
     if (!pickCropStorePortrait || !ImagePicker || !cropImageModal || !getPortraitAspect || !deleteBlob || !putBlob) {
@@ -512,7 +517,7 @@ export function initNpcsUI({
   }
 
   async function deleteNpc(id) {
-    const npc = state.tracker.npcs.find(n => n.id === id);
+    const npc = _state.tracker.npcs.find(n => n.id === id);
     if (!npc) return;
 
     if (uiConfirm) {
@@ -525,7 +530,7 @@ export function initNpcsUI({
       catch (err) { console.warn("Failed to delete npc image blob:", err); }
     }
 
-    state.tracker.npcs = state.tracker.npcs.filter(n => n.id !== id);
+    _state.tracker.npcs = _state.tracker.npcs.filter(n => n.id !== id);
     SaveManager.markDirty();
     renderNpcCards();
   }
@@ -544,7 +549,7 @@ export function initNpcsUI({
   });
 
   function setActiveSection(sectionId) {
-    state.tracker.npcActiveSectionId = sectionId;
+    _state.tracker.npcActiveSectionId = sectionId;
     SaveManager.markDirty();
     renderNpcTabs();
     renderNpcCards();
@@ -553,15 +558,15 @@ export function initNpcsUI({
   function renderNpcTabs() {
     tabsEl.innerHTML = "";
 
-    const query = (state.tracker.npcSearch || "").trim().toLowerCase();
-    const sections = state.tracker.npcSections || [];
-    const activeId = state.tracker.npcActiveSectionId;
+    const query = (_state.tracker.npcSearch || "").trim().toLowerCase();
+    const sections = _state.tracker.npcSections || [];
+    const activeId = _state.tracker.npcActiveSectionId;
 
     let toShow = sections.filter(sec => {
       if (!query) return true;
       const nameMatch = (sec.name || "").toLowerCase().includes(query);
       if (nameMatch) return true;
-      return state.tracker.npcs.some(n => n.sectionId === sec.id && matchesSearch(n, query));
+      return _state.tracker.npcs.some(n => n.sectionId === sec.id && matchesSearch(n, query));
     });
 
     if (!toShow.some(s => s.id === activeId)) {
@@ -594,9 +599,9 @@ export function initNpcsUI({
   window.renderNpcTabs = renderNpcTabs;
 
   // Bind search
-  searchEl.value = state.tracker.npcSearch;
+  searchEl.value = _state.tracker.npcSearch;
   searchEl.addEventListener("input", () => {
-    state.tracker.npcSearch = searchEl.value;
+    _state.tracker.npcSearch = searchEl.value;
     SaveManager.markDirty();
     renderNpcTabs();
     renderNpcCards();
@@ -608,7 +613,7 @@ export function initNpcsUI({
       await uiAlert?.("This action needs the in-app prompt dialog, but it isn't available.", { title: "Missing Dialog" });
       return;
     }
-    const nextNum = (state.tracker.npcSections?.length || 0) + 1;
+    const nextNum = (_state.tracker.npcSections?.length || 0) + 1;
     const proposed = await uiPrompt("New section name:", { defaultValue: `Section ${nextNum}`, title: "New NPC Section" });
     if (proposed === null) return;
 
@@ -617,8 +622,8 @@ export function initNpcsUI({
       id: "npcsec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
       name
     };
-    state.tracker.npcSections.push(sec);
-    state.tracker.npcActiveSectionId = sec.id;
+    _state.tracker.npcSections.push(sec);
+    _state.tracker.npcActiveSectionId = sec.id;
 
     SaveManager.markDirty();
     renderNpcTabs();
@@ -626,7 +631,7 @@ export function initNpcsUI({
   });
 
   renameSectionBtn.addEventListener("click", async () => {
-    const sec = state.tracker.npcSections.find(s => s.id === state.tracker.npcActiveSectionId);
+    const sec = _state.tracker.npcSections.find(s => s.id === _state.tracker.npcActiveSectionId);
     if (!sec) return;
 
     if (!uiPrompt) {
@@ -643,12 +648,12 @@ export function initNpcsUI({
   });
 
   deleteSectionBtn.addEventListener("click", async () => {
-    if ((state.tracker.npcSections?.length || 0) <= 1) {
+    if ((_state.tracker.npcSections?.length || 0) <= 1) {
       await uiAlert?.("You need at least one section.", { title: "Notice" });
       return;
     }
 
-    const sec = state.tracker.npcSections.find(s => s.id === state.tracker.npcActiveSectionId);
+    const sec = _state.tracker.npcSections.find(s => s.id === _state.tracker.npcActiveSectionId);
     if (!sec) return;
 
     if (!uiConfirm) {
@@ -660,14 +665,14 @@ export function initNpcsUI({
     if (!ok) return;
 
     const deleteId = sec.id;
-    state.tracker.npcSections = state.tracker.npcSections.filter(s => s.id !== deleteId);
+    _state.tracker.npcSections = _state.tracker.npcSections.filter(s => s.id !== deleteId);
 
-    const fallbackId = state.tracker.npcSections[0].id;
-    state.tracker.npcs.forEach(n => {
+    const fallbackId = _state.tracker.npcSections[0].id;
+    _state.tracker.npcs.forEach(n => {
       if (n.sectionId === deleteId) n.sectionId = fallbackId;
     });
 
-    state.tracker.npcActiveSectionId = fallbackId;
+    _state.tracker.npcActiveSectionId = fallbackId;
     SaveManager.markDirty();
     renderNpcTabs();
     renderNpcCards();
@@ -679,8 +684,8 @@ export function initNpcsUI({
 
   // Add NPC
   addBtn.addEventListener("click", () => {
-    const npc = makeNpc({ sectionId: state.tracker.npcActiveSectionId });
-    state.tracker.npcs.unshift(npc);
+    const npc = makeNpc({ sectionId: _state.tracker.npcActiveSectionId });
+    _state.tracker.npcs.unshift(npc);
     SaveManager.markDirty();
     renderNpcTabs();
     renderNpcCards();

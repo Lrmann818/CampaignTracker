@@ -2,13 +2,13 @@
 // This module renders party member cards. It relies on a few helpers that still
 // live in app.js; those are injected via initPartyCards().
 
-import { state } from "../../../state.js";
 import { blobIdToObjectUrl } from "../../../storage/blobs.js";
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { autoSizeInput } from "../../../features/autosize.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 
 let _cardsEl = null;
+let _state = null;
 
 // Optional: Popovers manager, used to enhance native <select> open menus.
 let _Popovers = null;
@@ -23,7 +23,8 @@ let _deleteParty = null;
 let _numberOrNull = null;
 let _renderPartyTabs = null;
 
-function initPartyCards(deps) {
+function initPartyCards(deps = {}) {
+  _state = deps.state || _state;
   _cardsEl = deps.cardsEl;
   _matchesSearch = deps.matchesSearch;
   _enhanceNumberSteppers = deps.enhanceNumberSteppers;
@@ -37,12 +38,13 @@ function initPartyCards(deps) {
 
 export function renderPartyCards() {
   if (!_cardsEl) return;
+  if (!_state) return;
 
   const prevScroll = _cardsEl.scrollTop; // keep scroll position
-  const q = (state.tracker.partySearch || "").trim();
-  const sectionId = state.tracker.partyActiveSectionId;
+  const q = (_state.tracker.partySearch || "").trim();
+  const sectionId = _state.tracker.partyActiveSectionId;
 
-  const list = state.tracker.party
+  const list = _state.tracker.party
     .filter(m => m.sectionId === sectionId)
     .filter(m => _matchesSearch ? _matchesSearch(m, q) : true);
 
@@ -271,13 +273,13 @@ function renderPartyCard(m) {
   const sectionSelect = document.createElement("select");
   sectionSelect.className = "cardSelect"; // shared select styling (plus existing mapSelect look)
   sectionSelect.title = "Move to section";
-  (state.tracker.partySections || []).forEach(sec => {
+  (_state.tracker.partySections || []).forEach(sec => {
     const opt = document.createElement("option");
     opt.value = sec.id;
     opt.textContent = sec.name || "Section";
     sectionSelect.appendChild(opt);
   });
-  sectionSelect.value = m.sectionId || state.tracker.partyActiveSectionId;
+  sectionSelect.value = m.sectionId || _state.tracker.partyActiveSectionId;
 
   sectionSelect.addEventListener("change", () => {
     _updateParty(m.id, { sectionId: sectionSelect.value }, true);
@@ -321,7 +323,7 @@ function renderPartyCard(m) {
 
 
   // True in-field search highlight (every occurrence)
-  const _getPartyQuery = () => (state.tracker.partySearch || "");
+  const _getPartyQuery = () => (_state.tracker.partySearch || "");
   // Search highlight: exclude HP inputs entirely (cur/max) so numeric HP never gets marked.
   card.querySelectorAll("input:not(.npcHpInput), textarea").forEach(el => {
     attachSearchHighlightOverlay(el, _getPartyQuery);
@@ -333,50 +335,53 @@ function renderPartyCard(m) {
 
 // Phase 3 polish: Party init + CRUD helpers moved out of app.js
 // Returns an API object useful for optional legacy/global wiring.
-export function initPartyUI({
-  SaveManager,
-  Popovers,
-  uiPrompt,
-  uiAlert,
-  uiConfirm,
-  makePartyMember,
-  enhanceNumberSteppers,
-  numberOrNull,
-  // portrait flow deps
-  pickCropStorePortrait,
-  ImagePicker,
-  deleteBlob,
-  putBlob,
-  cropImageModal,
-  getPortraitAspect,
-  setStatus,
-} = {}) {
+export function initPartyUI(deps = {}) {
+  const {
+    SaveManager,
+    Popovers,
+    uiPrompt,
+    uiAlert,
+    uiConfirm,
+    makePartyMember,
+    enhanceNumberSteppers,
+    numberOrNull,
+    // portrait flow deps
+    pickCropStorePortrait,
+    ImagePicker,
+    deleteBlob,
+    putBlob,
+    cropImageModal,
+    getPortraitAspect,
+    setStatus,
+  } = deps;
+  _state = deps.state;
+  if (!_state) throw new Error("initPartyUI: missing state");
   if (!SaveManager) throw new Error("initPartyUI: missing SaveManager");
   if (!makePartyMember) throw new Error("initPartyUI: missing makePartyMember");
 
   // store Popovers for dynamic card dropdown enhancements
   _Popovers = Popovers || null;
 
-  if (!Array.isArray(state.tracker.party)) state.tracker.party = [];
-  if (typeof state.tracker.partySearch !== "string") state.tracker.partySearch = "";
+  if (!Array.isArray(_state.tracker.party)) _state.tracker.party = [];
+  if (typeof _state.tracker.partySearch !== "string") _state.tracker.partySearch = "";
 
   // Party sections state (migrate old saves safely)
-  if (!Array.isArray(state.tracker.partySections) || state.tracker.partySections.length === 0) {
-    state.tracker.partySections = [{
+  if (!Array.isArray(_state.tracker.partySections) || _state.tracker.partySections.length === 0) {
+    _state.tracker.partySections = [{
       id: "partysec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
       name: "Main"
     }];
   }
-  if (typeof state.tracker.partyActiveSectionId !== "string" || !state.tracker.partyActiveSectionId) {
-    state.tracker.partyActiveSectionId = state.tracker.partySections[0].id;
+  if (typeof _state.tracker.partyActiveSectionId !== "string" || !_state.tracker.partyActiveSectionId) {
+    _state.tracker.partyActiveSectionId = _state.tracker.partySections[0].id;
   }
   // If active id no longer exists, reset to first
-  if (!state.tracker.partySections.some(s => s.id === state.tracker.partyActiveSectionId)) {
-    state.tracker.partyActiveSectionId = state.tracker.partySections[0].id;
+  if (!_state.tracker.partySections.some(s => s.id === _state.tracker.partyActiveSectionId)) {
+    _state.tracker.partyActiveSectionId = _state.tracker.partySections[0].id;
   }
   // Migrate existing party members to default section
-  const defaultSectionId = state.tracker.partySections[0].id;
-  state.tracker.party.forEach(m => {
+  const defaultSectionId = _state.tracker.partySections[0].id;
+  _state.tracker.party.forEach(m => {
     if (!m.sectionId) m.sectionId = defaultSectionId;
   });
 
@@ -403,7 +408,7 @@ export function initPartyUI({
   }
 
   async function pickPartyImage(memberId) {
-    const member = state?.tracker?.party?.find(m => m.id === memberId);
+    const member = _state?.tracker?.party?.find(m => m.id === memberId);
     if (!member) return;
 
     if (!pickCropStorePortrait || !ImagePicker || !cropImageModal || !getPortraitAspect || !deleteBlob || !putBlob) {
@@ -426,15 +431,15 @@ export function initPartyUI({
   }
 
   function updateParty(id, patch, rerender = true) {
-    const idx = state.tracker.party.findIndex(m => m.id === id);
+    const idx = _state.tracker.party.findIndex(m => m.id === id);
     if (idx === -1) return;
-    state.tracker.party[idx] = { ...state.tracker.party[idx], ...patch };
+    _state.tracker.party[idx] = { ..._state.tracker.party[idx], ...patch };
     SaveManager.markDirty();
     if (rerender) renderPartyCards();
   }
 
   async function deleteParty(id) {
-    const member = state.tracker.party.find(m => m.id === id);
+    const member = _state.tracker.party.find(m => m.id === id);
     if (!member) return;
 
     if (uiConfirm) {
@@ -447,14 +452,14 @@ export function initPartyUI({
       catch (err) { console.warn("Failed to delete party image blob:", err); }
     }
 
-    state.tracker.party = state.tracker.party.filter(m => m.id !== id);
+    _state.tracker.party = _state.tracker.party.filter(m => m.id !== id);
     SaveManager.markDirty();
     renderPartyTabs();
     renderPartyCards();
   }
 
   function setActiveSection(sectionId) {
-    state.tracker.partyActiveSectionId = sectionId;
+    _state.tracker.partyActiveSectionId = sectionId;
     SaveManager.markDirty();
     renderPartyTabs();
     renderPartyCards();
@@ -463,9 +468,9 @@ export function initPartyUI({
   function renderPartyTabs() {
     tabsEl.innerHTML = "";
 
-    const query = (state.tracker.partySearch || "").trim().toLowerCase();
-    const sections = state.tracker.partySections || [];
-    const activeId = state.tracker.partyActiveSectionId;
+    const query = (_state.tracker.partySearch || "").trim().toLowerCase();
+    const sections = _state.tracker.partySections || [];
+    const activeId = _state.tracker.partyActiveSectionId;
 
     // Sessions-style filtering: show sections if their NAME matches search
     // OR if any member inside matches the search
@@ -473,7 +478,7 @@ export function initPartyUI({
       if (!query) return true;
       const nameMatch = (sec.name || "").toLowerCase().includes(query);
       if (nameMatch) return true;
-      return state.tracker.party.some(m => m.sectionId === sec.id && matchesSearch(m, query));
+      return _state.tracker.party.some(m => m.sectionId === sec.id && matchesSearch(m, query));
     });
 
     // If search would hide the active tab, keep it visible
@@ -503,10 +508,10 @@ export function initPartyUI({
   }
 
   function movePartyCard(id, dir) {
-    const q = (state.tracker.partySearch || "").trim();
-    const sectionId = state.tracker.partyActiveSectionId;
+    const q = (_state.tracker.partySearch || "").trim();
+    const sectionId = _state.tracker.partyActiveSectionId;
 
-    const visible = state.tracker.party.filter(m =>
+    const visible = _state.tracker.party.filter(m =>
       m.sectionId === sectionId && matchesSearch(m, q)
     );
 
@@ -517,13 +522,13 @@ export function initPartyUI({
     const aId = visible[pos].id;
     const bId = visible[newPos].id;
 
-    const aIdx = state.tracker.party.findIndex(m => m.id === aId);
-    const bIdx = state.tracker.party.findIndex(m => m.id === bId);
+    const aIdx = _state.tracker.party.findIndex(m => m.id === aId);
+    const bIdx = _state.tracker.party.findIndex(m => m.id === bId);
     if (aIdx === -1 || bIdx === -1) return;
 
-    const tmp = state.tracker.party[aIdx];
-    state.tracker.party[aIdx] = state.tracker.party[bIdx];
-    state.tracker.party[bIdx] = tmp;
+    const tmp = _state.tracker.party[aIdx];
+    _state.tracker.party[aIdx] = _state.tracker.party[bIdx];
+    _state.tracker.party[bIdx] = tmp;
 
     SaveManager.markDirty();
     renderPartyCards();
@@ -543,9 +548,9 @@ export function initPartyUI({
   });
 
   // Bind search
-  searchEl.value = state.tracker.partySearch;
+  searchEl.value = _state.tracker.partySearch;
   searchEl.addEventListener("input", () => {
-    state.tracker.partySearch = searchEl.value;
+    _state.tracker.partySearch = searchEl.value;
     SaveManager.markDirty();
     renderPartyTabs();     // tabs react to search
     renderPartyCards();    // cards react to search
@@ -554,8 +559,8 @@ export function initPartyUI({
   // Add party member (goes into ACTIVE section)
   addBtn.addEventListener("click", () => {
     const member = makePartyMember();
-    member.sectionId = state.tracker.partyActiveSectionId;
-    state.tracker.party.unshift(member);
+    member.sectionId = _state.tracker.partyActiveSectionId;
+    _state.tracker.party.unshift(member);
     SaveManager.markDirty();
     renderPartyTabs();
     renderPartyCards();
@@ -567,7 +572,7 @@ export function initPartyUI({
       await uiAlert?.("This action needs the in-app prompt dialog, but it isn't available.", { title: "Missing Dialog" });
       return;
     }
-    const nextNum = (state.tracker.partySections?.length || 0) + 1;
+    const nextNum = (_state.tracker.partySections?.length || 0) + 1;
     const proposed = await uiPrompt("New section name:", { defaultValue: `Section ${nextNum}`, title: "New Party Section" });
     if (proposed === null) return;
 
@@ -576,8 +581,8 @@ export function initPartyUI({
       id: "partysec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
       name
     };
-    state.tracker.partySections.push(sec);
-    state.tracker.partyActiveSectionId = sec.id;
+    _state.tracker.partySections.push(sec);
+    _state.tracker.partyActiveSectionId = sec.id;
 
     SaveManager.markDirty();
     renderPartyTabs();
@@ -585,7 +590,7 @@ export function initPartyUI({
   });
 
   renameSectionBtn.addEventListener("click", async () => {
-    const sec = state.tracker.partySections.find(s => s.id === state.tracker.partyActiveSectionId);
+    const sec = _state.tracker.partySections.find(s => s.id === _state.tracker.partyActiveSectionId);
     if (!sec) return;
 
     if (!uiPrompt) {
@@ -602,12 +607,12 @@ export function initPartyUI({
   });
 
   deleteSectionBtn.addEventListener("click", async () => {
-    if ((state.tracker.partySections?.length || 0) <= 1) {
+    if ((_state.tracker.partySections?.length || 0) <= 1) {
       await uiAlert?.("You need at least one section.", { title: "Notice" });
       return;
     }
 
-    const sec = state.tracker.partySections.find(s => s.id === state.tracker.partyActiveSectionId);
+    const sec = _state.tracker.partySections.find(s => s.id === _state.tracker.partyActiveSectionId);
     if (!sec) return;
 
     if (!uiConfirm) {
@@ -619,14 +624,14 @@ export function initPartyUI({
     if (!ok) return;
 
     const deleteId = sec.id;
-    state.tracker.partySections = state.tracker.partySections.filter(s => s.id !== deleteId);
+    _state.tracker.partySections = _state.tracker.partySections.filter(s => s.id !== deleteId);
 
-    const fallbackId = state.tracker.partySections[0].id;
-    state.tracker.party.forEach(m => {
+    const fallbackId = _state.tracker.partySections[0].id;
+    _state.tracker.party.forEach(m => {
       if (m.sectionId === deleteId) m.sectionId = fallbackId;
     });
 
-    state.tracker.partyActiveSectionId = fallbackId;
+    _state.tracker.partyActiveSectionId = fallbackId;
 
     SaveManager.markDirty();
     renderPartyTabs();

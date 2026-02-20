@@ -1,4 +1,4 @@
 {
-    "chatgpt.openOnStartup": true,
+    "chatgpt.openOnStartup": false,
     "liveServer.settings.port": 5501
 }
