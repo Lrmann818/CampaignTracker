@@ -258,7 +258,6 @@ function switchInventoryItem(idx) {
   _notesBox.focus();
 }
 
-
 export function initEquipmentPanelUI(deps) {
   const { 
     SaveManager, 
