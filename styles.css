@@ -1070,7 +1070,7 @@ input[type="range"].uiRange::-moz-range-thumb {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  border: 2px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border: 2px solid color-mix(in srgb, var(--border) 75%, transparent);
   opacity: 0.95;
   background: color-mix(in srgb, var(--panel) 85%, black);
   color: var(--text);

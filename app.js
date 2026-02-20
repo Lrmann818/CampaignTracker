@@ -71,7 +71,7 @@ import { createStatus } from "./js/ui/status.js";
 import { initDialogs, uiAlert, uiConfirm, uiPrompt } from "./js/ui/dialogs.js";
 import { initTopTabsNavigation } from "./js/ui/navigation.js";
 import { createPopoverManager } from "./js/ui/popovers.js";
-import { initTopbarUI } from "./js/ui/topbar.js";
+import { initTopbarUI } from "./js/ui/topbar/topbar.js";
 import { createThemeManager } from "./js/ui/theme.js";
 
 import { setupSettingsPanel } from "./js/ui/settingsPanel.js";
