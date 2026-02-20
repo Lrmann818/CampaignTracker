@@ -1,5 +1,5 @@
 // @ts-nocheck
-// js/features-ui/trackerPage.js — page-level wiring for the main Tracker view
+// js/pages/tracker/trackerPage.js — page-level wiring for the main Tracker view
 //
 // This keeps app.js as a composition root and groups Tracker-specific DOM wiring
 // (title, misc textarea, section reorder, sessions/npcs/party/locations sheets).
@@ -10,7 +10,7 @@ import { initSessionsUI } from "./panels/sessions.js";
 import { initNpcsUI } from "./panels/npcCards.js";
 import { initPartyUI, renderPartyCards as renderPartyCardsUI } from "./panels/partyCards.js";
 import { initLocationsUI, renderLocationCards as renderLocationCardsUI } from "./panels/locationCards.js";
-import { initcharacterPageUI } from "../character/characterPage.js";
+import { initCharacterPageUI } from "../character/characterPage.js";
 import { initSpellsPanelUI } from "../character/panels/spellsPanel.js";
 import { initPanelHeaderCollapse } from "../../ui/panelHeaderCollapse.js";
 import { bindText, bindContentText } from "../../ui/bindings.js";
@@ -152,7 +152,7 @@ export function initTrackerPage(deps) {
   });
 
   // ----- Character sheet UI -----
-  initcharacterPageUI({
+  initCharacterPageUI({
     state,
     SaveManager,
     Popovers,
@@ -174,11 +174,7 @@ export function initTrackerPage(deps) {
     uiPrompt,
     setStatus,
   });
-
-  // ----- Panel header click-to-collapse (header stays visible) -----
-
-  // ----- Character section two-column stacking (like Tracker) -----
-  setupCharacterSectionReorder({ state, SaveManager });
+  
   // Runs after the Tracker + Character DOM is present.
   initPanelHeaderCollapse({ state, SaveManager });
 

@@ -12,7 +12,7 @@ import { initAbilitiesPanelUI } from "../character/panels/abilitiesPanel.js";
 import { initPersonalityPanelUI, initCharacterCollapsibleTextareas } from "../character/panels/personalityPanel.js";
 import { bindText as bindTextInput, bindNumber as bindNumberInput } from "../../ui/bindings.js";
 
-export function initcharacterPageUI(deps) {
+export function initCharacterPageUI(deps) {
   const {
     state,
     SaveManager,
