@@ -1,7 +1,7 @@
 // js/pages/map/mapDrawing.js
 
 import { colorFromKey } from "./mapUtils.js";
-import { renderMap, getCanvasPoint } from "./mapCanvas.js";
+import { renderMap } from "./mapCanvas.js";
 
 export function snapshotForUndo({ state, drawLayer }) {
   const url = drawLayer.toDataURL("image/png");

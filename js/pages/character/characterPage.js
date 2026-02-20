@@ -1,4 +1,4 @@
-// js/features-ui/characterPage.js
+// js/pages/character/characterPage.js
 // Phase 3: Character page + Spells v2 extracted from app.js.
 
 import { initEquipmentPanelUI } from "../character/panels/equipmentPanel.js";
@@ -35,6 +35,9 @@ export function initCharacterPageUI(deps) {
     uiPrompt,
     setStatus
   } = deps || {};
+
+  if (!state) throw new Error("initCharacterPageUI: state is required");
+  if (!SaveManager) throw new Error("initCharacterPageUI: SaveManager is required");
 
   // Initialize spells panel
   initSpellsPanelUI(deps);

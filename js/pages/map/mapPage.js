@@ -39,9 +39,15 @@ export function setupMapPage({
   uiPrompt,
   uiAlert,
   uiConfirm
-}) {
+} = {}) {
+  if (!state) throw new Error("setupMapPage: state is required");
+  if (!SaveManager) throw new Error("setupMapPage: SaveManager is required");
+  if (!ensureMapManager) throw new Error("setupMapPage: ensureMapManager is required");
+  if (!getActiveMap) throw new Error("setupMapPage: getActiveMap is required");
+  if (!newMapEntry) throw new Error("setupMapPage: newMapEntry is required");
+  if (!uiAlert) throw new Error("setupMapPage: uiAlert is required");
+
   _uiAlert = uiAlert;
-  if (!_uiAlert) throw new Error("setupMapPage requires uiAlert");
 
   /************************ Map page ***********************/
   let canvas, ctx;

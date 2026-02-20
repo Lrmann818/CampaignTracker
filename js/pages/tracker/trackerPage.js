@@ -5,13 +5,11 @@
 // (title, misc textarea, section reorder, sessions/npcs/party/locations sheets).
 
 import { setupTrackerSectionReorder } from "./trackerSectionReorder.js";
-import { setupCharacterSectionReorder } from "../character/characterSectionReorder.js";
 import { initSessionsUI } from "./panels/sessions.js";
 import { initNpcsUI } from "./panels/npcCards.js";
-import { initPartyUI, renderPartyCards as renderPartyCardsUI } from "./panels/partyCards.js";
-import { initLocationsUI, renderLocationCards as renderLocationCardsUI } from "./panels/locationCards.js";
+import { initPartyUI } from "./panels/partyCards.js";
+import { initLocationsUI } from "./panels/locationCards.js";
 import { initCharacterPageUI } from "../character/characterPage.js";
-import { initSpellsPanelUI } from "../character/panels/spellsPanel.js";
 import { initPanelHeaderCollapse } from "../../ui/panelHeaderCollapse.js";
 import { bindText, bindContentText } from "../../ui/bindings.js";
 
@@ -121,7 +119,7 @@ export function initTrackerPage(deps) {
     autoSizeInput,
   });
 
-  const partyApi = initPartyUI({
+  initPartyUI({
     state,
     SaveManager,
     Popovers,

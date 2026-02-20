@@ -23,7 +23,6 @@ import {
 } from "./js/state.js";
 
 import {
-  newBlobId,
   putBlob,
   getBlob,
   deleteBlob,
@@ -54,7 +53,6 @@ import { loadAll as loadAllPersist, installExitSave, saveAllLocal } from "./js/s
 import {
   autoSizeInput,
   autosizeAllNumbers,
-  applyAutosize,
   setupTextareaSizing
 } from "./js/features/autosize.js";
 
@@ -64,7 +62,7 @@ import { pickCropStorePortrait } from "./js/features/portraitFlow.js";
 
 import { enhanceNumberSteppers } from "./js/features/numberSteppers.js";
 import { numberOrNull } from "./js/utils/number.js";
-import { makeId, makeNpc, makePartyMember, makeLocation } from "./js/domain/factories.js";
+import { makeNpc, makePartyMember, makeLocation } from "./js/domain/factories.js";
 import { positionMenuOnScreen } from "./js/ui/positioning.js";
 import { createStatus } from "./js/ui/status.js";
 
@@ -130,6 +128,9 @@ function disableAutocompleteGlobally(root = document) {
 
 /************************ Boot ***********************/
 (async () => {
+  if (!state) throw new Error("app bootstrap: state is required");
+  if (!SaveManager) throw new Error("app bootstrap: SaveManager is required");
+
   const Status = createStatus({ statusEl: document.getElementById("statusText") });
   StatusApi.setStatus = Status.setStatus;
   StatusApi.installGlobalErrorHandlers = Status.installGlobalErrorHandlers;
