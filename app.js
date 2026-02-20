@@ -117,7 +117,10 @@ const Popovers = createPopoverManager({
 
 // Theme manager (system/light/dark + named themes)
 const Theme = createThemeManager({
-  state
+  state,
+  redraw: () => {
+    try { window.redraw?.(); } catch (_) { }
+  }
 });
 
 // Disable autocomplete globally (prevent password managers from hijacking our custom dialogs)
