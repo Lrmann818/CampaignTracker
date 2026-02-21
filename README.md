@@ -36,4 +36,14 @@ Modules:
 - The app uses a strict CSP in `index.html`.
 - Images use `blob:` + `data:` URLs and are stored via the storage layer.
 
+## Dev mutation guard
+
+Development mode is auto-enabled on local hosts (`localhost`, `127.0.0.1`, `::1`, `*.local`).
+
+- Force enable DEV mode: add `?dev=1`
+- Force disable DEV mode: add `?dev=0`
+- Mutation guard modes: `?stateGuard=warn` (default in DEV), `?stateGuard=throw`, `?stateGuard=off`
+
+When enabled, direct state writes outside action helpers log warnings (or throw in `throw` mode) and point to `createStateActions(...)` helpers.
+
 See `docs/architecture.md` for the intended boundaries and how the modules fit together.

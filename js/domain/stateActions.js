@@ -1,5 +1,6 @@
 // @ts-nocheck
 // Centralized, lightweight state mutation helpers.
+import { withAllowedStateMutation } from "../utils/dev.js";
 
 const TRACKER_CARD_LIST_BY_TYPE = Object.freeze({
   party: "party",
@@ -83,24 +84,30 @@ export function createStateActions({ state, SaveManager } = {}) {
   }
 
   function updateCharacterField(path, value, options = {}) {
-    if (!state.character || typeof state.character !== "object") state.character = {};
-    const updated = setPathValue(state.character, path, value);
+    const updated = withAllowedStateMutation(() => {
+      if (!state.character || typeof state.character !== "object") state.character = {};
+      return setPathValue(state.character, path, value);
+    });
     if (!updated) return false;
     maybeQueueSave(SaveManager, options);
     return true;
   }
 
   function updateTrackerField(path, value, options = {}) {
-    if (!state.tracker || typeof state.tracker !== "object") state.tracker = {};
-    const updated = setPathValue(state.tracker, path, value);
+    const updated = withAllowedStateMutation(() => {
+      if (!state.tracker || typeof state.tracker !== "object") state.tracker = {};
+      return setPathValue(state.tracker, path, value);
+    });
     if (!updated) return false;
     maybeQueueSave(SaveManager, options);
     return true;
   }
 
   function updateMapField(path, value, options = {}) {
-    if (!state.map || typeof state.map !== "object") state.map = {};
-    const updated = setPathValue(state.map, path, value);
+    const updated = withAllowedStateMutation(() => {
+      if (!state.map || typeof state.map !== "object") state.map = {};
+      return setPathValue(state.map, path, value);
+    });
     if (!updated) return false;
     maybeQueueSave(SaveManager, options);
     return true;
@@ -110,11 +117,12 @@ export function createStateActions({ state, SaveManager } = {}) {
     const listKey = resolveTrackerListKey(type);
     if (!listKey) return false;
 
-    const list = ensureTrackerList(state, listKey);
-    const card = list.find((item) => item && item.id === id);
-    if (!card || typeof card !== "object") return false;
-
-    const updated = setPathValue(card, field, value);
+    const updated = withAllowedStateMutation(() => {
+      const list = ensureTrackerList(state, listKey);
+      const card = list.find((item) => item && item.id === id);
+      if (!card || typeof card !== "object") return false;
+      return setPathValue(card, field, value);
+    });
     if (!updated) return false;
     maybeQueueSave(SaveManager, options);
     return true;
@@ -124,9 +132,11 @@ export function createStateActions({ state, SaveManager } = {}) {
     const listKey = resolveTrackerListKey(type);
     if (!listKey) return false;
 
-    const list = ensureTrackerList(state, listKey);
-    if (options?.atStart) list.unshift(card);
-    else list.push(card);
+    withAllowedStateMutation(() => {
+      const list = ensureTrackerList(state, listKey);
+      if (options?.atStart) list.unshift(card);
+      else list.push(card);
+    });
 
     maybeQueueSave(SaveManager, options);
     return true;
@@ -136,11 +146,14 @@ export function createStateActions({ state, SaveManager } = {}) {
     const listKey = resolveTrackerListKey(type);
     if (!listKey) return null;
 
-    const list = ensureTrackerList(state, listKey);
-    const idx = list.findIndex((item) => item && item.id === id);
-    if (idx === -1) return null;
-
-    const [removed] = list.splice(idx, 1);
+    const removed = withAllowedStateMutation(() => {
+      const list = ensureTrackerList(state, listKey);
+      const idx = list.findIndex((item) => item && item.id === id);
+      if (idx === -1) return null;
+      const [taken] = list.splice(idx, 1);
+      return taken;
+    });
+    if (!removed) return null;
     maybeQueueSave(SaveManager, options);
     return removed;
   }
@@ -149,14 +162,17 @@ export function createStateActions({ state, SaveManager } = {}) {
     const listKey = resolveTrackerListKey(type);
     if (!listKey) return false;
 
-    const list = ensureTrackerList(state, listKey);
-    const aIdx = list.findIndex((item) => item && item.id === aId);
-    const bIdx = list.findIndex((item) => item && item.id === bId);
-    if (aIdx === -1 || bIdx === -1 || aIdx === bIdx) return false;
-
-    const tmp = list[aIdx];
-    list[aIdx] = list[bIdx];
-    list[bIdx] = tmp;
+    const didSwap = withAllowedStateMutation(() => {
+      const list = ensureTrackerList(state, listKey);
+      const aIdx = list.findIndex((item) => item && item.id === aId);
+      const bIdx = list.findIndex((item) => item && item.id === bId);
+      if (aIdx === -1 || bIdx === -1 || aIdx === bIdx) return false;
+      const tmp = list[aIdx];
+      list[aIdx] = list[bIdx];
+      list[bIdx] = tmp;
+      return true;
+    });
+    if (!didSwap) return false;
 
     maybeQueueSave(SaveManager, options);
     return true;

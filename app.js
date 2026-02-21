@@ -22,6 +22,12 @@ import {
   getActiveMap,
   newMapEntry
 } from "./js/state.js";
+import {
+  DEV_MODE,
+  DEV_STATE_GUARD_MODE,
+  installStateMutationGuard,
+  withAllowedStateMutationAsync
+} from "./js/utils/dev.js";
 
 import {
   putBlob,
@@ -84,6 +90,15 @@ const StatusApi = {
   installGlobalErrorHandlers: () => { }
 };
 
+const StateGuard = installStateMutationGuard(state, {
+  mode: DEV_STATE_GUARD_MODE,
+  helperHint: "Use createStateActions(...) helpers for mutations so changes stay explicit and save-aware."
+});
+const appState = StateGuard.state;
+if (DEV_MODE && StateGuard.enabled) {
+  console.info(`[dev] state mutation guard is active (${StateGuard.mode}). Use ?stateGuard=off or ?dev=0 to disable.`);
+}
+
 /************************ Shared file picker ************************/
 // One hidden <input type="file"> for the whole app.
 const ImagePicker = createFilePicker({ accept: "image/*" });
@@ -91,7 +106,7 @@ const ImagePicker = createFilePicker({ accept: "image/*" });
 // Local persistence (kept as a tiny wrapper for SaveManager + autosize integration)
 const saveAll = () => saveAllLocal({
   storageKey: STORAGE_KEY,
-  state,
+  state: appState,
   currentSchemaVersion: CURRENT_SCHEMA_VERSION,
   sanitizeForSave
 });
@@ -117,7 +132,7 @@ const Popovers = createPopoverManager({
 
 // Theme manager (system/light/dark + named themes)
 const Theme = createThemeManager({
-  state
+  state: appState
 });
 
 // Disable autocomplete globally (prevent password managers from hijacking our custom dialogs)
@@ -130,7 +145,7 @@ function disableAutocompleteGlobally(root = document) {
 
 /************************ Boot ***********************/
 (async () => {
-  if (!state) throw new Error("app bootstrap: state is required");
+  if (!appState) throw new Error("app bootstrap: state is required");
   if (!SaveManager) throw new Error("app bootstrap: SaveManager is required");
 
   const Status = createStatus({ statusEl: document.getElementById("statusText") });
@@ -138,103 +153,105 @@ function disableAutocompleteGlobally(root = document) {
   StatusApi.installGlobalErrorHandlers = Status.installGlobalErrorHandlers;
   StatusApi.installGlobalErrorHandlers();
 
-  await loadAllPersist({
-    storageKey: STORAGE_KEY,
-    state,
-    migrateState,
-    ensureMapManager,
-    dataUrlToBlob,
-    putBlob,
-    setStatus: StatusApi.setStatus,
-    markDirty: SaveManager.markDirty
-  });
-  // Wire CSP-safe modal dialogs (replaces window.confirm/prompt)
-  initDialogs();
-  Theme.initFromState();
-  initTopTabsNavigation({
-    state,
-    markDirty: () => SaveManager.markDirty(),
-    activeTabStorageKey: ACTIVE_TAB_KEY
-  });
-  setupSettingsPanel({
-    state,
-    storageKeys: { STORAGE_KEY, ACTIVE_TAB_KEY },
-    applyTheme: Theme.applyTheme,
-    markDirty: () => SaveManager.markDirty(),
-    flush: () => SaveManager.flush(),
-    Popovers,
-
-    // Backups/reset are dependency-injected; bind the deps here so UI can call them with no args.
-    exportBackup: () => _exportBackup({
-      state,
-      ensureMapManager,
-      getBlob,
-      blobToDataUrl,
-      getAllTexts,
-      sanitizeForSave
-    }),
-    importBackup: (e) => _importBackup(e, {
-      state,
-      ensureMapManager,
+  await withAllowedStateMutationAsync(async () => {
+    await loadAllPersist({
+      storageKey: STORAGE_KEY,
+      state: appState,
       migrateState,
-      sanitizeForSave,
-      saveAll,
-      putBlob,
+      ensureMapManager,
       dataUrlToBlob,
-      clearAllBlobs,
-      clearAllTexts,
-      putText,
-      ACTIVE_TAB_KEY,
-      STORAGE_KEY,
-      afterImport: async () => {
-        // simplest + safest: refresh the UI after importing
-        try { location.reload(); } catch (_) { }
-      }
-    }),
-    resetAll: () => _resetAll({
-      ACTIVE_TAB_KEY,
-      STORAGE_KEY,
-      clearAllBlobs,
-      clearAllTexts,
+      putBlob,
+      setStatus: StatusApi.setStatus,
+      markDirty: SaveManager.markDirty
+    });
+    // Wire CSP-safe modal dialogs (replaces window.confirm/prompt)
+    initDialogs();
+    Theme.initFromState();
+    initTopTabsNavigation({
+      state: appState,
+      markDirty: () => SaveManager.markDirty(),
+      activeTabStorageKey: ACTIVE_TAB_KEY
+    });
+    setupSettingsPanel({
+      state: appState,
+      storageKeys: { STORAGE_KEY, ACTIVE_TAB_KEY },
+      applyTheme: Theme.applyTheme,
+      markDirty: () => SaveManager.markDirty(),
       flush: () => SaveManager.flush(),
-      setStatus: StatusApi.setStatus
-    }),
+      Popovers,
 
-    clearAllBlobs,
-    clearAllTexts,
-    setStatus: StatusApi.setStatus
+      // Backups/reset are dependency-injected; bind the deps here so UI can call them with no args.
+      exportBackup: () => _exportBackup({
+        state: appState,
+        ensureMapManager,
+        getBlob,
+        blobToDataUrl,
+        getAllTexts,
+        sanitizeForSave
+      }),
+      importBackup: (e) => withAllowedStateMutationAsync(() => _importBackup(e, {
+        state: appState,
+        ensureMapManager,
+        migrateState,
+        sanitizeForSave,
+        saveAll,
+        putBlob,
+        dataUrlToBlob,
+        clearAllBlobs,
+        clearAllTexts,
+        putText,
+        ACTIVE_TAB_KEY,
+        STORAGE_KEY,
+        afterImport: async () => {
+          // simplest + safest: refresh the UI after importing
+          try { location.reload(); } catch (_) { }
+        }
+      })),
+      resetAll: () => _resetAll({
+        ACTIVE_TAB_KEY,
+        STORAGE_KEY,
+        clearAllBlobs,
+        clearAllTexts,
+        flush: () => SaveManager.flush(),
+        setStatus: StatusApi.setStatus
+      }),
+
+      clearAllBlobs,
+      clearAllTexts,
+      setStatus: StatusApi.setStatus
+    });
+    initTopbarUI({ state: appState, SaveManager, Popovers, positionMenuOnScreen, setStatus: StatusApi.setStatus });
+    initTrackerPage({
+      state: appState,
+      SaveManager,
+      Popovers,
+      uiPrompt,
+      uiAlert,
+      uiConfirm,
+      setStatus: StatusApi.setStatus,
+      makeNpc,
+      makePartyMember,
+      makeLocation,
+      enhanceNumberSteppers,
+      numberOrNull,
+      pickCropStorePortrait,
+      ImagePicker,
+      deleteBlob,
+      putBlob,
+      cropImageModal,
+      getPortraitAspect,
+      blobIdToObjectUrl,
+      textKey_spellNotes,
+      putText,
+      getText,
+      deleteText,
+      autoSizeInput,
+    });
+    autosizeAllNumbers();
+    setupTextareaSizing({ state: appState, markDirty: SaveManager.markDirty, saveAll, setStatus: StatusApi.setStatus });
+    setupMapPage({ state: appState, SaveManager, setStatus: StatusApi.setStatus, positionMenuOnScreen, Popovers, ensureMapManager, getActiveMap, newMapEntry, blobIdToObjectUrl, putBlob, deleteBlob, uiPrompt, uiAlert, uiConfirm });
+    // If migrations or initial setup changed state, persist once, then show clean status.
+    await SaveManager.flush();
   });
-  initTopbarUI({ state, SaveManager, Popovers, positionMenuOnScreen, setStatus: StatusApi.setStatus });
-  initTrackerPage({
-    state,
-    SaveManager,
-    Popovers,
-    uiPrompt,
-    uiAlert,
-    uiConfirm,
-    setStatus: StatusApi.setStatus,
-    makeNpc,
-    makePartyMember,
-    makeLocation,
-    enhanceNumberSteppers,
-    numberOrNull,
-    pickCropStorePortrait,
-    ImagePicker,
-    deleteBlob,
-    putBlob,
-    cropImageModal,
-    getPortraitAspect,
-    blobIdToObjectUrl,
-    textKey_spellNotes,
-    putText,
-    getText,
-    deleteText,
-    autoSizeInput,
-  });
-  autosizeAllNumbers();
-  setupTextareaSizing({ state, markDirty: SaveManager.markDirty, saveAll, setStatus: StatusApi.setStatus });
-  setupMapPage({ state, SaveManager, setStatus: StatusApi.setStatus, positionMenuOnScreen, Popovers, ensureMapManager, getActiveMap, newMapEntry, blobIdToObjectUrl, putBlob, deleteBlob, uiPrompt, uiAlert, uiConfirm });
-  // If migrations or initial setup changed state, persist once, then show clean status.
-  await SaveManager.flush();
   SaveManager.init();
 })();
