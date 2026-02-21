@@ -1,2 +1,6 @@
 .vscode/
-'n.vscode/settings.json
+.DS_Store
+node_modules/
+dist/
+*.zip
+.git
