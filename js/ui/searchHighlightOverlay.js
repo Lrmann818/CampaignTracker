@@ -5,31 +5,51 @@
 
 const _wrapped = new WeakMap();
 
-/** Escape text for safe HTML injection. */
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
 function escapeRegExp(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function computeOverlayHtml(value, query) {
-  const text = escapeHtml(value ?? "");
-  // Preserve newlines for textarea; CSS uses white-space: pre-wrap.
-  const withBreaks = text.replaceAll("\n", "<br>");
-  if (!query) return withBreaks;
+function buildHighlightedFragment(value, query) {
+  const fragment = document.createDocumentFragment();
+  const text = String(value ?? "");
+  const q = String(query ?? "").trim();
 
-  const q = String(query).trim();
-  if (!q) return withBreaks;
+  if (!q) {
+    fragment.appendChild(document.createTextNode(text));
+    return fragment;
+  }
 
   const re = new RegExp(escapeRegExp(q), "gi");
-  return withBreaks.replace(re, (m) => `<mark class="searchMark">${m}</mark>`);
+  let lastIndex = 0;
+  let match = re.exec(text);
+
+  if (!match) {
+    fragment.appendChild(document.createTextNode(text));
+    return fragment;
+  }
+
+  while (match) {
+    const start = match.index;
+    const end = start + match[0].length;
+
+    if (start > lastIndex) {
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex, start)));
+    }
+
+    const mark = document.createElement("mark");
+    mark.className = "searchMark";
+    mark.textContent = text.slice(start, end);
+    fragment.appendChild(mark);
+
+    lastIndex = end;
+    match = re.exec(text);
+  }
+
+  if (lastIndex < text.length) {
+    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+
+  return fragment;
 }
 
 /**
@@ -93,7 +113,7 @@ export function attachSearchHighlightOverlay(fieldEl, getQuery) {
     syncStyles();
 
     const q = (getQuery ? getQuery() : "") || "";
-    overlay.innerHTML = computeOverlayHtml(fieldEl.value, q);
+    overlay.replaceChildren(buildHighlightedFragment(fieldEl.value, q));
 
     // Keep heights aligned (use clientHeight, because borders are on field)
     overlay.style.height = fieldEl.clientHeight + "px";

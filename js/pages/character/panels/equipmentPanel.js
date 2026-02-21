@@ -27,23 +27,44 @@ let _setStatus = null;
 
 let _wired = false;
 
-function _escapeHtml(str) {
-  return String(str ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 function _escapeRegExp(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-function _highlightInline(text, query) {
-  const safe = _escapeHtml(text ?? "");
+function _appendHighlightedText(parentEl, text, query) {
+  const source = String(text ?? "");
   const q = String(query ?? "").trim();
-  if (!q) return safe;
+  if (!q) {
+    parentEl.replaceChildren(document.createTextNode(source));
+    return;
+  }
+
   const re = new RegExp(_escapeRegExp(q), "gi");
-  return safe.replace(re, (m) => `<mark class="searchMark">${m}</mark>`);
+  const fragment = document.createDocumentFragment();
+  let lastIndex = 0;
+  let match = re.exec(source);
+
+  while (match) {
+    const start = match.index;
+    const end = start + match[0].length;
+
+    if (start > lastIndex) {
+      fragment.appendChild(document.createTextNode(source.slice(lastIndex, start)));
+    }
+
+    const mark = document.createElement("mark");
+    mark.className = "searchMark";
+    mark.textContent = source.slice(start, end);
+    fragment.appendChild(mark);
+
+    lastIndex = end;
+    match = re.exec(source);
+  }
+
+  if (lastIndex < source.length) {
+    fragment.appendChild(document.createTextNode(source.slice(lastIndex)));
+  }
+
+  parentEl.replaceChildren(fragment);
 }
 
 function initInventoryUI(deps = {}) {
@@ -89,7 +110,7 @@ function initInventoryUI(deps = {}) {
 function renderInventoryTabs() {
   if (!_tabsEl || !_notesBox) return;
 
-  _tabsEl.innerHTML = "";
+  _tabsEl.replaceChildren();
 
   const query = (_state.character.inventorySearch || "").trim().toLowerCase();
 
@@ -107,7 +128,7 @@ function renderInventoryTabs() {
     const btn = document.createElement("button");
     btn.className = "sessionTab" + (idx === _state.character.activeInventoryIndex ? " active" : "");
     btn.type = "button";
-    btn.innerHTML = _highlightInline((it.title || `Item ${idx + 1}`), _state.character.inventorySearch || "");
+    _appendHighlightedText(btn, (it.title || `Item ${idx + 1}`), _state.character.inventorySearch || "");
     btn.addEventListener("click", () => switchInventoryItem(idx));
     _tabsEl.appendChild(btn);
   });

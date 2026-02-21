@@ -86,6 +86,7 @@ overlay = document.createElement("div");
   panel.setAttribute("aria-modal", "true");
   panel.setAttribute("tabindex", "-1");
 
+  // static-only template (no user text).
   panel.innerHTML = `
     <div class="uiDialogHeader">
       <div class="modalTitle" id="uiDialogTitle">Notice</div>

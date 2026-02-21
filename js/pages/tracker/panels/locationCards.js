@@ -189,6 +189,7 @@ export function renderLocationCard(loc) {
 
   const typeSelect = document.createElement("select");
   typeSelect.className = "cardSelect";
+  // static-only template (no user text).
   typeSelect.innerHTML = `
     <option value="town">Town</option>
     <option value="dungeon">Dungeon</option>
