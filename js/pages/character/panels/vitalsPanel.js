@@ -332,7 +332,7 @@ export function initVitalsPanel(deps = {}) {
     refreshVitalsNumbers();
     autoSizeVitals();
     renderResources();
-    return;
+    return getNoopDestroyApi();
   }
   panelEl.dataset.vitalsInit = "1";
 

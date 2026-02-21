@@ -12,7 +12,7 @@ import { initLocationsPanel } from "./panels/locationCards.js";
 import { initCharacterPageUI } from "../character/characterPage.js";
 import { initPanelHeaderCollapse } from "../../ui/panelHeaderCollapse.js";
 import { bindText, bindContentText } from "../../ui/bindings.js";
-import { requireEl } from "../../utils/domGuards.js";
+import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
 
 export function initTrackerPage(deps) {
   const {
@@ -70,7 +70,7 @@ export function initTrackerPage(deps) {
     } catch (err) {
       console.error(`${panelName} init failed:`, err);
       setStatus(`${panelName} failed to initialize. Check console for details.`);
-      return null;
+      return getNoopDestroyApi();
     }
   };
 

@@ -40,7 +40,7 @@ export function initAttacksPanel(deps = {}) {
   if (panelEl.dataset.attacksInit === "1") {
     // Still re-render in case state changed.
     renderAttacks();
-    return;
+    return getNoopDestroyApi();
   }
   panelEl.dataset.attacksInit = "1";
 

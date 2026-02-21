@@ -11,7 +11,7 @@ import { initProficienciesPanel } from "../character/panels/proficienciesPanel.j
 import { initAbilitiesPanel } from "../character/panels/abilitiesPanel.js";
 import { initPersonalityPanel, setupCharacterCollapsibleTextareas } from "../character/panels/personalityPanel.js";
 import { bindText as bindTextInput, bindNumber as bindNumberInput } from "../../ui/bindings.js";
-import { requireEl } from "../../utils/domGuards.js";
+import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
 
 export function initCharacterPageUI(deps) {
   const {
@@ -47,7 +47,7 @@ export function initCharacterPageUI(deps) {
     } catch (err) {
       console.error(`${panelName} init failed:`, err);
       setStatus(`${panelName} failed to initialize. Check console for details.`);
-      return null;
+      return getNoopDestroyApi();
     }
   };
 
