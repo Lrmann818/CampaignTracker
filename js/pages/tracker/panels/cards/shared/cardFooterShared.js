@@ -4,7 +4,11 @@ export function createDeleteButton({ onDelete, className, text = "Delete", title
   button.className = className;
   button.textContent = text;
   if (title) button.title = title;
-  button.addEventListener("click", () => onDelete());
+  button.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof onDelete === "function") onDelete();
+  });
   return button;
 }
 

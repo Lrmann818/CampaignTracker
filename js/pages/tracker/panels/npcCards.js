@@ -4,14 +4,14 @@
 
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
-import { renderSectionTabs, wireSectionCrud } from "./cardsShared.js";
-import { pickAndStorePortrait } from "./cardPortraitShared.js";
-import { makeFieldSearchMatcher } from "./cardSearchShared.js";
-import { attachCardSearchHighlights } from "./cardSearchHighlightShared.js";
-import { createMoveButton, createCollapseButton } from "./cardHeaderControlsShared.js";
-import { enhanceSelectOnce } from "./cardSelectShared.js";
-import { createDeleteButton, createSectionSelectRow } from "./cardFooterShared.js";
-import { renderCardPortrait } from "./cardPortraitRenderShared.js";
+import { renderSectionTabs, wireSectionCrud } from "./cards/shared/cardsShared.js";
+import { pickAndStorePortrait } from "./cards/shared/cardPortraitShared.js";
+import { makeFieldSearchMatcher } from "./cards/shared/cardSearchShared.js";
+import { attachCardSearchHighlights } from "./cards/shared/cardSearchHighlightShared.js";
+import { createMoveButton, createCollapseButton } from "./cards/shared/cardHeaderControlsShared.js";
+import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
+import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
+import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
 
 let _cardsEl = null;
 let _Popovers = null;

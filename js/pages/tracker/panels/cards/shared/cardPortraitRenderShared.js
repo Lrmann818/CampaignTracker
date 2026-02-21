@@ -15,9 +15,11 @@ export function renderCardPortrait({
     img.alt = altText;
     portrait.appendChild(img);
 
-    blobIdToObjectUrl(blobId).then(url => {
-      if (url) img.src = url;
-    });
+    if (typeof blobIdToObjectUrl === "function") {
+      blobIdToObjectUrl(blobId).then(url => {
+        if (url) img.src = url;
+      });
+    }
   } else {
     const placeholder = document.createElement("div");
     placeholder.className = "mutedSmall";
@@ -25,6 +27,10 @@ export function renderCardPortrait({
     portrait.appendChild(placeholder);
   }
 
-  portrait.addEventListener("click", () => onPick());
+  portrait.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof onPick === "function") onPick();
+  });
   return portrait;
 }
