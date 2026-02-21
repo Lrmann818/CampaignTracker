@@ -63,7 +63,7 @@
   --spell-toggle-warn-on-border: #ff8c0099;
   --skill-prof-dot: #3aa6ff;
   --calculatorBg: linear-gradient(to bottom,
-      color-mix(in srgb, var(--bg) 90%, transparent),
+      color-mix(in srgb, var(--bg) 100%, transparent),
       color-mix(in srgb, var(--bg) 70%, transparent));
   --diceDivText: var(--diceIconColor);
   --dicePresetIconColor: var(--diceIconColor);
@@ -77,6 +77,10 @@
   --sb-track: color-mix(in srgb, var(--panel) 70%, transparent);
   --sb-thumb: color-mix(in srgb, var(--border) 70%, transparent);
   --sb-thumb-hover: color-mix(in srgb, var(--border) 92%, transparent);
+  --search-mark-color: #ffffff33;
+  --search-mark-bg: color-mix(in srgb, var(--search-mark-color) 90%, transparent);
+  --search-mark-radius: 3px;
+  --search-mark-pad-x: 1px;
 
   /* Size variants (override default width) */
   .num-xs {
@@ -819,11 +823,16 @@ body::before {
   border-radius: inherit;
 }
 
+.searchMark {
+  background: var(--search-mark-bg);
+  color: inherit;
+  border-radius: var(--search-mark-radius);
+  padding: 0 var(--search-mark-pad-x);
+}
+
 .hlOverlay .searchMark {
-  background: #ffffff33;
   color: transparent;
-  border-radius: 3px;
-  padding: 0 1px;
+  -webkit-text-fill-color: transparent;
 }
 
 .hlField {
