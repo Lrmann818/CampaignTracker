@@ -5,6 +5,7 @@
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { renderSectionTabs, wireSectionCrud } from "./cardsShared.js";
+import { pickAndStorePortrait } from "./cardPortraitShared.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -471,26 +472,32 @@ export function initLocationsUI(deps = {}) {
   }
 
   async function pickLocImage(id) {
-    const loc = _state?.tracker?.locationsList?.find(l => l.id === id);
-    if (!loc) return;
-
     if (!pickCropStorePortrait || !ImagePicker || !cropImageModal || !getPortraitAspect || !deleteBlob || !putBlob) {
       console.warn("Location portrait flow dependencies missing; cannot pick image.");
       return;
     }
 
-    const blobId = await pickCropStorePortrait({
-      picker: ImagePicker,
-      currentBlobId: loc.imgBlobId,
-      deleteBlob,
-      putBlob,
-      cropImageModal,
-      getPortraitAspect,
-      aspectSelector: ".npcPortraitTop",
+    let pickedBlobId = null;
+    const ok = await pickAndStorePortrait({
+      itemId: id,
+      getItemById: (locId) => _state?.tracker?.locationsList?.find(l => l.id === locId) || null,
+      getBlobId: (loc) => loc.imgBlobId,
+      setBlobId: (loc, blobId) => {
+        loc.imgBlobId = blobId;
+        pickedBlobId = blobId;
+      },
+      deps: {
+        pickCropStorePortrait,
+        ImagePicker,
+        deleteBlob,
+        putBlob,
+        cropImageModal,
+        getPortraitAspect,
+      },
       setStatus,
     });
-    if (!blobId) return;
-    updateLoc(id, { imgBlobId: blobId });
+    if (!ok) return;
+    updateLoc(id, { imgBlobId: pickedBlobId });
   }
 
   async function deleteLoc(id) {

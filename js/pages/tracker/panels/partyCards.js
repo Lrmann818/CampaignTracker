@@ -5,6 +5,7 @@
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { renderSectionTabs, wireSectionCrud } from "./cardsShared.js";
+import { pickAndStorePortrait } from "./cardPortraitShared.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -415,26 +416,27 @@ export function initPartyUI(deps = {}) {
   }
 
   async function pickPartyImage(memberId) {
-    const member = _state?.tracker?.party?.find(m => m.id === memberId);
-    if (!member) return;
-
-    if (!pickCropStorePortrait || !ImagePicker || !cropImageModal || !getPortraitAspect || !deleteBlob || !putBlob) {
-      console.warn("Party portrait flow dependencies missing; cannot pick image.");
-      return;
-    }
-
-    const blobId = await pickCropStorePortrait({
-      picker: ImagePicker,
-      currentBlobId: member.imgBlobId,
-      deleteBlob,
-      putBlob,
-      cropImageModal,
-      getPortraitAspect,
-      aspectSelector: ".npcPortraitTop",
+    let pickedBlobId = null;
+    const ok = await pickAndStorePortrait({
+      itemId: memberId,
+      getItemById: (id) => _state?.tracker?.party?.find(m => m.id === id) || null,
+      getBlobId: (member) => member.imgBlobId,
+      setBlobId: (member, blobId) => {
+        member.imgBlobId = blobId;
+        pickedBlobId = blobId;
+      },
+      deps: {
+        pickCropStorePortrait,
+        ImagePicker,
+        deleteBlob,
+        putBlob,
+        cropImageModal,
+        getPortraitAspect,
+      },
       setStatus,
     });
-    if (!blobId) return;
-    updateParty(memberId, { imgBlobId: blobId });
+    if (!ok) return;
+    updateParty(memberId, { imgBlobId: pickedBlobId });
   }
 
   function updateParty(id, patch, rerender = true) {

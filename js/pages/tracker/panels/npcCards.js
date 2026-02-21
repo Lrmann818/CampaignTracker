@@ -5,6 +5,7 @@
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { renderSectionTabs, wireSectionCrud } from "./cardsShared.js";
+import { pickAndStorePortrait } from "./cardPortraitShared.js";
 
 let _cardsEl = null;
 let _Popovers = null;
@@ -501,26 +502,27 @@ export function initNpcsUI(deps = {}) {
   }
 
   async function pickNpcImage(npcId) {
-    const npc = _state?.tracker?.npcs?.find(n => n.id === npcId);
-    if (!npc) return;
-
-    if (!pickCropStorePortrait || !ImagePicker || !cropImageModal || !getPortraitAspect || !deleteBlob || !putBlob) {
-      console.warn("NPC portrait flow dependencies missing; cannot pick image.");
-      return;
-    }
-
-    const blobId = await pickCropStorePortrait({
-      picker: ImagePicker,
-      currentBlobId: npc.imgBlobId,
-      deleteBlob,
-      putBlob,
-      cropImageModal,
-      getPortraitAspect,
-      aspectSelector: ".npcPortraitTop",
+    let pickedBlobId = null;
+    const ok = await pickAndStorePortrait({
+      itemId: npcId,
+      getItemById: (id) => _state?.tracker?.npcs?.find(n => n.id === id) || null,
+      getBlobId: (npc) => npc.imgBlobId,
+      setBlobId: (npc, blobId) => {
+        npc.imgBlobId = blobId;
+        pickedBlobId = blobId;
+      },
+      deps: {
+        pickCropStorePortrait,
+        ImagePicker,
+        cropImageModal,
+        getPortraitAspect,
+        deleteBlob,
+        putBlob,
+      },
       setStatus,
     });
-    if (!blobId) return;
-    updateNpc(npcId, { imgBlobId: blobId });
+    if (!ok) return;
+    updateNpc(npcId, { imgBlobId: pickedBlobId });
   }
 
   async function deleteNpc(id) {
