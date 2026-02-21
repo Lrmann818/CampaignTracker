@@ -30,6 +30,7 @@ export function initMapListUI({
   setBgImg,
   // drawing persistence:
   commitDrawingSnapshot,
+  clearHistory,
   // UI helpers from toolbar module / mapPage:
   setActiveToolUI,
   setActiveColorUI,
@@ -42,6 +43,9 @@ export function initMapListUI({
   }
   if (!mapState || typeof mapState !== "object") {
     throw new Error("initMapListUI requires mapState");
+  }
+  if (typeof clearHistory !== "function") {
+    throw new Error("initMapListUI requires clearHistory");
   }
   mapState.ui ||= {};
   const addListener = addOwnedListener;
@@ -83,8 +87,7 @@ export function initMapListUI({
   async function loadActiveMapIntoCanvas() {
     const mp = getActiveMap();
 
-    mapState.undo = [];
-    mapState.redo = [];
+    clearHistory();
 
     const brush = document.getElementById("brushSize");
     brush.value = mapState.ui.brushSize;

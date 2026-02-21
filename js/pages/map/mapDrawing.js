@@ -3,15 +3,6 @@
 import { colorFromKey } from "./mapUtils.js";
 import { renderMap } from "./mapCanvas.js";
 
-export function snapshotForUndo({ mapState, drawLayer }) {
-  const url = drawLayer.toDataURL("image/png");
-  mapState.undo ||= [];
-  mapState.redo ||= [];
-  mapState.undo.push(url);
-  if (mapState.undo.length > 50) mapState.undo.shift();
-  mapState.redo.length = 0;
-}
-
 export function drawDot({
   pt,
   mapState,
@@ -87,38 +78,6 @@ export function restoreFromDataUrl({
     commitDrawing();
   };
   img.src = url;
-}
-
-export function undo({
-  mapState,
-  drawLayer,
-  restoreFromDataUrlFn
-}) {
-  if (!Array.isArray(mapState.undo) || !mapState.undo.length) return;
-  mapState.redo ||= [];
-
-  const current = drawLayer.toDataURL("image/png");
-  mapState.redo.push(current);
-
-  const prev = mapState.undo.pop();
-  if (typeof prev !== "string") return;
-  restoreFromDataUrlFn(prev);
-}
-
-export function redo({
-  mapState,
-  drawLayer,
-  restoreFromDataUrlFn
-}) {
-  if (!Array.isArray(mapState.redo) || !mapState.redo.length) return;
-  mapState.undo ||= [];
-
-  const current = drawLayer.toDataURL("image/png");
-  mapState.undo.push(current);
-
-  const next = mapState.redo.pop();
-  if (typeof next !== "string") return;
-  restoreFromDataUrlFn(next);
 }
 
 export async function clearDrawing({

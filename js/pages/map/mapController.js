@@ -3,11 +3,9 @@
 import { createMapCanvases, renderMap } from "./mapCanvas.js";
 import { colorFromKey } from "./mapUtils.js";
 import { persistDrawingSnapshot } from "./mapPersistence.js";
+import { createMapHistory } from "./mapHistory.js";
 import {
-  snapshotForUndo,
   restoreFromDataUrl,
-  undo as undoDrawing,
-  redo as redoDrawing,
   clearDrawing as clearDrawingAction
 } from "./mapDrawing.js";
 import { createMapGestures } from "./mapGestures.js";
@@ -17,6 +15,8 @@ import { initMapListUI } from "./mapListUI.js";
 import { initMapToolbarUI } from "./mapToolbarUI.js";
 import { safeAsync } from "../../ui/safeAsync.js";
 import { createStateActions } from "../../domain/stateActions.js";
+
+const MAP_HISTORY_MAX_LEN = 50;
 
 function toJsonSafe(value, seen = new WeakSet()) {
   if (value === null) return null;
@@ -46,13 +46,6 @@ function toJsonSafe(value, seen = new WeakSet()) {
 
   seen.delete(value);
   return out;
-}
-
-function sanitizeHistoryStack(value, maxLen = 50) {
-  if (!Array.isArray(value)) return [];
-  const strings = value.filter((entry) => typeof entry === "string");
-  if (strings.length <= maxLen) return strings;
-  return strings.slice(strings.length - maxLen);
 }
 
 function normalizeMapState({ state, ensureMapManager, incomingMapState, newMapEntry }) {
@@ -95,8 +88,8 @@ function normalizeMapState({ state, ensureMapManager, incomingMapState, newMapEn
   const viewScale = Number(mapState.ui.viewScale);
   mapState.ui.viewScale = Number.isFinite(viewScale) ? viewScale : 1;
 
-  mapState.undo = sanitizeHistoryStack(mapState.undo);
-  mapState.redo = sanitizeHistoryStack(mapState.redo);
+  if (!Array.isArray(mapState.undo)) mapState.undo = [];
+  if (!Array.isArray(mapState.redo)) mapState.redo = [];
   return mapState;
 }
 
@@ -165,13 +158,34 @@ export function createMapController({
   const { updateMapField } = createStateActions({ state, SaveManager });
   const runtime = createRuntimeState();
   let mapState = normalizeMapState({ state, ensureMapManager, incomingMapState: state.map, newMapEntry });
+  const mapHistory = createMapHistory({
+    undo: mapState.undo,
+    redo: mapState.redo,
+    maxLen: MAP_HISTORY_MAX_LEN,
+    getCurrentSnapshot: () => {
+      if (!runtime.drawLayer) return null;
+      return runtime.drawLayer.toDataURL("image/png");
+    }
+  });
+
+  const syncHistoryToMapState = () => {
+    const historyState = mapHistory.exportState();
+    mapState.undo = historyState.undo;
+    mapState.redo = historyState.redo;
+  };
+
+  syncHistoryToMapState();
 
   const addListener = (target, type, handler, options) => {
     if (!target || typeof target.addEventListener !== "function" || !runtime.listenerSignal) return;
     target.addEventListener(type, handler, { ...(options || {}), signal: runtime.listenerSignal });
   };
 
-  const snapshotForUndoFn = () => snapshotForUndo({ mapState, drawLayer: runtime.drawLayer });
+  const snapshotForUndoFn = () => {
+    if (!runtime.drawLayer) return;
+    mapHistory.push(runtime.drawLayer.toDataURL("image/png"));
+    syncHistoryToMapState();
+  };
 
   const commitDrawingSnapshot = () => {
     if (!runtime.drawLayer) return Promise.resolve();
@@ -194,11 +208,21 @@ export function createMapController({
       commitDrawing: commitDrawingSnapshot
     });
 
-  const undo = () =>
-    undoDrawing({ mapState, drawLayer: runtime.drawLayer, restoreFromDataUrlFn });
+  const undo = () => {
+    if (!runtime.drawLayer) return;
+    const prev = mapHistory.undo();
+    syncHistoryToMapState();
+    if (typeof prev !== "string") return;
+    restoreFromDataUrlFn(prev);
+  };
 
-  const redo = () =>
-    redoDrawing({ mapState, drawLayer: runtime.drawLayer, restoreFromDataUrlFn });
+  const redo = () => {
+    if (!runtime.drawLayer) return;
+    const next = mapHistory.redo();
+    syncHistoryToMapState();
+    if (typeof next !== "string") return;
+    restoreFromDataUrlFn(next);
+  };
 
   const clearDrawing = async () =>
     clearDrawingAction({
@@ -234,6 +258,8 @@ export function createMapController({
       incomingMapState: safeIncomingMapState,
       newMapEntry
     });
+    mapHistory.replace({ undo: mapState.undo, redo: mapState.redo });
+    syncHistoryToMapState();
   };
 
   const init = () => {
@@ -331,6 +357,10 @@ export function createMapController({
       getBgImg: () => runtime.bgImg,
       setBgImg: (v) => { runtime.bgImg = v; },
       commitDrawingSnapshot,
+      clearHistory: () => {
+        mapHistory.clear();
+        syncHistoryToMapState();
+      },
       setActiveToolUI,
       setActiveColorUI,
       renderMap,
@@ -384,8 +414,8 @@ export function createMapController({
   };
 
   const serialize = () => {
-    mapState.undo = sanitizeHistoryStack(mapState.undo);
-    mapState.redo = sanitizeHistoryStack(mapState.redo);
+    mapHistory.replace({ undo: mapState.undo, redo: mapState.redo });
+    syncHistoryToMapState();
     return toJsonSafe(mapState || {});
   };
 
