@@ -19,6 +19,7 @@ import { initMapToolbarUI } from "./mapToolbarUI.js";
 import { safeAsync } from "../../ui/safeAsync.js";
 
 let _uiAlert = null;
+let _activeMapPageController = null;
 
 export function setupMapPage({
   state,
@@ -53,12 +54,54 @@ export function setupMapPage({
     typeof positionMenuOnScreen === "function" ? positionMenuOnScreen : () => { };
   const safeUiConfirm = typeof uiConfirm === "function" ? uiConfirm : () => false;
 
+  if (_activeMapPageController?.destroy) {
+    _activeMapPageController.destroy();
+  }
+
   /************************ Map page ***********************/
   let canvas, ctx;
   let drawLayer, drawCtx;
   let bgImg = null;
   let canvasWrap = null;
   let gestures;
+  let toolbarUI = null;
+  let listUI = null;
+  let destroyed = false;
+
+  const listenerController = new AbortController();
+  const { signal: listenerSignal } = listenerController;
+
+  const addListener = (target, type, handler, options) => {
+    if (!target || typeof target.addEventListener !== "function") return;
+    target.addEventListener(type, handler, { ...(options || {}), signal: listenerSignal });
+  };
+
+  const destroy = () => {
+    if (destroyed) return;
+    destroyed = true;
+
+    listenerController.abort();
+    gestures?.destroy?.();
+    toolbarUI?.destroy?.();
+    listUI?.destroy?.();
+
+    canvas = null;
+    ctx = null;
+    drawLayer = null;
+    drawCtx = null;
+    bgImg = null;
+    canvasWrap = null;
+    gestures = null;
+    toolbarUI = null;
+    listUI = null;
+
+    if (_activeMapPageController === controller) {
+      _activeMapPageController = null;
+    }
+  };
+
+  const controller = { destroy };
+  _activeMapPageController = controller;
 
   const snapshotForUndoFn = () => snapshotForUndo({ state, drawLayer });
 
@@ -93,6 +136,8 @@ export function setupMapPage({
     });
 
   function setupMap() {
+    if (destroyed) return;
+
     const can = createMapCanvases({ canvasId: "mapCanvas" });
     canvas = can.canvas;
     ctx = can.ctx;
@@ -138,7 +183,7 @@ export function setupMapPage({
       if (!state.map.ui.activeTool) state.map.ui.activeTool = "brush";
     }
 
-    const { setActiveToolUI, setActiveColorUI } = initMapToolbarUI({
+    toolbarUI = initMapToolbarUI({
       state,
       SaveManager,
       Popovers,
@@ -150,10 +195,12 @@ export function setupMapPage({
       undo,
       redo,
       clearDrawing,
-      setStatus
+      setStatus,
+      listenerSignal
     });
+    const { setActiveToolUI, setActiveColorUI } = toolbarUI;
 
-    initMapListUI({
+    listUI = initMapListUI({
       state,
       SaveManager,
       Popovers,
@@ -175,11 +222,13 @@ export function setupMapPage({
       setActiveToolUI,
       setActiveColorUI,
       renderMap,
-      setStatus
+      setStatus,
+      listenerSignal
     });
 
-    document.getElementById("mapImageInput").addEventListener("change", bgActions.setMapImage);
-    document.getElementById("removeMapImageBtn").addEventListener(
+    addListener(document.getElementById("mapImageInput"), "change", bgActions.setMapImage);
+    addListener(
+      document.getElementById("removeMapImageBtn"),
       "click",
       safeAsync(bgActions.removeMapImage, (err) => {
         console.error(err);
@@ -187,11 +236,17 @@ export function setupMapPage({
       })
     );
 
-    canvas.addEventListener("pointerdown", pointerHandlers.onPointerDown);
-    canvas.addEventListener("pointermove", pointerHandlers.onPointerMove);
-    window.addEventListener("pointerup", pointerHandlers.onPointerUp);
+    addListener(canvas, "pointerdown", pointerHandlers.onPointerDown);
+    addListener(canvas, "pointermove", pointerHandlers.onPointerMove);
+    addListener(window, "pointerup", pointerHandlers.onPointerUp);
   }
 
   // actually wire it up
-  setupMap();
+  try {
+    setupMap();
+  } catch (err) {
+    destroy();
+    throw err;
+  }
+  return controller;
 }

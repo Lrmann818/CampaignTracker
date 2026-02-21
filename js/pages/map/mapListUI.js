@@ -33,9 +33,15 @@ export function initMapListUI({
   setActiveToolUI,
   setActiveColorUI,
   renderMap,
-  setStatus
+  setStatus,
+  listenerSignal
 }) {
   if (!setStatus) throw new Error("initMapListUI requires setStatus");
+  const addListener = (target, type, handler, options) => {
+    if (!target || typeof target.addEventListener !== "function") return;
+    if (listenerSignal) target.addEventListener(type, handler, { ...(options || {}), signal: listenerSignal });
+    else target.addEventListener(type, handler, options);
+  };
 
   const mapSelect = document.getElementById("mapSelect");
   const addMapBtn = document.getElementById("addMapBtn");
@@ -96,7 +102,8 @@ export function initMapListUI({
     await loadActiveMapIntoCanvas();
   }
 
-  addMapBtn?.addEventListener(
+  addListener(
+    addMapBtn,
     "click",
     safeAsync(async () => {
       const name = await uiPrompt("Name for the new map?", { defaultValue: "New Map", title: "New Map" });
@@ -110,7 +117,8 @@ export function initMapListUI({
     })
   );
 
-  renameMapBtn?.addEventListener(
+  addListener(
+    renameMapBtn,
     "click",
     safeAsync(async () => {
       const mp = getActiveMap();
@@ -124,7 +132,8 @@ export function initMapListUI({
     })
   );
 
-  deleteMapBtn?.addEventListener(
+  addListener(
+    deleteMapBtn,
     "click",
     safeAsync(async () => {
       if (state.map.maps.length <= 1) {
@@ -155,7 +164,8 @@ export function initMapListUI({
     })
   );
 
-  mapSelect?.addEventListener(
+  addListener(
+    mapSelect,
     "change",
     safeAsync(async () => {
       await switchMap(mapSelect.value);
@@ -168,5 +178,7 @@ export function initMapListUI({
   refreshMapSelect();
   loadActiveMapIntoCanvas();
 
-  return { refreshMapSelect, loadActiveMapIntoCanvas, switchMap };
+  const destroy = () => { };
+
+  return { refreshMapSelect, loadActiveMapIntoCanvas, switchMap, destroy };
 }

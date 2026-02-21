@@ -2,6 +2,9 @@
 
 import { safeAsync } from "../../ui/safeAsync.js";
 
+const toolbarPopoverByButton = new WeakMap();
+const colorPopoverByButton = new WeakMap();
+
 export function initMapToolbarUI({
   state,
   SaveManager,
@@ -14,12 +17,18 @@ export function initMapToolbarUI({
   undo,
   redo,
   clearDrawing,
-  setStatus
+  setStatus,
+  listenerSignal
 }) {
   if (!setStatus) throw new Error("initMapToolbarUI requires setStatus");
 
   const safePositionMenuOnScreen =
     typeof positionMenuOnScreen === "function" ? positionMenuOnScreen : () => { };
+  const addListener = (target, type, handler, options) => {
+    if (!target || typeof target.addEventListener !== "function") return;
+    if (listenerSignal) target.addEventListener(type, handler, { ...(options || {}), signal: listenerSignal });
+    else target.addEventListener(type, handler, options);
+  };
   const toolBtn = document.getElementById("toolDropdownBtn");
   const toolMenu = document.getElementById("toolDropdownMenu");
   const toolOptions = Array.from(toolMenu?.querySelectorAll("[data-tool]") || []);
@@ -31,9 +40,21 @@ export function initMapToolbarUI({
   const colorOptions = Array.from(colorMenu?.querySelectorAll(".colorSwatch") || []);
   const preview = document.getElementById("activeColorPreview");
 
+  const getOrRegisterPopover = ({ cache, button, menu, args }) => {
+    if (!Popovers || !button || !menu) return null;
+    const existing = cache.get(button);
+    if (existing?.reg?.menu === menu) return existing;
+    const api = Popovers.register(args);
+    if (api) cache.set(button, api);
+    return api;
+  };
+
   // Centralized popover registrations (outside click + Escape + resize reposition)
-  const toolPopover = (Popovers && toolBtn && toolMenu)
-    ? Popovers.register({
+  const toolPopover = getOrRegisterPopover({
+    cache: toolbarPopoverByButton,
+    button: toolBtn,
+    menu: toolMenu,
+    args: {
       button: toolBtn,
       menu: toolMenu,
       preferRight: false,
@@ -45,11 +66,14 @@ export function initMapToolbarUI({
         const first = toolMenu.querySelector("button:not([disabled])");
         try { first?.focus?.({ preventScroll: true }); } catch { first?.focus?.(); }
       }
-    })
-    : null;
+    }
+  });
 
-  const colorPopover = (Popovers && colorBtn && colorMenu)
-    ? Popovers.register({
+  const colorPopover = getOrRegisterPopover({
+    cache: colorPopoverByButton,
+    button: colorBtn,
+    menu: colorMenu,
+    args: {
       button: colorBtn,
       menu: colorMenu,
       preferRight: false,
@@ -61,13 +85,13 @@ export function initMapToolbarUI({
         const first = colorMenu.querySelector("button:not([disabled])");
         try { first?.focus?.({ preventScroll: true }); } catch { first?.focus?.(); }
       }
-    })
-    : null;
+    }
+  });
 
   // Keyboard: make tool + color dropdowns feel closer to native <select>.
   const wireNativeLikeKeys = (btn, openFn, menu) => {
     if (!btn || !openFn || !menu) return;
-    btn.addEventListener("keydown", (e) => {
+    addListener(btn, "keydown", (e) => {
       const k = e.key;
       if (k !== "ArrowDown" && k !== "ArrowUp" && k !== "Enter" && k !== " ") return;
       e.preventDefault();
@@ -119,7 +143,7 @@ export function initMapToolbarUI({
   }
 
   const brush = document.getElementById("brushSize");
-  brush?.addEventListener("input", () => {
+  addListener(brush, "input", () => {
     const mp = getActiveMap();
     state.map.ui.brushSize = Number(brush.value);
     mp.brushSize = state.map.ui.brushSize;
@@ -129,7 +153,7 @@ export function initMapToolbarUI({
   // Tool button is auto-wired by popovers manager (if present).
 
   toolOptions.forEach(opt => {
-    opt.addEventListener("click", () => {
+    addListener(opt, "click", () => {
       const tool = opt.getAttribute("data-tool") || "brush";
       state.map.ui.activeTool = tool;
       setActiveToolUI(tool);
@@ -139,7 +163,7 @@ export function initMapToolbarUI({
     });
   });
 
-  colorBtn?.addEventListener("click", (e) => {
+  addListener(colorBtn, "click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (state.map.ui.activeTool === "eraser") return;
@@ -158,12 +182,12 @@ export function initMapToolbarUI({
     }
   });
 
-  colorMenu?.addEventListener("click", (e) => { e.stopPropagation(); });
+  addListener(colorMenu, "click", (e) => { e.stopPropagation(); });
 
   // Outside click close is handled by popovers manager (if present).
 
   colorOptions.forEach(btn => {
-    btn.addEventListener("click", () => {
+    addListener(btn, "click", () => {
       if (state.map.ui.activeTool === "eraser") return;
       const colorKey = btn.dataset.color || "grey";
       const mp = getActiveMap();
@@ -176,9 +200,10 @@ export function initMapToolbarUI({
 
   applyMapInteractionMode();
 
-  document.getElementById("undoBtn")?.addEventListener("click", undo);
-  document.getElementById("redoBtn")?.addEventListener("click", redo);
-  document.getElementById("clearMapBtn")?.addEventListener(
+  addListener(document.getElementById("undoBtn"), "click", undo);
+  addListener(document.getElementById("redoBtn"), "click", redo);
+  addListener(
+    document.getElementById("clearMapBtn"),
     "click",
     safeAsync(async () => {
       await clearDrawing();
@@ -188,5 +213,10 @@ export function initMapToolbarUI({
     })
   );
 
-  return { applyMapInteractionMode, setActiveToolUI, setActiveColorUI };
+  const destroy = () => {
+    closeToolMenu();
+    closeColorMenu();
+  };
+
+  return { applyMapInteractionMode, setActiveToolUI, setActiveColorUI, destroy };
 }

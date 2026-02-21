@@ -13,6 +13,8 @@ export function createMapGestures({
   let panStart = null;    // {cx,cy,scrollLeft,scrollTop}
   let pinchStart = null;  // {dist,scale}
   let viewScale = Number(state.map.ui?.viewScale || 1) || 1;
+  let initScaleRaf = 0;
+  let activeGestureWrap = null;
 
   function applyViewScale({ canvas, canvasWrap, scale, anchorClientX = null, anchorClientY = null }) {
     if (!canvas) return;
@@ -56,6 +58,7 @@ export function createMapGestures({
     const cy = (pts[0].y + pts[1].y) / 2;
 
     gestureMode = "panzoom";
+    activeGestureWrap = canvasWrap || null;
     canvasWrap?.classList.add("gestureMode");
 
     panStart = {
@@ -137,6 +140,7 @@ export function createMapGestures({
       panStart = null;
       pinchStart = null;
       canvasWrap?.classList.remove("gestureMode");
+      activeGestureWrap = null;
       return { endedPanZoom: true };
     }
 
@@ -144,10 +148,27 @@ export function createMapGestures({
   }
 
   function initScale({ canvas, canvasWrap }) {
-    requestAnimationFrame(() => applyViewScale({ canvas, canvasWrap, scale: viewScale }));
+    if (initScaleRaf) cancelAnimationFrame(initScaleRaf);
+    initScaleRaf = requestAnimationFrame(() => {
+      initScaleRaf = 0;
+      applyViewScale({ canvas, canvasWrap, scale: viewScale });
+    });
   }
 
   function getViewScale() { return viewScale; }
+
+  function destroy() {
+    if (initScaleRaf) {
+      cancelAnimationFrame(initScaleRaf);
+      initScaleRaf = 0;
+    }
+    activePointers.clear();
+    gestureMode = null;
+    panStart = null;
+    pinchStart = null;
+    activeGestureWrap?.classList.remove("gestureMode");
+    activeGestureWrap = null;
+  }
 
   return {
     initScale,
@@ -156,6 +177,7 @@ export function createMapGestures({
     onPointerMove,
     onPointerUp,
     getViewScale,
+    destroy,
     activePointers // exposed only if you want it for debugging
   };
 }
