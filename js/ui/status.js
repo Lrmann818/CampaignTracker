@@ -46,7 +46,7 @@ export function createStatus(opts = {}) {
         columnNumber: e.columnNumber
       });
 
-      // Friendly message in your UI
+      // Show a user-facing status message.
       setStatus(`Blocked by security policy: ${e.effectiveDirective || e.violatedDirective}`);
     });
   }

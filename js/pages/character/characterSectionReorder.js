@@ -48,7 +48,7 @@ export function setupCharacterSectionReorder({ state, SaveManager }) {
       return null;
     },
 
-    // Keep your existing hook (used by other modules sometimes)
+    // Expose a stable hook used by modules that need to re-apply stored order.
     storeApplyFnKey: "_applySectionOrder",
   });
 }

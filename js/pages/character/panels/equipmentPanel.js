@@ -1,5 +1,5 @@
-// Phase 3+: Character -> Equipment panel (Inventory + Money)
-// Makes Inventory behave like Sessions: tabs + notes + toolbar (add/rename/delete/search).
+// Character Equipment panel (Inventory + Money).
+// Inventory uses tabbed notes + toolbar actions (add/rename/delete/search).
 //
 // State shape (stored in state.character):
 //   inventoryItems: [{ title, notes }]
@@ -203,7 +203,6 @@ function wireHandlers() {
     markDirty();
   });
 
-  // Add item
   // Add item (prompt first, cancel aborts)
   _addBtn?.addEventListener(
     "click",

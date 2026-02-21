@@ -14,7 +14,7 @@ export function createTopbarPopover(opts) {
     positionMenuOnScreen,
     preferRight = true,
 
-    // Behavior defaults match your current calculator/dice UX:
+    // Defaults mirror current topbar widget behavior:
     // - stays open unless explicitly closed (no outside-click close)
     // - Escape closes (handled here, not by Popovers)
     closeOnOutside = false,

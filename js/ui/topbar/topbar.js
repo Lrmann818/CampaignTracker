@@ -1,5 +1,5 @@
-// js/ui/topbar.js
-// Phase 3: topbar clock + calculator + dice roller.
+// js/ui/topbar/topbar.js
+// Topbar clock + calculator + dice roller wiring.
 
 import { initTopbarClock } from "./topbarClock.js";
 import { initTopbarDiceRoller } from "./topbarDiceRoller.js";
@@ -20,9 +20,9 @@ export function initTopbarUI(deps) {
     setStatus
   } = deps || {};
 
-  // These *do* need deps. If any are missing, fail fast in dev.
+  // Require complete deps to avoid partial widget wiring.
   if (!state || !SaveManager || !Popovers || !positionMenuOnScreen || !setStatus) {
-    // In production you could just return, but during refactor this is safer.
+    // Missing deps leaves topbar widgets unavailable.
     console.warn("[topbar] Missing deps; calculator/dice not initialized.");
     return getNoopDestroyApi();
   }

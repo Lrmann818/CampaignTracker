@@ -126,7 +126,7 @@
               <input id="diceCount" type="number" min="1" max="100" step="1" value="1" inputmode="numeric" />
             </label>
 
-            <!-- NEW: big active die icon -->
+            <!-- Active die icon -->
             <div class="diceHero" aria-hidden="true">
               <span id="diceActiveIcon" class="iconMask diceActiveIcon"
                 style="--icon:url('icons/dice/d20.svg');"></span>
@@ -141,19 +141,19 @@
             </label>
           </div>
 
-          <!-- NEW: 3-button roll row (even spacing) -->
+          <!-- 3-button roll row -->
           <div class="diceRollRow" aria-label="Roll controls">
             <button id="diceDisBtn" type="button" class="diceAltBtn">Dis</button>
             <button id="diceRollBtn" type="button" class="diceRollBtn">Roll</button>
             <button id="diceAdvBtn" type="button" class="diceAltBtn">Adv</button>
           </div>
 
-          <!-- Clear sits under, like your sketch -->
+          <!-- Clear action row -->
           <div class="diceActions">
             <button id="diceClearBtn" type="button" class="diceClearBtn danger" title="Clear history">Clear</button>
           </div>
 
-          <!-- NEW: icon presets (select die, do NOT roll) -->
+          <!-- Icon presets (select die, do not roll) -->
           <div class="dicePresets" aria-label="Choose die">
             <button type="button" class="dicePreset" data-sides="4" aria-label="d4">
               <span class="iconMask dicePresetIcon" aria-hidden="true" style="--icon:url('icons/dice/d4.svg');"></span>
@@ -237,7 +237,6 @@
               </div>
             </div>
 
-            <!-- <div class="npcTabsWrap" role="tablist" aria-label="NPC Sections"> -->
             <div class="sessionTabsWrap" role="tablist" aria-label="Sessions">
               <div id="npcTabs" class="sessionTabs"></div>
             </div>
@@ -262,8 +261,6 @@
               </div>
             </div>
 
-            <!-- ✅ Party Sections (NPC-style tabs) -->
-            <!-- <div class="npcTabsWrap" role="tablist" aria-label="Party Sections"> -->
             <div class="sessionTabsWrap" role="tablist" aria-label="Sessions">
               <div id="partyTabs" class="sessionTabs"></div>
             </div>
@@ -297,7 +294,6 @@
               </div>
             </div>
 
-            <!-- <div class="npcTabsWrap" role="tablist" aria-label="Location Sections"> -->
             <div class="sessionTabsWrap" role="tablist" aria-label="Sessions">
               <div id="locTabs" class="sessionTabs"></div>
             </div>

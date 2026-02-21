@@ -57,8 +57,7 @@ export function initDataPanel(deps) {
 
   const themeSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById("dataPanelThemeSelect"));
 
-  // Populate the Theme dropdown in the organized format you liked.
-  // (We used to clone from #themeSelect in the old dropdown, but that element no longer exists.)
+  // Populate the Theme dropdown groups once.
   if (themeSelect && !themeSelect.dataset.built) {
     buildThemeOptions(themeSelect);
     themeSelect.dataset.built = "1";
@@ -119,7 +118,7 @@ export function initDataPanel(deps) {
     themeSelect.addEventListener("change", () => {
       const val = themeSelect.value || "system";
       applyTheme(val);
-      // store theme where your app expects it (tracker.ui), but keep backward compat if you had ui earlier
+      // Preserve whichever UI bucket exists (legacy tracker.ui or root ui).
       if (state?.tracker?.ui) state.tracker.ui.theme = val;
       else {
         state.ui = state.ui || {};

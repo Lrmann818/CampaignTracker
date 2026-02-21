@@ -38,7 +38,7 @@ export async function enhanceNumberSteppers(root = document) {
     wrap.appendChild(stepper);
 
     const pokeInput = () => {
-      // This triggers your existing save bindings (bindNumber uses "input")3
+      // Trigger the same input listeners used by bindNumber/save wiring.
       input.dispatchEvent(new Event("input", { bubbles: true }));
     };
 

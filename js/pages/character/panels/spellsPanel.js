@@ -58,7 +58,7 @@ export function initSpellsPanel(deps = {}) {
 
     // Spell factory (Spells v2).
     // Keep this local so the UI can always create a valid spell object,
-    // even if other modules refactor/rename helpers.
+    // even if shared helper names change.
     function newSpell(name = '') {
         return {
             id: newTextId('spell'),

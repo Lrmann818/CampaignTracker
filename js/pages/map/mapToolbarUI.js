@@ -185,7 +185,7 @@ export function initMapToolbarUI({
     if (mapState.ui.activeTool === "eraser") return;
     if (colorPopover) colorPopover.toggle();
     else {
-      // fallback: old behavior
+      // Fallback path when Popovers manager is unavailable.
       if (!colorMenu || !colorBtn) return;
       if (colorMenu.hidden) {
         colorMenu.hidden = false;

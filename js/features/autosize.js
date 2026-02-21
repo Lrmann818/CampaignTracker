@@ -1,4 +1,4 @@
-// Autosize helpers extracted from app.js (Phase 2)
+// Autosize helpers for number inputs and persisted textarea sizing.
 
 // NOTE: many inputs are created *before* being inserted into the DOM.
 // getComputedStyle() returns incomplete values for disconnected elements, so we defer measuring
@@ -65,7 +65,6 @@ export function autoSizeInput(el, { min = 0, max = 300, extra = 0 } = {}) {
   el.addEventListener("input", schedule);
   el.addEventListener("blur", schedule);
 
-  // Re-measure when the layout around the input changes (card/grid resize)
   // Re-measure when the layout around the input changes (card/grid resize)
   if (window.ResizeObserver) {
     const ro = new ResizeObserver(() => schedule());
@@ -158,7 +157,7 @@ export function setupTextareaSizing({
       if (typeof markDirty === "function") {
         markDirty();
       } else {
-        // Legacy fallback (shouldn't be used once app.js passes markDirty)
+        // Legacy fallback for callers that still pass saveAll/setStatus.
         setStatus("Saving...");
         saveAll();
       }

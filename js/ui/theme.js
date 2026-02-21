@@ -1,5 +1,5 @@
 // js/ui/theme.js
-// Phase 3: theme manager (system/light/dark + named themes) with a safe system listener.
+// Theme manager (system/light/dark + named themes) with a safe system listener.
 
 export function createThemeManager({ state, redraw } = {}) {
   let _systemThemeMql = null;

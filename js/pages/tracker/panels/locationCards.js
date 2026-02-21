@@ -1,6 +1,5 @@
-// Phase 3 (part 2.5): Location Cards UI extracted from app.js
-// This module renders Location cards. A few location helpers still live in app.js
-// and are injected via initLocationCards().
+// Location cards panel renderer and wiring.
+// Dependencies are injected by initLocationsPanel so this module stays page-agnostic.
 
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
@@ -21,7 +20,7 @@ let _blobIdToObjectUrl = null;
 // Optional: Popovers manager, used to enhance native <select> open menus.
 let _Popovers = null;
 
-// Injected helpers (still in app.js for now)
+// Injected helper functions.
 let _pickLocImage = null;
 let _updateLoc = null;
 let _moveLocCard = null;
@@ -237,7 +236,7 @@ export function renderLocationCard(loc) {
   const footer = document.createElement("div");
 footer.className = "npcCardFooter";
 
-// “Move between sections” dropdown (matches Party/NPC cards)
+// "Move between sections" dropdown (matches Party/NPC cards).
 const { sectionWrap } = createSectionSelectRow({
   sections: _state.tracker.locSections || [],
   value: loc.sectionId || _state.tracker.locActiveSectionId,
@@ -291,7 +290,7 @@ return card;
 }
 
 
-// Phase 3 polish: Locations init + CRUD helpers moved out of app.js
+// Initialize Locations panel wiring + CRUD handlers.
 export function initLocationsPanel(deps = {}) {
   const {
     SaveManager,
@@ -321,7 +320,7 @@ export function initLocationsPanel(deps = {}) {
   // store Popovers for dynamic card dropdown enhancements
   _Popovers = Popovers || null;
 
-  // migrate old textarea into a location card (only once)
+  // Migrate legacy textarea content into a location card (only once).
   if (!Array.isArray(_state.tracker.locationsList)) _state.tracker.locationsList = [];
   if (typeof _state.tracker.locSearch !== "string") _state.tracker.locSearch = "";
   if (typeof _state.tracker.locFilter !== "string") _state.tracker.locFilter = "all";

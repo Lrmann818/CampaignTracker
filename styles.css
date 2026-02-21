@@ -506,7 +506,7 @@
   --text: #f6f2ff;
   --muted: #cfc6ee;
 
-  /* Violet structure with gold influence */
+  /* Violet surfaces with gold accents */
   --border: #7a6738;
   --surface-2: #231e44;
   /* inputs */
@@ -516,11 +516,11 @@
   --diceIconColor: #7a6738;
   --dicePresetIconColor: #7a6738;
 
-  /* Gold rune accents (now unmistakable) */
+  /* Gold accent ring + hairline */
   --ring: rgba(255, 205, 120, 0.55);
   --hairline: rgba(255, 200, 95, 0.35);
 
-  /* Shadows stay dark so gold pops */
+  /* Keep shadows dark for contrast */
   --shadow-inset: rgba(0, 0, 0, 0.6);
   --shadow-drop: rgba(0, 0, 0, 0.8);
   --map-empty: #0a0916;
@@ -1015,7 +1015,7 @@ input[type="range"].uiRange::-moz-range-thumb {
   place-items: center;
 
   color: var(--border);
-  /* match your border color */
+  /* match the border color token */
   opacity: 0.95;
   cursor: pointer;
   line-height: 1;
@@ -1023,7 +1023,7 @@ input[type="range"].uiRange::-moz-range-thumb {
 
   user-select: none;
 
-  /* 🔥 kill the circle */
+  /* remove default button focus ring/halo styles */
   outline: none;
   box-shadow: none;
   -webkit-tap-highlight-color: transparent;
@@ -2406,7 +2406,7 @@ div.mutedSmall {
   }
 }
 
-/* Make select boxes match your textbox style (closed state) */
+/* Make select boxes match textbox styling (closed state) */
 
 select.npcField {
   width: 100%;
@@ -2587,7 +2587,7 @@ select.npcField:focus {
   gap: 1px;
 }
 
-/* NEW: label on the left, field on the right */
+/* Label on the left, field on the right */
 .npcRowBlock {
   display: grid;
   grid-template-columns: var(--npc-label-w, 40px) 1fr;
@@ -2616,7 +2616,7 @@ select.npcField:focus {
   min-width: 0;
 }
 
-/* Notes: fixed height + internal scroll (like your sketch) */
+/* Notes: fixed height + internal scroll */
 .npcNotesBox {
   min-height: 110px;
   max-height: 110px;
@@ -2943,7 +2943,7 @@ select.npcField:focus {
   display: grid;
   gap: 4px;
 
-  /* ✅ two columns only (so top/mid have “only two columns”) */
+  /* Keep two columns so top/mid rows stay paired. */
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: auto auto auto;
   align-items: start;
@@ -2986,7 +2986,7 @@ select.npcField:focus {
   grid-template-columns: max-content max-content;
   /* or: auto auto */
   column-gap: 4px;
-  /* your desired gap */
+  /* spacing between damage fields */
   justify-content: start;
   /* keep them left */
   overflow: hidden;
@@ -2994,9 +2994,9 @@ select.npcField:focus {
 
 .attackBottom {
   grid-template-columns: max-content max-content max-content;
-  /* ✅ adds column for X */
+  /* third column holds delete action */
   column-gap: 4px;
-  /* ✅ your desired gap */
+  /* spacing between range/type/actions */
   justify-content: start;
   overflow: hidden;
 }
@@ -3036,7 +3036,7 @@ select.npcField:focus {
   display: flex;
   align-items: center;
   gap: 4px;
-  /* your desired spacing between Range and Type */
+  /* spacing between Range and Type */
   justify-content: flex-start;
 }
 
@@ -3291,7 +3291,7 @@ select.npcField:focus {
   border-color: var(--skill-prof-dot);
 }
 
-/* Skill proficiency options button (replaces the old dot checkbox) */
+/* Skill proficiency options button */
 .skillProfBtn {
   width: 26px;
   height: 26px;
@@ -4011,7 +4011,7 @@ button#colorBtn.dropdownBtn {
   background-repeat: no-repeat;
 }
 
-/* Hide the old caret so it doesn't affect height */
+/* Hide the legacy caret icon so it does not affect height */
 button#colorBtn .caret {
   display: none;
 }
@@ -4216,7 +4216,7 @@ button#colorBtn[aria-expanded="true"] {
   display: block;
 }
 
-/* Match your dropdown look */
+/* Dice dropdown container */
 .diceMenu {
   position: fixed;
   /* positionMenuOnScreen() sets left/top */
@@ -4349,7 +4349,7 @@ button#colorBtn[aria-expanded="true"] {
   opacity: 0.95;
 }
 
-/* 3-button roll row like your sketch */
+/* 3-button roll row */
 .diceRollRow {
   display: grid;
   grid-template-columns: 1fr 1.4fr 1fr;
@@ -4435,7 +4435,7 @@ button#colorBtn[aria-expanded="true"] {
   /* IMPORTANT: give it real space */
 }
 
-/* Hug hero using your stable classes */
+/* Align side fields toward the hero icon */
 #diceMenu .diceTopRow .diceCountField {
   justify-self: end;
 }
@@ -4509,7 +4509,7 @@ button#colorBtn[aria-expanded="true"] {
   opacity: 0.9;
 }
 
-/* IMPORTANT: your number input is wrapped by .numWrap.
+/* Number inputs are wrapped by .numWrap.
    Don't try padding tricks on the input itself. */
 .modWrap .numWrap {
   flex: 0 0 auto;

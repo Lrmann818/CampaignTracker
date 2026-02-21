@@ -8,7 +8,7 @@ export function makeId(prefix) {
 export function makeNpc({ sectionId = "", group = "undecided", name = "", notes = "" } = {}) {
   return {
     id: makeId("npc"),
-    // Sections are the new scalable grouping system.
+    // sectionId is the primary grouping field for current saves.
     // We keep `group` for backwards-compat / older saves.
     sectionId,
     group,

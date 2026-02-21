@@ -10,26 +10,31 @@ A lightweight, offline-first Campaign Tracker web app (vanilla HTML/CSS/JS) for 
 
 ## Run locally
 
-This project is designed to run with a simple static server (recommended so ES modules load correctly).
+This project uses ES modules (`<script type="module" src="app.js"></script>`), so run it from a static server.
 
 - VS Code: **Live Server**
-- Or any local server of your choice
+- Or any local static server of your choice
 
 Then open the served URL (not a `file://` path).
 
 ## Project structure (high level)
 
-- `index.html` – app shell / markup
-- `styles.css` – global styling
-- `boot.js` – early boot (non-module) helpers if needed
-- `app.js` – main module orchestrator (wires state, storage, UI, features)
+- `index.html` - app shell/markup + CSP + root page sections
+- `styles.css` - global styling
+- `boot.js` - pre-module boot for initial theme + app version exposure
+- `app.js` - composition root (state guard, persistence wiring, shared UI systems, page init)
+- `docs/architecture.md` - intended boundaries + current wiring details
 
-Modules:
-- `js/state.js` – shared app state + defaults
-- `js/storage/*` – persistence, IndexedDB, backups/import/export
-- `js/ui/*` – dialogs, navigation, theme, topbar, popovers, data panel
-- `js/features/*` – reusable feature helpers (autosize, image picker/cropper/flow)
-- `js/pages/*` – Page-specific UI logic. (party, NPCs, locations, sessions, map, character sheet)
+`js/` modules:
+- `js/state.js` - app state defaults, migrations, save sanitization, map-manager helpers
+- `js/domain/*` - domain factories + explicit state action helpers
+- `js/storage/*` - localStorage + IndexedDB (blobs/text) + backup/import/export + save manager
+- `js/ui/*` - shared UI infrastructure (dialogs, navigation, popovers, topbar, settings/data panel, bindings)
+- `js/features/*` - reusable feature helpers (autosize, image picker/cropper/portrait flow, steppers)
+- `js/pages/tracker/*` - tracker page wiring + panel modules (`sessions`, `npcCards`, `partyCards`, `locationCards`, shared card helpers)
+- `js/pages/character/*` - character page wiring + panel modules
+- `js/pages/map/*` - map page setup + controller/ui/persistence/history/gesture/drawing modules
+- `js/utils/*` - dev/state-guard helpers, DOM guards, general utilities
 
 ## Notes
 

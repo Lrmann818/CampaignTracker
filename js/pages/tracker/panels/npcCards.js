@@ -1,6 +1,5 @@
-// Phase 3 (part 2): NPC Cards UI extracted from app.js
-// This module renders NPC cards. It relies on a few helpers that still live in app.js;
-// those are injected via initNpcCards().
+// NPC cards panel renderer and wiring.
+// Dependencies are injected by initNpcsPanel so this module stays page-agnostic.
 
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
@@ -20,7 +19,7 @@ let _state = null;
 let _blobIdToObjectUrl = null;
 let _autoSizeInput = null;
 
-// Injected helpers (still in app.js for now)
+// Injected helper functions.
 let _matchesSearch = null;
 let _enhanceNumberSteppers = null;
 let _pickNpcImage = null;
@@ -253,7 +252,7 @@ function renderNpcCard(npc) {
   const footer = document.createElement("div");
   footer.className = "npcCardFooter";
 
-  // ✅ Scalable “move between sections” via dropdown (same pattern as Party)
+  // Move between sections via dropdown (same pattern as Party).
   const { sectionWrap } = createSectionSelectRow({
     sections: _state.tracker.npcSections || [],
     value: npc.sectionId || _state.tracker.npcActiveSectionId,
@@ -312,7 +311,7 @@ function renderNpcCard(npc) {
 // (Move buttons removed in favor of section dropdown)
 
 
-// Phase 3 polish: NPC init + CRUD helpers moved out of app.js
+// Initialize NPC panel wiring + CRUD handlers.
 export function initNpcsPanel(deps = {}) {
   const {
     SaveManager,
@@ -346,7 +345,7 @@ export function initNpcsPanel(deps = {}) {
 
   _Popovers = Popovers || null;
 
-  // Migrate old npc textarea string into first NPC note (if any old data exists)
+  // Migrate legacy NPC textarea text into the first NPC note (if present).
   // Only runs if npcs is not an array.
   if (!Array.isArray(_state.tracker.npcs)) {
     const old = String(_state.tracker.npcs || "").trim();

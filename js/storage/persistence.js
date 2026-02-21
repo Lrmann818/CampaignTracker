@@ -249,6 +249,6 @@ export function installExitSave(SaveManager) {
   return () => {
     window.removeEventListener("beforeunload", handler);
     window.removeEventListener("pagehide", backgroundFlush);
-    // visibilitychange removal would require the same fn ref; keep it simple for now.
+    // visibilitychange listener intentionally stays for app lifetime; removal needs a named handler reference.
   };
 }

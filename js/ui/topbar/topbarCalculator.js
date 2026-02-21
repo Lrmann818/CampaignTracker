@@ -1,4 +1,4 @@
-// topbar calculator
+// Topbar calculator popover.
 
 import { createTopbarPopover } from "./topbarPopover.js";
 import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
@@ -111,7 +111,7 @@ export function initTopbarCalculator(deps) {
         onOpen: () => {
             renderHistory();
         },
-        // keep focus behavior consistent with your old code
+        // Keep focus in the display when opening.
         focusOnOpen: display
     });
 
@@ -306,7 +306,7 @@ export function initTopbarCalculator(deps) {
         const isDigit = /^[0-9]$/.test(k) || k === ".";
         const isOp = ["*", "/", "-", "+"].includes(k);
 
-        // ✅ if we just hit "=", and now we're starting a NEW number, clear first
+        // If "=" was just pressed and the next key is a digit, start a new expression.
         if (calcJustEvaluated && isDigit) {
             display.value = "";
         }

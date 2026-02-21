@@ -1,14 +1,8 @@
 // @ts-nocheck
 
-/************************ Phase 1: split into modules ************************
- * This file is now an ES module. Your index.html must load it like:
- *   <script type="module" src="app.js"></script>
- *
- * Extracted modules:
- *   ./js/state.js
- *   ./js/storage/blobs.js
- *   ./js/storage/texts-idb.js
- *   ./js/storage/backup.js
+/************************ App Composition Root ************************
+ * Wires shared services (state guard, persistence, popovers, theme)
+ * and initializes tracker/character/map modules.
  ***************************************************************************/
 
 import {

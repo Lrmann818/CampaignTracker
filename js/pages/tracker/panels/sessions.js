@@ -1,5 +1,5 @@
-// Phase 3: Sessions UI extracted from app.js
-// Renders the Sessions tab strip + notes box and wires the toolbar buttons.
+// Sessions panel wiring.
+// Renders the tab strip + notes box and wires toolbar actions.
 
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { safeAsync } from "../../../ui/safeAsync.js";
@@ -13,7 +13,7 @@ let _renameBtn = null;
 let _deleteBtn = null;
 let _notesHl = null;
 
-// Injected services (still live in app.js)
+// Injected services from page-level wiring.
 let _SaveManager = null;
 let _uiPrompt = null;
 let _uiAlert = null;
@@ -238,7 +238,7 @@ function wireHandlers() {
     safeAsync(async (e) => {
       if ((_state.tracker.sessions?.length || 0) <= 1) {
         await _uiAlert?.("You need at least one session.", { title: "Notice" });
-        // (legacy) some handlers tried to clear inputs; keep harmless
+        // Defensive: some click targets expose a value field; clearing it is harmless.
         if (e?.target && "value" in e.target) e.target.value = "";
         return;
       }

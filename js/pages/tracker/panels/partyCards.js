@@ -1,6 +1,5 @@
-// Phase 3 (part 1): Party Cards UI extracted from app.js
-// This module renders party member cards. It relies on a few helpers that still
-// live in app.js; those are injected via initPartyCards().
+// Party cards panel renderer and wiring.
+// Dependencies are injected by initPartyPanel so this module stays page-agnostic.
 
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
@@ -23,7 +22,7 @@ let _autoSizeInput = null;
 // Optional: Popovers manager, used to enhance native <select> open menus.
 let _Popovers = null;
 
-// Injected helpers (still in app.js for now)
+// Injected helper functions.
 let _matchesSearch = null;
 let _enhanceNumberSteppers = null;
 let _pickPartyImage = null;
@@ -245,8 +244,7 @@ function renderPartyCard(m) {
   const footer = document.createElement("div");
   footer.className = "npcCardFooter";
 
-  // ✅ NPC-style “move between sections”, but scalable:
-  // a dropdown that switches which section the member belongs to
+  // NPC-style "move between sections" via dropdown.
   const { sectionWrap } = createSectionSelectRow({
     sections: _state.tracker.partySections || [],
     value: m.sectionId || _state.tracker.partyActiveSectionId,
@@ -296,8 +294,8 @@ function renderPartyCard(m) {
 }
 
 
-// Phase 3 polish: Party init + CRUD helpers moved out of app.js
-// Returns an API object useful for optional legacy/global wiring.
+// Initialize Party panel wiring + CRUD handlers.
+// Returns handlers for optional external wiring.
 export function initPartyPanel(deps = {}) {
   const {
     SaveManager,
@@ -342,7 +340,7 @@ export function initPartyPanel(deps = {}) {
   if (!Array.isArray(_state.tracker.party)) _state.tracker.party = [];
   if (typeof _state.tracker.partySearch !== "string") _state.tracker.partySearch = "";
 
-  // Party sections state (migrate old saves safely)
+  // Party sections state (migrate legacy saves safely).
   if (!Array.isArray(_state.tracker.partySections) || _state.tracker.partySections.length === 0) {
     _state.tracker.partySections = [{
       id: "partysec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),

@@ -1,5 +1,5 @@
 // js/pages/character/characterPage.js
-// Phase 3: Character page + Spells v2 extracted from app.js.
+// Character page composition and panel wiring.
 
 import { initEquipmentPanel } from "../character/panels/equipmentPanel.js";
 import { initAttacksPanel } from "../character/panels/attackPanel.js";
