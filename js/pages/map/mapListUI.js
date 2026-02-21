@@ -11,6 +11,7 @@ export function initMapListUI({
   state,
   SaveManager,
   Popovers,
+  addListener: addOwnedListener,
   ensureMapManager,
   getActiveMap,
   newMapEntry,
@@ -33,15 +34,13 @@ export function initMapListUI({
   setActiveToolUI,
   setActiveColorUI,
   renderMap,
-  setStatus,
-  listenerSignal
+  setStatus
 }) {
   if (!setStatus) throw new Error("initMapListUI requires setStatus");
-  const addListener = (target, type, handler, options) => {
-    if (!target || typeof target.addEventListener !== "function") return;
-    if (listenerSignal) target.addEventListener(type, handler, { ...(options || {}), signal: listenerSignal });
-    else target.addEventListener(type, handler, options);
-  };
+  if (typeof addOwnedListener !== "function") {
+    throw new Error("initMapListUI requires deps.addListener (controller-owned listener attachment)");
+  }
+  const addListener = addOwnedListener;
 
   const mapSelect = document.getElementById("mapSelect");
   const addMapBtn = document.getElementById("addMapBtn");

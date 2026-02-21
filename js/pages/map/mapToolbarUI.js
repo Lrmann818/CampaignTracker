@@ -10,6 +10,7 @@ export function initMapToolbarUI({
   SaveManager,
   Popovers,
   positionMenuOnScreen,
+  addListener: addOwnedListener,
   canvas,
   canvasWrap,
   getActiveMap,
@@ -17,18 +18,16 @@ export function initMapToolbarUI({
   undo,
   redo,
   clearDrawing,
-  setStatus,
-  listenerSignal
+  setStatus
 }) {
   if (!setStatus) throw new Error("initMapToolbarUI requires setStatus");
+  if (typeof addOwnedListener !== "function") {
+    throw new Error("initMapToolbarUI requires deps.addListener (controller-owned listener attachment)");
+  }
 
   const safePositionMenuOnScreen =
     typeof positionMenuOnScreen === "function" ? positionMenuOnScreen : () => { };
-  const addListener = (target, type, handler, options) => {
-    if (!target || typeof target.addEventListener !== "function") return;
-    if (listenerSignal) target.addEventListener(type, handler, { ...(options || {}), signal: listenerSignal });
-    else target.addEventListener(type, handler, options);
-  };
+  const addListener = addOwnedListener;
   const toolBtn = document.getElementById("toolDropdownBtn");
   const toolMenu = document.getElementById("toolDropdownMenu");
   const toolOptions = Array.from(toolMenu?.querySelectorAll("[data-tool]") || []);
