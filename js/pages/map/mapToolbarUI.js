@@ -6,7 +6,7 @@ const toolbarPopoverByButton = new WeakMap();
 const colorPopoverByButton = new WeakMap();
 
 export function initMapToolbarUI({
-  state,
+  mapState,
   SaveManager,
   Popovers,
   positionMenuOnScreen,
@@ -24,6 +24,10 @@ export function initMapToolbarUI({
   if (typeof addOwnedListener !== "function") {
     throw new Error("initMapToolbarUI requires deps.addListener (controller-owned listener attachment)");
   }
+  if (!mapState || typeof mapState !== "object") {
+    throw new Error("initMapToolbarUI requires mapState");
+  }
+  mapState.ui ||= {};
 
   const safePositionMenuOnScreen =
     typeof positionMenuOnScreen === "function" ? positionMenuOnScreen : () => { };
@@ -106,7 +110,7 @@ export function initMapToolbarUI({
   wireNativeLikeKeys(colorBtn, () => colorPopover?.open?.(), colorMenu);
 
   function applyMapInteractionMode() {
-    const tool = state.map.ui?.activeTool || "brush";
+    const tool = mapState.ui?.activeTool || "brush";
     const drawing = (tool === "brush" || tool === "eraser");
     canvasWrap?.classList.toggle("drawingMode", drawing);
     canvas.style.touchAction = drawing ? "none" : "pan-x pan-y";
@@ -144,8 +148,8 @@ export function initMapToolbarUI({
   const brush = document.getElementById("brushSize");
   addListener(brush, "input", () => {
     const mp = getActiveMap();
-    state.map.ui.brushSize = Number(brush.value);
-    mp.brushSize = state.map.ui.brushSize;
+    mapState.ui.brushSize = Number(brush.value);
+    mp.brushSize = mapState.ui.brushSize;
     SaveManager.markDirty();
   });
 
@@ -154,7 +158,7 @@ export function initMapToolbarUI({
   toolOptions.forEach(opt => {
     addListener(opt, "click", () => {
       const tool = opt.getAttribute("data-tool") || "brush";
-      state.map.ui.activeTool = tool;
+      mapState.ui.activeTool = tool;
       setActiveToolUI(tool);
       if (tool === "brush") setActiveColorUI(getActiveMap().colorKey);
       applyMapInteractionMode();
@@ -165,7 +169,7 @@ export function initMapToolbarUI({
   addListener(colorBtn, "click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (state.map.ui.activeTool === "eraser") return;
+    if (mapState.ui.activeTool === "eraser") return;
     if (colorPopover) colorPopover.toggle();
     else {
       // fallback: old behavior
@@ -187,7 +191,7 @@ export function initMapToolbarUI({
 
   colorOptions.forEach(btn => {
     addListener(btn, "click", () => {
-      if (state.map.ui.activeTool === "eraser") return;
+      if (mapState.ui.activeTool === "eraser") return;
       const colorKey = btn.dataset.color || "grey";
       const mp = getActiveMap();
       mp.colorKey = colorKey;

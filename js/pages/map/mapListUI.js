@@ -8,7 +8,7 @@ import {
 } from "./mapPersistence.js";
 
 export function initMapListUI({
-  state,
+  mapState,
   SaveManager,
   Popovers,
   addListener: addOwnedListener,
@@ -40,6 +40,10 @@ export function initMapListUI({
   if (typeof addOwnedListener !== "function") {
     throw new Error("initMapListUI requires deps.addListener (controller-owned listener attachment)");
   }
+  if (!mapState || typeof mapState !== "object") {
+    throw new Error("initMapListUI requires mapState");
+  }
+  mapState.ui ||= {};
   const addListener = addOwnedListener;
 
   const mapSelect = document.getElementById("mapSelect");
@@ -65,11 +69,12 @@ export function initMapListUI({
   function refreshMapSelect() {
     ensureMapManager();
     mapSelect.innerHTML = "";
-    for (const mp of state.map.maps) {
+    const maps = Array.isArray(mapState.maps) ? mapState.maps : [];
+    for (const mp of maps) {
       const opt = document.createElement("option");
       opt.value = mp.id;
       opt.textContent = mp.name || "Map";
-      if (mp.id === state.map.activeMapId) opt.selected = true;
+      if (mp.id === mapState.activeMapId) opt.selected = true;
       mapSelect.appendChild(opt);
     }
     try { mapSelect.dispatchEvent(new Event("selectDropdown:rebuild")); } catch { }
@@ -78,13 +83,13 @@ export function initMapListUI({
   async function loadActiveMapIntoCanvas() {
     const mp = getActiveMap();
 
-    state.map.undo = [];
-    state.map.redo = [];
+    mapState.undo = [];
+    mapState.redo = [];
 
     const brush = document.getElementById("brushSize");
-    brush.value = state.map.ui.brushSize;
-    mp.brushSize = state.map.ui.brushSize;
-    setActiveToolUI(state.map.ui.activeTool);
+    brush.value = mapState.ui.brushSize;
+    mp.brushSize = mapState.ui.brushSize;
+    setActiveToolUI(mapState.ui.activeTool);
     setActiveColorUI(mp.colorKey);
 
     setBgImg(await loadMapBackgroundImage({ mp, blobIdToObjectUrl }));
@@ -96,7 +101,7 @@ export function initMapListUI({
 
   async function switchMap(newId) {
     await commitDrawingSnapshot();
-    state.map.activeMapId = newId;
+    mapState.activeMapId = newId;
     SaveManager.markDirty(); refreshMapSelect();
     await loadActiveMapIntoCanvas();
   }
@@ -108,7 +113,7 @@ export function initMapListUI({
       const name = await uiPrompt("Name for the new map?", { defaultValue: "New Map", title: "New Map" });
       if (name == null) return;
       const mp = newMapEntry(name.trim() || "New Map");
-      state.map.maps.push(mp);
+      mapState.maps.push(mp);
       await switchMap(mp.id);
     }, (err) => {
       console.error(err);
@@ -135,7 +140,7 @@ export function initMapListUI({
     deleteMapBtn,
     "click",
     safeAsync(async () => {
-      if (state.map.maps.length <= 1) {
+      if (mapState.maps.length <= 1) {
         await uiAlert("You must keep at least one map.", { title: "Notice" });
         return;
       }
@@ -152,9 +157,9 @@ export function initMapListUI({
         catch (err) { console.warn("Failed to delete map image blob:", err); }
       }
 
-      state.map.maps = state.map.maps.filter(m => m.id !== mp.id);
-      if (!state.map.maps.length) state.map.maps = [newMapEntry("World Map")];
-      state.map.activeMapId = state.map.maps[0].id;
+      mapState.maps = mapState.maps.filter(m => m.id !== mp.id);
+      if (!mapState.maps.length) mapState.maps = [newMapEntry("World Map")];
+      mapState.activeMapId = mapState.maps[0].id;
       SaveManager.markDirty(); refreshMapSelect();
       await loadActiveMapIntoCanvas();
     }, (err) => {

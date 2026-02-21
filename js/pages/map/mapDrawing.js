@@ -3,23 +3,25 @@
 import { colorFromKey } from "./mapUtils.js";
 import { renderMap } from "./mapCanvas.js";
 
-export function snapshotForUndo({ state, drawLayer }) {
+export function snapshotForUndo({ mapState, drawLayer }) {
   const url = drawLayer.toDataURL("image/png");
-  state.map.undo.push(url);
-  if (state.map.undo.length > 50) state.map.undo.shift();
-  state.map.redo.length = 0;
+  mapState.undo ||= [];
+  mapState.redo ||= [];
+  mapState.undo.push(url);
+  if (mapState.undo.length > 50) mapState.undo.shift();
+  mapState.redo.length = 0;
 }
 
 export function drawDot({
   pt,
-  state,
+  mapState,
   getActiveMap,
   drawCtx,
   renderArgs
 }) {
   const mp = getActiveMap();
-  const tool = state.map.ui?.activeTool || "brush";
-  const size = state.map.ui?.brushSize ?? mp.brushSize;
+  const tool = mapState.ui?.activeTool || "brush";
+  const size = mapState.ui?.brushSize ?? mp.brushSize;
 
   drawCtx.save();
   if (tool === "eraser") {
@@ -41,14 +43,14 @@ export function drawDot({
 export function drawLine({
   a,
   b,
-  state,
+  mapState,
   getActiveMap,
   drawCtx,
   renderArgs
 }) {
   const mp = getActiveMap();
-  const tool = state.map.ui?.activeTool || "brush";
-  const size = state.map.ui?.brushSize ?? mp.brushSize;
+  const tool = mapState.ui?.activeTool || "brush";
+  const size = mapState.ui?.brushSize ?? mp.brushSize;
 
   drawCtx.save();
   if (tool === "eraser") {
@@ -88,30 +90,34 @@ export function restoreFromDataUrl({
 }
 
 export function undo({
-  state,
+  mapState,
   drawLayer,
   restoreFromDataUrlFn
 }) {
-  if (!state.map.undo.length) return;
+  if (!Array.isArray(mapState.undo) || !mapState.undo.length) return;
+  mapState.redo ||= [];
 
   const current = drawLayer.toDataURL("image/png");
-  state.map.redo.push(current);
+  mapState.redo.push(current);
 
-  const prev = state.map.undo.pop();
+  const prev = mapState.undo.pop();
+  if (typeof prev !== "string") return;
   restoreFromDataUrlFn(prev);
 }
 
 export function redo({
-  state,
+  mapState,
   drawLayer,
   restoreFromDataUrlFn
 }) {
-  if (!state.map.redo.length) return;
+  if (!Array.isArray(mapState.redo) || !mapState.redo.length) return;
+  mapState.undo ||= [];
 
   const current = drawLayer.toDataURL("image/png");
-  state.map.undo.push(current);
+  mapState.undo.push(current);
 
-  const next = state.map.redo.pop();
+  const next = mapState.redo.pop();
+  if (typeof next !== "string") return;
   restoreFromDataUrlFn(next);
 }
 
