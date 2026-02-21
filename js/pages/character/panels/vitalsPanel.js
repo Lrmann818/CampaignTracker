@@ -97,7 +97,7 @@ function setupVitalsTileReorder({ state, SaveManager, panelEl, gridEl }) {
   applyOrder();
 }
 
-export function initVitalsPanelUI(deps = {}) {
+export function initVitalsPanel(deps = {}) {
   const {
     state,
     SaveManager,

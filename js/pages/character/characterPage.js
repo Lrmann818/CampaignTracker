@@ -1,15 +1,15 @@
 // js/pages/character/characterPage.js
 // Phase 3: Character page + Spells v2 extracted from app.js.
 
-import { initEquipmentPanelUI } from "../character/panels/equipmentPanel.js";
-import { initAttacksPanelUI } from "../character/panels/attackPanel.js";
+import { initEquipmentPanel } from "../character/panels/equipmentPanel.js";
+import { initAttacksPanel } from "../character/panels/attackPanel.js";
 import { setupCharacterSectionReorder } from "../character/characterSectionReorder.js";
-import { initSpellsPanelUI } from "../character/panels/spellsPanel.js";
-import { initVitalsPanelUI } from "../character/panels/vitalsPanel.js";
-import { initBasicsPanelUI } from "../character/panels/basicsPanel.js";
-import { initProficienciesPanelUI } from "../character/panels/proficienciesPanel.js";
-import { initAbilitiesPanelUI } from "../character/panels/abilitiesPanel.js";
-import { initPersonalityPanelUI, initCharacterCollapsibleTextareas } from "../character/panels/personalityPanel.js";
+import { initSpellsPanel } from "../character/panels/spellsPanel.js";
+import { initVitalsPanel } from "../character/panels/vitalsPanel.js";
+import { initBasicsPanel } from "../character/panels/basicsPanel.js";
+import { initProficienciesPanel } from "../character/panels/proficienciesPanel.js";
+import { initAbilitiesPanel } from "../character/panels/abilitiesPanel.js";
+import { initPersonalityPanel, setupCharacterCollapsibleTextareas } from "../character/panels/personalityPanel.js";
 import { bindText as bindTextInput, bindNumber as bindNumberInput } from "../../ui/bindings.js";
 
 export function initCharacterPageUI(deps) {
@@ -40,10 +40,10 @@ export function initCharacterPageUI(deps) {
   if (!SaveManager) throw new Error("initCharacterPageUI: SaveManager is required");
 
   // Initialize spells panel
-  initSpellsPanelUI(deps);
+  initSpellsPanel(deps);
 
   // Initialize attacks panel
-  initAttacksPanelUI(deps);
+  initAttacksPanel(deps);
 
   /************************ Character Sheet page ***********************/
   function initCharacterUI() {
@@ -76,10 +76,10 @@ export function initCharacterPageUI(deps) {
       });
 
     // Equipment panel (Inventory + Money)
-    initEquipmentPanelUI({ ...deps, bindNumber });
+    initEquipmentPanel({ ...deps, bindNumber });
 
     // Basics
-    initBasicsPanelUI({
+    initBasicsPanel({
       ...deps,
       ImagePicker,
       pickCropStorePortrait,
@@ -95,17 +95,17 @@ export function initCharacterPageUI(deps) {
     });
 
     // Vitals panel (numbers + resource trackers + internal tile reorder)
-    initVitalsPanelUI({ ...deps, bindNumber });
+    initVitalsPanel({ ...deps, bindNumber });
 
     // Proficiencies
-    initProficienciesPanelUI({ ...deps, bindText });
+    initProficienciesPanel({ ...deps, bindText });
 
     // Personality
-    initPersonalityPanelUI({ ...deps, bindText });
+    initPersonalityPanel({ ...deps, bindText });
 
-    initAbilitiesPanelUI({ ...deps, bindNumber, bindText });
+    initAbilitiesPanel({ ...deps, bindNumber, bindText });
     setupCharacterSectionReorder({ state, SaveManager });
-    initCharacterCollapsibleTextareas({ state, SaveManager });
+    setupCharacterCollapsibleTextareas({ state, SaveManager });
   }
 
   // Boot character page bindings

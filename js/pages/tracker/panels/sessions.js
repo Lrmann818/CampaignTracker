@@ -48,7 +48,7 @@ function _highlightInline(text, query) {
  *   SaveManager, uiPrompt, uiAlert, uiConfirm
  * }
  */
-export function initSessionsUI(deps = {}) {
+export function initSessionsPanel(deps = {}) {
   _state = deps.state;
   _tabsEl = deps.tabsEl;
   _notesBox = deps.notesBox;

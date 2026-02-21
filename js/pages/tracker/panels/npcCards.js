@@ -312,7 +312,7 @@ function renderNpcCard(npc) {
 
 
 // Phase 3 polish: NPC init + CRUD helpers moved out of app.js
-export function initNpcsUI(deps = {}) {
+export function initNpcsPanel(deps = {}) {
   const {
     SaveManager,
     Popovers,
@@ -336,11 +336,11 @@ export function initNpcsUI(deps = {}) {
   _state = deps.state;
   _blobIdToObjectUrl = blobIdToObjectUrl || _blobIdToObjectUrl;
   _autoSizeInput = autoSizeInput || _autoSizeInput;
-  if (!_state) throw new Error("initNpcsUI requires state");
-  if (!_blobIdToObjectUrl) throw new Error("initNpcsUI requires blobIdToObjectUrl");
-  if (!_autoSizeInput) throw new Error("initNpcsUI requires autoSizeInput");
-  if (!SaveManager) throw new Error("initNpcsUI: missing SaveManager");
-  if (!makeNpc) throw new Error("initNpcsUI: missing makeNpc");
+  if (!_state) throw new Error("initNpcsPanel requires state");
+  if (!_blobIdToObjectUrl) throw new Error("initNpcsPanel requires blobIdToObjectUrl");
+  if (!_autoSizeInput) throw new Error("initNpcsPanel requires autoSizeInput");
+  if (!SaveManager) throw new Error("initNpcsPanel: missing SaveManager");
+  if (!makeNpc) throw new Error("initNpcsPanel: missing makeNpc");
 
   _Popovers = Popovers || null;
 

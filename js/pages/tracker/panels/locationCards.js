@@ -290,7 +290,7 @@ return card;
 
 
 // Phase 3 polish: Locations init + CRUD helpers moved out of app.js
-export function initLocationsUI(deps = {}) {
+export function initLocationsPanel(deps = {}) {
   const {
     SaveManager,
     Popovers,
@@ -310,10 +310,10 @@ export function initLocationsUI(deps = {}) {
   } = deps;
   _state = deps.state;
   _blobIdToObjectUrl = blobIdToObjectUrl || _blobIdToObjectUrl;
-  if (!_state) throw new Error("initLocationsUI requires state");
-  if (!_blobIdToObjectUrl) throw new Error("initLocationsUI requires blobIdToObjectUrl");
-  if (!SaveManager) throw new Error("initLocationsUI: missing SaveManager");
-  if (!makeLocation) throw new Error("initLocationsUI: missing makeLocation");
+  if (!_state) throw new Error("initLocationsPanel requires state");
+  if (!_blobIdToObjectUrl) throw new Error("initLocationsPanel requires blobIdToObjectUrl");
+  if (!SaveManager) throw new Error("initLocationsPanel: missing SaveManager");
+  if (!makeLocation) throw new Error("initLocationsPanel: missing makeLocation");
 
   // store Popovers for dynamic card dropdown enhancements
   _Popovers = Popovers || null;

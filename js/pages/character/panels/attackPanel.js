@@ -8,7 +8,7 @@
 let _state = null;
 
 
-export function initAttacksPanelUI(deps = {}) {
+export function initAttacksPanel(deps = {}) {
   const {
     SaveManager,
     uiConfirm,
@@ -16,8 +16,8 @@ export function initAttacksPanelUI(deps = {}) {
   } = deps;
   _state = deps.state;
 
-  if (!_state) throw new Error("initAttacksPanelUI requires state");
-  if (!SaveManager) throw new Error("initAttacksPanelUI requires SaveManager");
+  if (!_state) throw new Error("initAttacksPanel requires state");
+  if (!SaveManager) throw new Error("initAttacksPanel requires SaveManager");
 
   if (!_state.character) _state.character = {};
   if (!Array.isArray(_state.character.attacks)) _state.character.attacks = [];

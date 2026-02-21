@@ -1,7 +1,7 @@
 // js/pages/character/panels/proficienciesPanel.js
 // Character page Proficiencies panel (armor/weapon/tool/language textareas)
 
-export function initProficienciesPanelUI(deps = {}) {
+export function initProficienciesPanel(deps = {}) {
   const { state, SaveManager, bindText } = deps;
 
   if (!state || !SaveManager || !bindText) return;

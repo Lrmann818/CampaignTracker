@@ -265,18 +265,19 @@ function switchInventoryItem(idx) {
   _notesBox.focus();
 }
 
-export function initEquipmentPanelUI(deps) {
+export function initEquipmentPanel(deps = {}) {
   const { 
+    state,
     SaveManager, 
     uiPrompt, 
     uiAlert, 
     uiConfirm, 
     autoSizeInput 
-  } = deps || {};
-  _state = deps?.state;
+  } = deps;
+  _state = state;
 
   if (!_state) {
-    console.warn("initEquipmentPanelUI: missing state");
+    console.warn("initEquipmentPanel: missing state");
     return;
   }
 

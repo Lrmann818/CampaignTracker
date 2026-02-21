@@ -1,8 +1,9 @@
 let _state = null;
 
 
-export function initSpellsPanelUI(deps) {
+export function initSpellsPanel(deps = {}) {
     const {
+        state,
         SaveManager,
 
         // Spells notes storage
@@ -18,11 +19,11 @@ export function initSpellsPanelUI(deps) {
         uiConfirm,
         uiPrompt,
         setStatus
-    } = deps || {};
-    _state = deps?.state;
+    } = deps;
+    _state = state;
 
-    if (!_state) throw new Error("initSpellsPanelUI requires state");
-    if (!SaveManager) throw new Error("initSpellsPanelUI requires SaveManager");
+    if (!_state) throw new Error("initSpellsPanel requires state");
+    if (!SaveManager) throw new Error("initSpellsPanel requires SaveManager");
 
     // ---------- Spells v2 UI (dynamic levels + spells) ----------
     const _spellNotesCache = new Map(); // spellId -> text

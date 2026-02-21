@@ -296,7 +296,7 @@ function renderPartyCard(m) {
 
 // Phase 3 polish: Party init + CRUD helpers moved out of app.js
 // Returns an API object useful for optional legacy/global wiring.
-export function initPartyUI(deps = {}) {
+export function initPartyPanel(deps = {}) {
   const {
     SaveManager,
     Popovers,
@@ -320,11 +320,11 @@ export function initPartyUI(deps = {}) {
   _state = deps.state;
   _blobIdToObjectUrl = blobIdToObjectUrl || _blobIdToObjectUrl;
   _autoSizeInput = autoSizeInput || _autoSizeInput;
-  if (!_state) throw new Error("initPartyUI requires state");
-  if (!_blobIdToObjectUrl) throw new Error("initPartyUI requires blobIdToObjectUrl");
-  if (!_autoSizeInput) throw new Error("initPartyUI requires autoSizeInput");
-  if (!SaveManager) throw new Error("initPartyUI: missing SaveManager");
-  if (!makePartyMember) throw new Error("initPartyUI: missing makePartyMember");
+  if (!_state) throw new Error("initPartyPanel requires state");
+  if (!_blobIdToObjectUrl) throw new Error("initPartyPanel requires blobIdToObjectUrl");
+  if (!_autoSizeInput) throw new Error("initPartyPanel requires autoSizeInput");
+  if (!SaveManager) throw new Error("initPartyPanel: missing SaveManager");
+  if (!makePartyMember) throw new Error("initPartyPanel: missing makePartyMember");
 
   // store Popovers for dynamic card dropdown enhancements
   _Popovers = Popovers || null;

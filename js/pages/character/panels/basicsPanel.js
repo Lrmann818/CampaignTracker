@@ -145,7 +145,7 @@ function setupCharacterPortrait(deps) {
   renderPortrait();
 }
 
-export function initBasicsPanelUI(deps = {}) {
+export function initBasicsPanel(deps = {}) {
   const {
     state,
     SaveManager,

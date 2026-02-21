@@ -7,7 +7,8 @@ function ensureStringField(obj, key) {
   if (typeof obj[key] !== "string") obj[key] = "";
 }
 
-export function initPersonalityPanelUI({ state, SaveManager, bindText, root } = {}) {
+export function initPersonalityPanel(deps = {}) {
+  const { state, bindText } = deps;
   if (!state || !bindText) return;
   if (!state.character) state.character = {};
   if (!state.character.personality || typeof state.character.personality !== "object") {
@@ -28,6 +29,6 @@ export function initPersonalityPanelUI({ state, SaveManager, bindText, root } = 
   bindText("charCharNotes", () => p.notes, (v) => p.notes = v);
 }
 
-export function initCharacterCollapsibleTextareas({ state, SaveManager, root } = {}) {
+export function setupCharacterCollapsibleTextareas({ state, SaveManager, root } = {}) {
   initCollapsibleTextareas({ state, SaveManager, root });
 }

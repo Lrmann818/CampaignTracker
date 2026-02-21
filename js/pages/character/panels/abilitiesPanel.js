@@ -3,7 +3,7 @@
 
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 
-export function initAbilitiesPanelUI(deps = {}) {
+export function initAbilitiesPanel(deps = {}) {
   const { state, SaveManager, Popovers, bindNumber, bindText } = deps;
   if (!state || !SaveManager || !Popovers) return;
 
