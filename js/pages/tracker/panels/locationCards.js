@@ -10,7 +10,8 @@ import { makeFieldSearchMatcher } from "./cardSearchShared.js";
 import { attachCardSearchHighlights } from "./cardSearchHighlightShared.js";
 import { createMoveButton, createCollapseButton } from "./cardHeaderControlsShared.js";
 import { enhanceSelectOnce } from "./cardSelectShared.js";
-import { createDeleteButton } from "./cardFooterShared.js";
+import { createDeleteButton, createSectionSelectRow } from "./cardFooterShared.js";
+import { renderCardPortrait } from "./cardPortraitRenderShared.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -128,27 +129,12 @@ export function renderLocationCard(loc) {
   const isCollapsed = !!loc.collapsed;
   card.classList.toggle("collapsed", isCollapsed);
 
-  const portrait = document.createElement("div");
-  portrait.className = "npcPortraitTop";
-  portrait.title = "Click to set/replace image";
-
-  if (loc.imgBlobId) {
-    const img = document.createElement("img");
-    img.alt = loc.title || "Location Image";
-    portrait.appendChild(img);
-
-    // Load async
-    _blobIdToObjectUrl(loc.imgBlobId).then(url => {
-      if (url) img.src = url;
-    });
-  } else {
-    const placeholder = document.createElement("div");
-    placeholder.className = "mutedSmall";
-    placeholder.textContent = "Click to add image";
-    portrait.appendChild(placeholder);
-  }
-
-  portrait.addEventListener("click", () => _pickLocImage(loc.id));
+  const portrait = renderCardPortrait({
+    blobId: loc.imgBlobId,
+    altText: loc.title || "Location Image",
+    blobIdToObjectUrl: _blobIdToObjectUrl,
+    onPick: () => _pickLocImage(loc.id),
+  });
 
   const body = document.createElement("div");
   body.className = "npcCardBodyStack";
@@ -250,35 +236,14 @@ export function renderLocationCard(loc) {
 footer.className = "npcCardFooter";
 
 // “Move between sections” dropdown (matches Party/NPC cards)
-const sectionWrap = document.createElement("div");
-sectionWrap.className = "row";
-sectionWrap.style.gap = "4px";
-
-const sectionLabel = document.createElement("div");
-sectionLabel.className = "mutedSmall";
-sectionLabel.textContent = "Section";
-
-const sectionSelect = document.createElement("select");
-sectionSelect.className = "cardSelect";
-sectionSelect.title = "Move to section";
-(_state.tracker.locSections || []).forEach(sec => {
-  const opt = document.createElement("option");
-  opt.value = sec.id;
-  opt.textContent = sec.name || "Section";
-  sectionSelect.appendChild(opt);
-});
-sectionSelect.value = loc.sectionId || _state.tracker.locActiveSectionId;
-sectionSelect.addEventListener("change", () => {
-  _updateLoc(loc.id, { sectionId: sectionSelect.value }, true);
-  if (typeof window.renderLocationTabs === "function") window.renderLocationTabs();
-});
-
-sectionWrap.appendChild(sectionLabel);
-sectionWrap.appendChild(sectionSelect);
-
-// Enhance OPEN menu styling (closed sizing stays the same).
-enhanceSelectOnce({
-  select: sectionSelect,
+const { sectionWrap } = createSectionSelectRow({
+  sections: _state.tracker.locSections || [],
+  value: loc.sectionId || _state.tracker.locActiveSectionId,
+  onChange: (newVal) => {
+    _updateLoc(loc.id, { sectionId: newVal }, true);
+    if (typeof window.renderLocationTabs === "function") window.renderLocationTabs();
+  },
+  enhanceSelectOnce,
   Popovers: _Popovers,
   enhanceSelectDropdown,
   buttonClass: "cardSelectBtn",

@@ -10,7 +10,8 @@ import { makeFieldSearchMatcher } from "./cardSearchShared.js";
 import { attachCardSearchHighlights } from "./cardSearchHighlightShared.js";
 import { createMoveButton, createCollapseButton } from "./cardHeaderControlsShared.js";
 import { enhanceSelectOnce } from "./cardSelectShared.js";
-import { createDeleteButton } from "./cardFooterShared.js";
+import { createDeleteButton, createSectionSelectRow } from "./cardFooterShared.js";
+import { renderCardPortrait } from "./cardPortraitRenderShared.js";
 
 let _cardsEl = null;
 let _Popovers = null;
@@ -83,28 +84,12 @@ function renderNpcCard(npc) {
   card.classList.toggle("collapsed", isCollapsed);
 
   // --- Portrait (full-width top) ---
-  const portrait = document.createElement("div");
-  portrait.className = "npcPortraitTop";
-  portrait.title = "Click to set/replace image";
-
-  if (npc.imgBlobId) {
-    const img = document.createElement("img");
-    img.alt = npc.name || "NPC Portrait";
-    portrait.appendChild(img);
-
-    // Load async
-    _blobIdToObjectUrl(npc.imgBlobId).then(url => {
-      if (url) img.src = url;
-    });
-  } else {
-    const placeholder = document.createElement("div");
-    placeholder.className = "mutedSmall";
-    placeholder.textContent = "Click to add image";
-    portrait.appendChild(placeholder);
-  }
-
-  // click portrait to set image
-  portrait.addEventListener("click", () => _pickNpcImage(npc.id));
+  const portrait = renderCardPortrait({
+    blobId: npc.imgBlobId,
+    altText: npc.name || "NPC Portrait",
+    blobIdToObjectUrl: _blobIdToObjectUrl,
+    onPick: () => _pickNpcImage(npc.id),
+  });
 
   // --- Main stacked fields ---
   const body = document.createElement("div");
@@ -268,36 +253,15 @@ function renderNpcCard(npc) {
   footer.className = "npcCardFooter";
 
   // ✅ Scalable “move between sections” via dropdown (same pattern as Party)
-  const sectionWrap = document.createElement("div");
-  sectionWrap.className = "row";
-  sectionWrap.style.gap = "4px";
-
-  const sectionLabel = document.createElement("div");
-  sectionLabel.className = "mutedSmall";
-  sectionLabel.textContent = "Section";
-
-  const sectionSelect = document.createElement("select");
-  sectionSelect.className = "cardSelect";
-  sectionSelect.title = "Move to section";
-  (_state.tracker.npcSections || []).forEach(sec => {
-    const opt = document.createElement("option");
-    opt.value = sec.id;
-    opt.textContent = sec.name || "Section";
-    sectionSelect.appendChild(opt);
-  });
-  sectionSelect.value = npc.sectionId || _state.tracker.npcActiveSectionId;
-  sectionSelect.addEventListener("change", () => {
-    _updateNpc(npc.id, { sectionId: sectionSelect.value }, true);
-    // If tabs are search-filtered like Party, ensure they stay accurate.
-    if (typeof window.renderNpcTabs === "function") window.renderNpcTabs();
-  });
-
-  sectionWrap.appendChild(sectionLabel);
-  sectionWrap.appendChild(sectionSelect);
-
-  // Enhance OPEN menu styling (closed select sizing stays the same).
-  enhanceSelectOnce({
-    select: sectionSelect,
+  const { sectionWrap } = createSectionSelectRow({
+    sections: _state.tracker.npcSections || [],
+    value: npc.sectionId || _state.tracker.npcActiveSectionId,
+    onChange: (newVal) => {
+      _updateNpc(npc.id, { sectionId: newVal }, true);
+      // If tabs are search-filtered like Party, ensure they stay accurate.
+      if (typeof window.renderNpcTabs === "function") window.renderNpcTabs();
+    },
+    enhanceSelectOnce,
     Popovers: _Popovers,
     enhanceSelectDropdown,
     buttonClass: "cardSelectBtn",

@@ -10,7 +10,8 @@ import { makeFieldSearchMatcher } from "./cardSearchShared.js";
 import { attachCardSearchHighlights } from "./cardSearchHighlightShared.js";
 import { createMoveButton, createCollapseButton } from "./cardHeaderControlsShared.js";
 import { enhanceSelectOnce } from "./cardSelectShared.js";
-import { createDeleteButton } from "./cardFooterShared.js";
+import { createDeleteButton, createSectionSelectRow } from "./cardFooterShared.js";
+import { renderCardPortrait } from "./cardPortraitRenderShared.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -87,26 +88,12 @@ function renderPartyCard(m) {
   const isCollapsed = !!m.collapsed;
   card.classList.toggle("collapsed", isCollapsed);
 
-  const portrait = document.createElement("div");
-  portrait.className = "npcPortraitTop";
-  portrait.title = "Click to set/replace image";
-
-  if (m.imgBlobId) {
-    const img = document.createElement("img");
-    img.alt = m.name || "Party Member Portrait";
-    portrait.appendChild(img);
-
-    _blobIdToObjectUrl(m.imgBlobId).then(url => {
-      if (url) img.src = url;
-    });
-  } else {
-    const placeholder = document.createElement("div");
-    placeholder.className = "mutedSmall";
-    placeholder.textContent = "Click to add image";
-    portrait.appendChild(placeholder);
-  }
-
-  portrait.addEventListener("click", () => _pickPartyImage(m.id));
+  const portrait = renderCardPortrait({
+    blobId: m.imgBlobId,
+    altText: m.name || "Party Member Portrait",
+    blobIdToObjectUrl: _blobIdToObjectUrl,
+    onPick: () => _pickPartyImage(m.id),
+  });
 
   const body = document.createElement("div");
   body.className = "npcCardBodyStack";
@@ -258,37 +245,14 @@ function renderPartyCard(m) {
 
   // ✅ NPC-style “move between sections”, but scalable:
   // a dropdown that switches which section the member belongs to
-  const sectionWrap = document.createElement("div");
-  sectionWrap.className = "row";
-  sectionWrap.style.gap = "4px";
-
-  const sectionLabel = document.createElement("div");
-  sectionLabel.className = "mutedSmall";
-  sectionLabel.textContent = "Section";
-
-  const sectionSelect = document.createElement("select");
-  sectionSelect.className = "cardSelect"; // shared select styling (plus existing mapSelect look)
-  sectionSelect.title = "Move to section";
-  (_state.tracker.partySections || []).forEach(sec => {
-    const opt = document.createElement("option");
-    opt.value = sec.id;
-    opt.textContent = sec.name || "Section";
-    sectionSelect.appendChild(opt);
-  });
-  sectionSelect.value = m.sectionId || _state.tracker.partyActiveSectionId;
-
-  sectionSelect.addEventListener("change", () => {
-    _updateParty(m.id, { sectionId: sectionSelect.value }, true);
-    if (_renderPartyTabs) _renderPartyTabs(); // so tab filtering (search) stays accurate
-  });
-
-  sectionWrap.appendChild(sectionLabel);
-  sectionWrap.appendChild(sectionSelect);
-
-  // Enhance the OPEN menu styling (closed look stays the same size as .cardSelect).
-  // Call only after the select is appended (needs a parentElement).
-  enhanceSelectOnce({
-    select: sectionSelect,
+  const { sectionWrap } = createSectionSelectRow({
+    sections: _state.tracker.partySections || [],
+    value: m.sectionId || _state.tracker.partyActiveSectionId,
+    onChange: (newVal) => {
+      _updateParty(m.id, { sectionId: newVal }, true);
+      if (_renderPartyTabs) _renderPartyTabs(); // so tab filtering (search) stays accurate
+    },
+    enhanceSelectOnce,
     Popovers: _Popovers,
     enhanceSelectDropdown,
     buttonClass: "cardSelectBtn",
