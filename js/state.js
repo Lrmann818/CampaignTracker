@@ -7,6 +7,31 @@ export const ACTIVE_TAB_KEY = "localCampaignTracker_activeTab";
 // Save schema versioning
 export const CURRENT_SCHEMA_VERSION = 2;
 
+/**
+ * Schema version history (append-only).
+ * For each new schema version:
+ * 1) Add a new entry here.
+ * 2) Add a migration function in migrateState().
+ * 3) Add it to SCHEMA_MIGRATIONS with key N mapping to migrateToV(N+1).
+ */
+export const SCHEMA_MIGRATION_HISTORY = Object.freeze([
+  {
+    version: 0,
+    date: "2026-02-19",
+    changes: "Legacy/unversioned saves before schemaVersion existed."
+  },
+  {
+    version: 1,
+    date: "2026-02-19",
+    changes: "Normalized top-level buckets and migrated legacy spells/resources/theme/map fields."
+  },
+  {
+    version: 2,
+    date: "2026-02-19",
+    changes: "Ensured character.inventoryItems exists and migrated legacy equipment text."
+  }
+]);
+
 export const state = {
   // Used to migrate older saves/backups as the app evolves.
   schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -232,7 +257,9 @@ export function migrateState(raw) {
   const data = (raw && typeof raw === "object") ? raw : {};
 
   // Older saves won't have schemaVersion.
-  let v = Number.isFinite(data.schemaVersion) ? data.schemaVersion : 0;
+  const parsedVersion = Number(data.schemaVersion);
+  let v = Number.isFinite(parsedVersion) ? Math.trunc(parsedVersion) : 0;
+  if (v < 0) v = 0;
 
   function ensureObj(parent, key) {
     if (!parent[key] || typeof parent[key] !== "object") parent[key] = {};
@@ -397,20 +424,26 @@ export function migrateState(raw) {
     }
   }
 
+  const SCHEMA_MIGRATIONS = Object.freeze({
+    0: migrateToV1,
+    1: migrateToV2
+  });
+
+  function applyMigrationStep(version) {
+    const migrate = SCHEMA_MIGRATIONS[version];
+    if (typeof migrate !== "function") return false;
+    migrate();
+    return true;
+  }
+
+  // Unknown future versions are accepted as-is to avoid downgrade/clobbering.
+  if (v > CURRENT_SCHEMA_VERSION) {
+    return normalizeState(data);
+  }
 
   while (v < CURRENT_SCHEMA_VERSION) {
-    if (v === 0) {
-      migrateToV1();
-      v = 1;
-      continue;
-    }
-    if (v === 1) {
-      migrateToV2();
-      v = 2;
-      continue;
-    }
-    // Safety: if we ever get an unknown version, stop trying to be clever.
-    break;
+    if (!applyMigrationStep(v)) break;
+    v += 1;
   }
 
   data.schemaVersion = CURRENT_SCHEMA_VERSION;
