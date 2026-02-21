@@ -428,7 +428,7 @@ export function initPartyPanel(deps = {}) {
       tabsEl,
       sections: _state.tracker.partySections || [],
       activeId: _state.tracker.partyActiveSectionId,
-      query: (_state.tracker.partySearch || "").trim().toLowerCase(),
+      query: (_state.tracker.partySearch || ""),
       tabClass: "npcTab",
       sectionMatches: (sec, query) =>
         _state.tracker.party.some(m => m.sectionId === sec.id && matchesSearch(m, query)),

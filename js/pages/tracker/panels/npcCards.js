@@ -516,7 +516,7 @@ export function initNpcsPanel(deps = {}) {
       tabsEl,
       sections: _state.tracker.npcSections || [],
       activeId: _state.tracker.npcActiveSectionId,
-      query: (_state.tracker.npcSearch || "").trim().toLowerCase(),
+      query: (_state.tracker.npcSearch || ""),
       tabClass: "npcTab",
       sectionMatches: (sec, query) =>
         _state.tracker.npcs.some(n => n.sectionId === sec.id && matchesSearch(n, query)),

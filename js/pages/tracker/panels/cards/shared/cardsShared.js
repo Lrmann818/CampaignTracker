@@ -4,6 +4,47 @@ export function makeSectionId(prefix) {
   return `${prefix}_` + Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function escapeRegExp(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function appendHighlightedText(parentEl, text, query) {
+  const source = String(text ?? "");
+  const q = String(query ?? "").trim();
+  if (!q) {
+    parentEl.replaceChildren(document.createTextNode(source));
+    return;
+  }
+
+  const re = new RegExp(escapeRegExp(q), "gi");
+  const fragment = document.createDocumentFragment();
+  let lastIndex = 0;
+  let match = re.exec(source);
+
+  while (match) {
+    const start = match.index;
+    const end = start + match[0].length;
+
+    if (start > lastIndex) {
+      fragment.appendChild(document.createTextNode(source.slice(lastIndex, start)));
+    }
+
+    const mark = document.createElement("mark");
+    mark.className = "searchMark";
+    mark.textContent = source.slice(start, end);
+    fragment.appendChild(mark);
+
+    lastIndex = end;
+    match = re.exec(source);
+  }
+
+  if (lastIndex < source.length) {
+    fragment.appendChild(document.createTextNode(source.slice(lastIndex)));
+  }
+
+  parentEl.replaceChildren(fragment);
+}
+
 /**
  * @param {Object} config
  * @param {HTMLElement} config.tabsEl
@@ -23,19 +64,15 @@ export function renderSectionTabs({
   sectionMatches,
   onSelect,
 }) {
-  tabsEl.innerHTML = "";
+  tabsEl.replaceChildren();
+  const q = String(query ?? "").trim().toLowerCase();
 
   let toShow = (sections || []).filter(sec => {
-    if (!query) return true;
-    const nameMatch = (sec.name || "").toLowerCase().includes(query);
+    if (!q) return true;
+    const nameMatch = (sec.name || "").toLowerCase().includes(q);
     if (nameMatch) return true;
-    return sectionMatches ? sectionMatches(sec, query) : false;
+    return sectionMatches ? sectionMatches(sec, q) : false;
   });
-
-  if (!toShow.some(s => s.id === activeId)) {
-    const active = (sections || []).find(s => s.id === activeId);
-    if (active) toShow = [active, ...toShow];
-  }
 
   toShow.forEach(sec => {
     const btn = document.createElement("button");
@@ -43,7 +80,7 @@ export function renderSectionTabs({
     btn.className = `${tabClass}${sec.id === activeId ? " active" : ""}`;
     btn.setAttribute("role", "tab");
     btn.setAttribute("aria-selected", sec.id === activeId ? "true" : "false");
-    btn.textContent = sec.name || "Section";
+    appendHighlightedText(btn, sec.name || "Section", query);
     btn.addEventListener("click", () => onSelect(sec.id));
     tabsEl.appendChild(btn);
   });

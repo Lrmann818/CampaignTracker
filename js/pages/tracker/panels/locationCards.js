@@ -479,7 +479,7 @@ export function initLocationsPanel(deps = {}) {
   }
 
   function renderLocTabs() {
-    const query = (_state.tracker.locSearch || "").trim().toLowerCase();
+    const query = (_state.tracker.locSearch || "");
     const typeFilter = _state.tracker.locFilter || "all";
     renderSectionTabs({
       tabsEl,
