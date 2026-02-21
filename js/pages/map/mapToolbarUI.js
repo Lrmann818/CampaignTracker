@@ -13,6 +13,8 @@ export function initMapToolbarUI({
   redo,
   clearDrawing
 }) {
+  const safePositionMenuOnScreen =
+    typeof positionMenuOnScreen === "function" ? positionMenuOnScreen : () => { };
   const toolBtn = document.getElementById("toolDropdownBtn");
   const toolMenu = document.getElementById("toolDropdownMenu");
   const toolOptions = Array.from(toolMenu?.querySelectorAll("[data-tool]") || []);
@@ -112,7 +114,7 @@ export function initMapToolbarUI({
   }
 
   const brush = document.getElementById("brushSize");
-  brush.addEventListener("input", () => {
+  brush?.addEventListener("input", () => {
     const mp = getActiveMap();
     state.map.ui.brushSize = Number(brush.value);
     mp.brushSize = state.map.ui.brushSize;
@@ -144,7 +146,7 @@ export function initMapToolbarUI({
         colorMenu.hidden = false;
         colorMenu.removeAttribute("hidden");
         colorBtn.setAttribute("aria-expanded", "true");
-        positionMenuOnScreen(colorMenu, colorBtn, { preferRight: false });
+        safePositionMenuOnScreen(colorMenu, colorBtn, { preferRight: false });
       } else {
         closeColorMenu();
       }
@@ -169,9 +171,9 @@ export function initMapToolbarUI({
 
   applyMapInteractionMode();
 
-  document.getElementById("undoBtn").addEventListener("click", undo);
-  document.getElementById("redoBtn").addEventListener("click", redo);
-  document.getElementById("clearMapBtn").addEventListener("click", async () => { await clearDrawing(); });
+  document.getElementById("undoBtn")?.addEventListener("click", undo);
+  document.getElementById("redoBtn")?.addEventListener("click", redo);
+  document.getElementById("clearMapBtn")?.addEventListener("click", async () => { await clearDrawing(); });
 
   return { applyMapInteractionMode, setActiveToolUI, setActiveColorUI };
 }

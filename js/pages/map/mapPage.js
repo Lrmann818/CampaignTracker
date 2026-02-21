@@ -46,6 +46,12 @@ export function setupMapPage({
 
   _uiAlert = uiAlert;
 
+  // Make optional deps safe to call (prevents "is not a function" crashes)
+  const safeSetStatus = typeof setStatus === "function" ? setStatus : () => { };
+  const safePositionMenuOnScreen =
+    typeof positionMenuOnScreen === "function" ? positionMenuOnScreen : () => { };
+  const safeUiConfirm = typeof uiConfirm === "function" ? uiConfirm : () => false;
+
   /************************ Map page ***********************/
   let canvas, ctx;
   let drawLayer, drawCtx;
@@ -77,7 +83,7 @@ export function setupMapPage({
 
   const clearDrawing = async () =>
     clearDrawingAction({
-      uiConfirm,
+      uiConfirm: safeUiConfirm,
       snapshotForUndoFn,
       drawCtx,
       drawLayer,
@@ -110,7 +116,7 @@ export function setupMapPage({
     });
 
     const bgActions = createMapBackgroundActions({
-      setStatus,
+      setStatus: safeSetStatus,
       uiAlert: _uiAlert,
       SaveManager,
       getActiveMap,
@@ -135,7 +141,7 @@ export function setupMapPage({
       state,
       SaveManager,
       Popovers,
-      positionMenuOnScreen,
+      positionMenuOnScreen: safePositionMenuOnScreen,
       canvas,
       canvasWrap,
       getActiveMap,
