@@ -6,6 +6,7 @@
 // - It should not call other Character-page wiring helpers (reorder, abilities, etc).
 // - It must be safe if init is called more than once (guard + no double event listeners).
 import { safeAsync } from "../../../ui/safeAsync.js";
+import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _state = null;
 
@@ -26,13 +27,13 @@ export function initAttacksPanel(deps = {}) {
   if (!_state.character) _state.character = {};
   if (!Array.isArray(_state.character.attacks)) _state.character.attacks = [];
 
-  const panelEl = document.getElementById("charAttacksPanel");
-  const listEl = document.getElementById("attackList");
-  const addBtn = document.getElementById("addAttackBtn");
+  const panelEl = requireEl("#charAttacksPanel", document, { prefix: "initAttacksPanel", warn: false });
+  const listEl = requireEl("#attackList", document, { prefix: "initAttacksPanel", warn: false });
+  const addBtn = requireEl("#addAttackBtn", document, { prefix: "initAttacksPanel", warn: false });
 
   if (!panelEl || !listEl || !addBtn) {
-    // Character page may not be mounted yet (or IDs changed).
-    return;
+    setStatus("Weapons panel unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
   }
 
   // Guard: avoid wiring twice if character page init runs again.

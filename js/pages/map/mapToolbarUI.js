@@ -1,6 +1,7 @@
 // js/pages/map/mapToolbarUI.js
 
 import { safeAsync } from "../../ui/safeAsync.js";
+import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
 
 const toolbarPopoverByButton = new WeakMap();
 const colorPopoverByButton = new WeakMap();
@@ -20,6 +21,13 @@ export function initMapToolbarUI({
   clearDrawing,
   setStatus
 }) {
+  const NOOP_TOOLBAR_API = {
+    applyMapInteractionMode: () => { },
+    setActiveToolUI: () => { },
+    setActiveColorUI: () => { },
+    destroy: getNoopDestroyApi().destroy
+  };
+
   if (!setStatus) throw new Error("initMapToolbarUI requires setStatus");
   if (typeof addOwnedListener !== "function") {
     throw new Error("initMapToolbarUI requires deps.addListener (controller-owned listener attachment)");
@@ -32,16 +40,22 @@ export function initMapToolbarUI({
   const safePositionMenuOnScreen =
     typeof positionMenuOnScreen === "function" ? positionMenuOnScreen : () => { };
   const addListener = addOwnedListener;
-  const toolBtn = document.getElementById("toolDropdownBtn");
-  const toolMenu = document.getElementById("toolDropdownMenu");
+  const toolBtn = requireEl("#toolDropdownBtn", document, { prefix: "initMapToolbarUI", warn: false });
+  const toolMenu = requireEl("#toolDropdownMenu", document, { prefix: "initMapToolbarUI", warn: false });
   const toolOptions = Array.from(toolMenu?.querySelectorAll("[data-tool]") || []);
   const toolLabel = toolBtn?.querySelector("[data-tool-label]");
 
-  const colorDropdown = document.getElementById("colorDropdown");
-  const colorBtn = document.getElementById("colorBtn");
-  const colorMenu = document.getElementById("colorDropdownMenu");
+  const colorDropdown = requireEl("#colorDropdown", document, { prefix: "initMapToolbarUI", warn: false });
+  const colorBtn = requireEl("#colorBtn", document, { prefix: "initMapToolbarUI", warn: false });
+  const colorMenu = requireEl("#colorDropdownMenu", document, { prefix: "initMapToolbarUI", warn: false });
   const colorOptions = Array.from(colorMenu?.querySelectorAll(".colorSwatch") || []);
-  const preview = document.getElementById("activeColorPreview");
+  const preview = requireEl("#activeColorPreview", document, { prefix: "initMapToolbarUI", warn: false });
+  const brush = requireEl("#brushSize", document, { prefix: "initMapToolbarUI", warn: false });
+
+  if (!toolBtn || !toolMenu || !colorDropdown || !colorBtn || !colorMenu || !preview || !brush) {
+    setStatus("Map toolbar unavailable (missing expected UI elements).");
+    return NOOP_TOOLBAR_API;
+  }
 
   const getOrRegisterPopover = ({ cache, button, menu, args }) => {
     if (!Popovers || !button || !menu) return null;
@@ -145,7 +159,6 @@ export function initMapToolbarUI({
     colorOptions.forEach(opt => opt.classList.toggle("active", opt.getAttribute("data-color") === colorKey));
   }
 
-  const brush = document.getElementById("brushSize");
   addListener(brush, "input", () => {
     const mp = getActiveMap();
     mapState.ui.brushSize = Number(brush.value);

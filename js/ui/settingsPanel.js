@@ -5,6 +5,7 @@
 // button and data panel init into a focused module.
 
 import { initDataPanel } from "./dataPanel.js";
+import { requireEl } from "../utils/domGuards.js";
 
 export function setupSettingsPanel(deps) {
   const {
@@ -45,10 +46,13 @@ export function setupSettingsPanel(deps) {
   });
 
   // Settings button opens the modal directly
-  const settingsBtn = document.getElementById("settingsBtn");
-  if (settingsBtn) {
-    settingsBtn.addEventListener("click", () => {
-      if (typeof window.openDataPanel === "function") window.openDataPanel();
-    });
+  const settingsBtn = requireEl("#settingsBtn", document, { prefix: "setupSettingsPanel", warn: false });
+  if (!settingsBtn) {
+    setStatus("Settings button unavailable (missing #settingsBtn).");
+    return;
   }
+
+  settingsBtn.addEventListener("click", () => {
+    if (typeof window.openDataPanel === "function") window.openDataPanel();
+  });
 }

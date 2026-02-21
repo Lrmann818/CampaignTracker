@@ -6,6 +6,7 @@
 // - Zero hard-coded page list in app.js (add a new page by adding a tab button + a matching #page-<name> section)
 // - Accessibility (ARIA + keyboard)
 // - Deep linking (#tracker/#character/#map) + state persistence
+import { requireEl, getNoopDestroyApi } from "../utils/domGuards.js";
 
 /**
  * Initialize the top page tabs.
@@ -24,6 +25,7 @@
 export function initTopTabsNavigation({
   state,
   markDirty,
+  setStatus,
   activeTabStorageKey = "localCampaignTracker_activeTab",
   tabsRootSelector = ".tabs",
   tabSelector = ".tab[data-tab]",
@@ -31,11 +33,17 @@ export function initTopTabsNavigation({
   defaultTab = "tracker",
   updateHash = true
 } = {}) {
-  const tabsRoot = document.querySelector(tabsRootSelector);
-  if (!tabsRoot) return;
+  const tabsRoot = requireEl(tabsRootSelector, document, { prefix: "initTopTabsNavigation", warn: false });
+  if (!tabsRoot) {
+    setStatus?.("Top navigation unavailable (missing tabs container).");
+    return getNoopDestroyApi();
+  }
 
   const tabButtons = Array.from(tabsRoot.querySelectorAll(tabSelector));
-  if (!tabButtons.length) return;
+  if (!tabButtons.length) {
+    setStatus?.("Top navigation unavailable (no tab buttons found).");
+    return getNoopDestroyApi();
+  }
 
   // Build the page registry from the DOM so adding pages is declarative.
   const pages = Object.create(null);

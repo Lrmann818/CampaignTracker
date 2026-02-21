@@ -1,6 +1,7 @@
 // @ts-nocheck
 // js/ui/panelHeaderCollapse.js
 // Click a panel's header to collapse/expand its body (header stays visible).
+import { getNoopDestroyApi } from "../utils/domGuards.js";
 
 function ensureObj(obj, key) {
   if (!obj[key] || typeof obj[key] !== "object") obj[key] = {};
@@ -43,7 +44,7 @@ function setCollapsed(panelEl, key, collapsedMap, next, SaveManager) {
   SaveManager.markDirty();
 }
 
-export function initPanelHeaderCollapse({ state, SaveManager } = {}) {
+export function initPanelHeaderCollapse({ state, SaveManager, setStatus } = {}) {
   if (!state) throw new Error("initPanelHeaderCollapse: state is required");
   if (!SaveManager) throw new Error("initPanelHeaderCollapse: SaveManager is required");
 
@@ -51,6 +52,10 @@ export function initPanelHeaderCollapse({ state, SaveManager } = {}) {
   const collapsedMap = ensureObj(state.ui, "panelCollapsed");
 
   const panels = Array.from(document.querySelectorAll("section.panel"));
+  if (!panels.length) {
+    setStatus?.("Panel collapse controls unavailable (no .panel sections found).");
+    return getNoopDestroyApi();
+  }
   panels.forEach((panelEl) => {
     const key = getPanelKey(panelEl);
     if (!key) return;

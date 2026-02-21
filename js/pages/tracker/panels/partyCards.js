@@ -13,6 +13,7 @@ import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
 import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
 import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
 import { createStateActions } from "../../../domain/stateActions.js";
+import { getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -370,7 +371,10 @@ export function initPartyPanel(deps = {}) {
   const renameSectionBtn = document.getElementById("renamePartySectionBtn");
   const deleteSectionBtn = document.getElementById("deletePartySectionBtn");
 
-  if (!cardsEl || !addBtn || !searchEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) return null;
+  if (!cardsEl || !addBtn || !searchEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) {
+    setStatus("Party panel unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
+  }
 
   async function pickPartyImage(memberId) {
     let pickedBlobId = null;

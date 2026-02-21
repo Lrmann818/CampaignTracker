@@ -3,6 +3,7 @@
 
 import { numberOrNull } from "../../../utils/number.js";
 import { safeAsync } from "../../../ui/safeAsync.js";
+import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 function setupVitalsTileReorder({ state, SaveManager, panelEl, gridEl }) {
   const panel = panelEl || document.getElementById("charVitalsPanel");
@@ -114,10 +115,32 @@ export function initVitalsPanel(deps = {}) {
 
   if (!state.character) state.character = {};
 
-  const panelEl = document.getElementById("charVitalsPanel");
-  const wrap = document.getElementById("charVitalsTiles") || panelEl?.querySelector(".charTiles");
-  const addBtn = document.getElementById("addResourceBtn");
-  if (!panelEl || !wrap || !addBtn) return;
+  const criticalSelectors = [
+    "#charVitalsPanel",
+    "#charVitalsTiles",
+    "#addResourceBtn",
+    "#charHpCur",
+    "#charHpMax",
+    "#hitDieAmt",
+    "#hitDieSize",
+    "#charAC",
+    "#charInit",
+    "#charSpeed",
+    "#charProf",
+    "#charSpellAtk",
+    "#charSpellDC"
+  ];
+  const missingCritical = criticalSelectors.some(
+    (selector) => !requireEl(selector, document, { prefix: "initVitalsPanel", warn: false })
+  );
+  const panelEl = requireEl("#charVitalsPanel", document, { prefix: "initVitalsPanel", warn: false });
+  const wrap = requireEl("#charVitalsTiles", document, { prefix: "initVitalsPanel", warn: false })
+    || panelEl?.querySelector(".charTiles");
+  const addBtn = requireEl("#addResourceBtn", document, { prefix: "initVitalsPanel", warn: false });
+  if (missingCritical || !panelEl || !wrap || !addBtn) {
+    setStatus("Vitals panel unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
+  }
 
   function bindVitalsNumbers() {
     bindNumber("charHpCur", () => state.character.hpCur, (v) => state.character.hpCur = v);

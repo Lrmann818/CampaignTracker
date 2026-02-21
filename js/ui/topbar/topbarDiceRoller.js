@@ -2,6 +2,7 @@
 // (not a full dialog with system selection, etc).
 
 import { createTopbarPopover } from "./topbarPopover.js";
+import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
 
 let _activeTopbarDiceRoller = null;
 
@@ -17,24 +18,27 @@ export function initTopbarDiceRoller(deps) {
         setStatus
     } = deps || {};
 
-    const dd = document.getElementById("diceDropdown");
-    const btn = document.getElementById("diceBtn");
-    const menu = document.getElementById("diceMenu");
-    const closeBtn = document.getElementById("diceCloseBtn");
+    const dd = requireEl("#diceDropdown", document, { prefix: "initTopbarDiceRoller", warn: false });
+    const btn = requireEl("#diceBtn", document, { prefix: "initTopbarDiceRoller", warn: false });
+    const menu = requireEl("#diceMenu", document, { prefix: "initTopbarDiceRoller", warn: false });
+    const closeBtn = requireEl("#diceCloseBtn", document, { prefix: "initTopbarDiceRoller", warn: false });
 
-    const countEl = document.getElementById("diceCount");
-    const modEl = document.getElementById("diceMod");
-    const rollBtn = document.getElementById("diceRollBtn");
-    const clearBtn = document.getElementById("diceClearBtn");
-    const histEl = document.getElementById("diceHistory");
+    const countEl = requireEl("#diceCount", document, { prefix: "initTopbarDiceRoller", warn: false });
+    const modEl = requireEl("#diceMod", document, { prefix: "initTopbarDiceRoller", warn: false });
+    const rollBtn = requireEl("#diceRollBtn", document, { prefix: "initTopbarDiceRoller", warn: false });
+    const clearBtn = requireEl("#diceClearBtn", document, { prefix: "initTopbarDiceRoller", warn: false });
+    const histEl = requireEl("#diceHistory", document, { prefix: "initTopbarDiceRoller", warn: false });
 
-    const advBtn = document.getElementById("diceAdvBtn");
-    const disBtn = document.getElementById("diceDisBtn");
-    const activeIcon = document.getElementById("diceActiveIcon");
+    const advBtn = requireEl("#diceAdvBtn", document, { prefix: "initTopbarDiceRoller", warn: false });
+    const disBtn = requireEl("#diceDisBtn", document, { prefix: "initTopbarDiceRoller", warn: false });
+    const activeIcon = requireEl("#diceActiveIcon", document, { prefix: "initTopbarDiceRoller", warn: false });
     const presetBtns = menu?.querySelectorAll(".dicePreset");
-    const modPlusEl = document.getElementById("diceModPlus");
+    const modPlusEl = requireEl("#diceModPlus", document, { prefix: "initTopbarDiceRoller", warn: false });
 
-    if (!dd || !btn || !menu || !closeBtn || !countEl || !modEl || !rollBtn || !clearBtn || !histEl || !advBtn || !disBtn) return { destroy() { } };
+    if (!dd || !btn || !menu || !closeBtn || !countEl || !modEl || !rollBtn || !clearBtn || !histEl || !advBtn || !disBtn) {
+        setStatus?.("Topbar dice roller unavailable (missing expected UI elements).");
+        return getNoopDestroyApi();
+    }
 
     const listenerController = new AbortController();
     const listenerSignal = listenerController.signal;

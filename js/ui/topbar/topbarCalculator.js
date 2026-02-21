@@ -1,6 +1,7 @@
 // topbar calculator
 
 import { createTopbarPopover } from "./topbarPopover.js";
+import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
 
 let _activeTopbarCalculator = null;
 
@@ -16,15 +17,18 @@ export function initTopbarCalculator(deps) {
         setStatus
     } = deps || {};
 
-    const dd = document.getElementById("calcDropdown");
-    const btn = document.getElementById("calcBtn");
-    const menu = document.getElementById("calcMenu");
-    const closeBtn = document.getElementById("calcCloseBtn");
-    const display = document.getElementById("calcDisplay");
+    const dd = requireEl("#calcDropdown", document, { prefix: "initTopbarCalculator", warn: false });
+    const btn = requireEl("#calcBtn", document, { prefix: "initTopbarCalculator", warn: false });
+    const menu = requireEl("#calcMenu", document, { prefix: "initTopbarCalculator", warn: false });
+    const closeBtn = requireEl("#calcCloseBtn", document, { prefix: "initTopbarCalculator", warn: false });
+    const display = requireEl("#calcDisplay", document, { prefix: "initTopbarCalculator", warn: false });
     const keys = menu?.querySelector(".calcKeys");
-    const histEl = document.getElementById("calcHistory");
+    const histEl = requireEl("#calcHistory", document, { prefix: "initTopbarCalculator", warn: false });
 
-    if (!dd || !btn || !menu || !closeBtn || !display || !keys || !histEl) return { destroy() { } };
+    if (!dd || !btn || !menu || !closeBtn || !display || !keys || !histEl) {
+        setStatus?.("Topbar calculator unavailable (missing expected UI elements).");
+        return getNoopDestroyApi();
+    }
 
     const listenerController = new AbortController();
     const listenerSignal = listenerController.signal;

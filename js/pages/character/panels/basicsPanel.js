@@ -3,6 +3,7 @@
 
 import { safeAsync } from "../../../ui/safeAsync.js";
 import { createStateActions } from "../../../domain/stateActions.js";
+import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 function formatPossessive(name) {
   const n = (name || "").trim();
@@ -166,6 +167,26 @@ export function initBasicsPanel(deps = {}) {
 
   if (!state || !SaveManager || !bindText || !bindNumber) return;
   if (!setStatus) throw new Error("initBasicsPanel requires setStatus");
+
+  const criticalSelectors = [
+    "#charBasicsPanel",
+    "#charName",
+    "#charClassLevel",
+    "#charRace",
+    "#charBackground",
+    "#charAlignment",
+    "#charExperience",
+    "#charFeatures",
+    "#charPortraitTop"
+  ];
+  const missingCritical = criticalSelectors.some(
+    (selector) => !requireEl(selector, document, { prefix: "initBasicsPanel", warn: false })
+  );
+  if (missingCritical) {
+    setStatus("Character basics panel unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
+  }
+
   if (!state.character) state.character = {};
   const { updateCharacterField } = createStateActions({ state, SaveManager });
 

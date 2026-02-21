@@ -11,6 +11,7 @@ import { initProficienciesPanel } from "../character/panels/proficienciesPanel.j
 import { initAbilitiesPanel } from "../character/panels/abilitiesPanel.js";
 import { initPersonalityPanel, setupCharacterCollapsibleTextareas } from "../character/panels/personalityPanel.js";
 import { bindText as bindTextInput, bindNumber as bindNumberInput } from "../../ui/bindings.js";
+import { requireEl } from "../../utils/domGuards.js";
 
 export function initCharacterPageUI(deps) {
   const {
@@ -40,16 +41,23 @@ export function initCharacterPageUI(deps) {
   if (!SaveManager) throw new Error("initCharacterPageUI: SaveManager is required");
   if (!setStatus) throw new Error("initCharacterPageUI requires setStatus");
 
-  // Initialize spells panel
-  initSpellsPanel(deps);
-
-  // Initialize attacks panel
-  initAttacksPanel(deps);
+  const runPanelInit = (panelName, initFn) => {
+    try {
+      return initFn();
+    } catch (err) {
+      console.error(`${panelName} init failed:`, err);
+      setStatus(`${panelName} failed to initialize. Check console for details.`);
+      return null;
+    }
+  };
 
   /************************ Character Sheet page ***********************/
   function initCharacterUI() {
-    const root = document.getElementById("page-character");
-    if (!root) return;
+    const root = requireEl("#page-character", document, { prefix: "initCharacterPageUI", warn: false });
+    if (!root) {
+      setStatus("Character page unavailable (missing #page-character).");
+      return;
+    }
 
     // Ensure shape exists (older saves/backups)
     if (!state.character) state.character = {};
@@ -76,11 +84,12 @@ export function initCharacterPageUI(deps) {
         autosizeOpts,
       });
 
-    // Equipment panel (Inventory + Money)
-    initEquipmentPanel({ ...deps, bindNumber });
+    runPanelInit("Spells panel", () => initSpellsPanel(deps));
+    runPanelInit("Attacks panel", () => initAttacksPanel(deps));
 
-    // Basics
-    initBasicsPanel({
+    runPanelInit("Equipment panel", () => initEquipmentPanel({ ...deps, bindNumber }));
+
+    runPanelInit("Basics panel", () => initBasicsPanel({
       ...deps,
       ImagePicker,
       pickCropStorePortrait,
@@ -93,20 +102,17 @@ export function initCharacterPageUI(deps) {
       bindNumber,
       autoSizeInput,
       setStatus,
-    });
+    }));
 
-    // Vitals panel (numbers + resource trackers + internal tile reorder)
-    initVitalsPanel({ ...deps, bindNumber });
+    runPanelInit("Vitals panel", () => initVitalsPanel({ ...deps, bindNumber }));
 
-    // Proficiencies
-    initProficienciesPanel({ ...deps, bindText });
+    runPanelInit("Proficiencies panel", () => initProficienciesPanel({ ...deps, bindText }));
 
-    // Personality
-    initPersonalityPanel({ ...deps, bindText });
+    runPanelInit("Personality panel", () => initPersonalityPanel({ ...deps, bindText }));
 
-    initAbilitiesPanel({ ...deps, bindNumber, bindText });
-    setupCharacterSectionReorder({ state, SaveManager });
-    setupCharacterCollapsibleTextareas({ state, SaveManager });
+    runPanelInit("Abilities panel", () => initAbilitiesPanel({ ...deps, bindNumber, bindText }));
+    runPanelInit("Character section reorder", () => setupCharacterSectionReorder({ state, SaveManager }));
+    runPanelInit("Character textarea collapse", () => setupCharacterCollapsibleTextareas({ state, SaveManager }));
   }
 
   // Boot character page bindings

@@ -170,6 +170,7 @@ function disableAutocompleteGlobally(root = document) {
     initTopTabsNavigation({
       state: appState,
       markDirty: () => SaveManager.markDirty(),
+      setStatus: StatusApi.setStatus,
       activeTabStorageKey: ACTIVE_TAB_KEY
     });
     setupSettingsPanel({

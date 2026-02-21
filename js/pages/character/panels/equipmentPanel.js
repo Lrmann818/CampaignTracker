@@ -9,6 +9,7 @@
 import { bindNumber } from "../../../ui/bindings.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { safeAsync } from "../../../ui/safeAsync.js";
+import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 let _state = null;
 
 let _tabsEl = null;
@@ -89,9 +90,11 @@ function initInventoryUI(deps = {}) {
   _setStatus = deps.setStatus;
   if (!_setStatus) throw new Error("initInventoryUI requires setStatus");
 
-  if (!_tabsEl || !_notesBox) {
-    console.warn("Inventory UI: missing required elements (tabsEl/notesBox).");
-    return;
+  const missingCritical =
+    !_tabsEl || !_notesBox || !_searchEl || !_addBtn || !_renameBtn || !_deleteBtn;
+  if (missingCritical) {
+    _setStatus("Equipment inventory unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
   }
 
   ensureInventoryDefaults();
@@ -325,6 +328,28 @@ export function initEquipmentPanel(deps = {}) {
     return;
   }
   if (!setStatus) throw new Error("initEquipmentPanel requires setStatus");
+
+  const panelEl = requireEl("#charEquipmentPanel", document, { prefix: "initEquipmentPanel", warn: false });
+  const criticalSelectors = [
+    "#inventoryTabs",
+    "#inventoryNotesBox",
+    "#inventorySearch",
+    "#addInventoryBtn",
+    "#renameInventoryBtn",
+    "#deleteInventoryBtn",
+    "#moneyPP",
+    "#moneyGP",
+    "#moneyEP",
+    "#moneySP",
+    "#moneyCP"
+  ];
+  const missingCriticalField = criticalSelectors.some(
+    (selector) => !requireEl(selector, document, { prefix: "initEquipmentPanel", warn: false })
+  );
+  if (!panelEl || missingCriticalField) {
+    setStatus("Equipment panel unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
+  }
 
   // ---- Inventory tabs UI ----
   initInventoryUI({

@@ -2,13 +2,23 @@
 // Character page Abilities panel (abilities + skills + save options)
 
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
+import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 export function initAbilitiesPanel(deps = {}) {
-  const { state, SaveManager, Popovers, bindNumber, bindText } = deps;
+  const { state, SaveManager, Popovers, bindNumber, bindText, setStatus } = deps;
   if (!state || !SaveManager || !Popovers) return;
+  if (!setStatus) throw new Error("initAbilitiesPanel requires setStatus");
 
-  const panel = document.getElementById("charAbilitiesPanel");
-  if (!panel) return;
+  const panel = requireEl("#charAbilitiesPanel", document, { prefix: "initAbilitiesPanel", warn: false });
+  if (!panel) {
+    setStatus("Abilities panel unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
+  }
+  const abilityGrid = requireEl(".abilityGrid", panel, { prefix: "initAbilitiesPanel", warn: false });
+  if (!abilityGrid) {
+    setStatus("Abilities panel unavailable (missing .abilityGrid).");
+    return getNoopDestroyApi();
+  }
 
   if (!state.character) state.character = {};
   if (!state.character.abilities) state.character.abilities = {};
@@ -295,7 +305,7 @@ export function initAbilitiesPanel(deps = {}) {
 
   /************************ Ability block reordering (STR/DEX/CON/INT/WIS/CHA) ***********************/
   function setupAbilityBlockReorder() {
-    const grid = panel.querySelector(".abilityGrid");
+    const grid = abilityGrid;
     if (!grid) return;
 
     const blocks = Array.from(grid.querySelectorAll(".abilityBlock"));

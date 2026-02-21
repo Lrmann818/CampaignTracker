@@ -12,6 +12,7 @@ import { initLocationsPanel } from "./panels/locationCards.js";
 import { initCharacterPageUI } from "../character/characterPage.js";
 import { initPanelHeaderCollapse } from "../../ui/panelHeaderCollapse.js";
 import { bindText, bindContentText } from "../../ui/bindings.js";
+import { requireEl } from "../../utils/domGuards.js";
 
 export function initTrackerPage(deps) {
   const {
@@ -57,6 +58,22 @@ export function initTrackerPage(deps) {
   if (!SaveManager) throw new Error("initTrackerPage: SaveManager is required");
   if (!setStatus) throw new Error("initTrackerPage requires setStatus");
 
+  const trackerRoot = requireEl("#page-tracker", document, { prefix: "initTrackerPage", warn: false });
+  if (!trackerRoot) {
+    setStatus("Tracker page unavailable (missing #page-tracker).");
+    return;
+  }
+
+  const runPanelInit = (panelName, initFn) => {
+    try {
+      return initFn();
+    } catch (err) {
+      console.error(`${panelName} init failed:`, err);
+      setStatus(`${panelName} failed to initialize. Check console for details.`);
+      return null;
+    }
+  };
+
   // ----- Campaign title -----
   bindContentText({
     id: "campaignTitle",
@@ -84,7 +101,7 @@ export function initTrackerPage(deps) {
   setupTrackerSectionReorder({ state, SaveManager });
 
   // ----- Sessions UI -----
-  initSessionsPanel({
+  runPanelInit("Sessions panel", () => initSessionsPanel({
     state,
     tabsEl: document.getElementById("sessionTabs"),
     notesBox: document.getElementById("sessionNotesBox"),
@@ -97,10 +114,10 @@ export function initTrackerPage(deps) {
     uiAlert,
     uiConfirm,
     setStatus,
-  });
+  }));
 
   // ----- Cards UIs -----
-  initNpcsPanel({
+  runPanelInit("NPCs panel", () => initNpcsPanel({
     state,
     SaveManager,
     Popovers,
@@ -119,9 +136,9 @@ export function initTrackerPage(deps) {
     getPortraitAspect,
     blobIdToObjectUrl,
     autoSizeInput,
-  });
+  }));
 
-  initPartyPanel({
+  runPanelInit("Party panel", () => initPartyPanel({
     state,
     SaveManager,
     Popovers,
@@ -140,9 +157,9 @@ export function initTrackerPage(deps) {
     setStatus,
     blobIdToObjectUrl,
     autoSizeInput,
-  });
+  }));
 
-  initLocationsPanel({
+  runPanelInit("Locations panel", () => initLocationsPanel({
     state,
     SaveManager,
     Popovers,
@@ -159,10 +176,10 @@ export function initTrackerPage(deps) {
     setStatus,
     blobIdToObjectUrl,
     autoSizeInput,
-  });
+  }));
 
   // ----- Character sheet UI -----
-  initCharacterPageUI({
+  runPanelInit("Character page", () => initCharacterPageUI({
     state,
     SaveManager,
     Popovers,
@@ -183,10 +200,10 @@ export function initTrackerPage(deps) {
     uiConfirm,
     uiPrompt,
     setStatus,
-  });
+  }));
   
   // Runs after the Tracker + Character DOM is present.
-  initPanelHeaderCollapse({ state, SaveManager });
+  runPanelInit("Panel collapse wiring", () => initPanelHeaderCollapse({ state, SaveManager, setStatus }));
 
-  enhanceNumberSteppers(document);
+  runPanelInit("Number steppers", () => enhanceNumberSteppers(document));
 }

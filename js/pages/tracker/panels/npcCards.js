@@ -12,6 +12,7 @@ import { createMoveButton, createCollapseButton } from "./cards/shared/cardHeade
 import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
 import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
 import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
+import { getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _cardsEl = null;
 let _Popovers = null;
@@ -409,7 +410,10 @@ export function initNpcsPanel(deps = {}) {
   const renameSectionBtn = document.getElementById("renameNpcSectionBtn");
   const deleteSectionBtn = document.getElementById("deleteNpcSectionBtn");
 
-  if (!cardsEl || !addBtn || !searchEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) return;
+  if (!cardsEl || !addBtn || !searchEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) {
+    setStatus("NPC panel unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
+  }
 
   function updateNpc(id, patch, rerender = true) {
     const idx = _state.tracker.npcs.findIndex(n => n.id === id);

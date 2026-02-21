@@ -1,13 +1,18 @@
 // js/ui/topbar/topbarClock.js
 
+import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
+
 let _activeTopbarClock = null;
 
-export function initTopbarClock() {
+export function initTopbarClock({ setStatus } = {}) {
     _activeTopbarClock?.destroy?.();
     _activeTopbarClock = null;
 
-    const el = document.getElementById("topbarClock");
-    if (!el) return { destroy() { } };
+    const el = requireEl("#topbarClock", document, { prefix: "initTopbarClock", warn: false });
+    if (!el) {
+        setStatus?.("Topbar clock unavailable (missing #topbarClock).");
+        return getNoopDestroyApi();
+    }
 
     const fmt = new Intl.DateTimeFormat(undefined, {
         hour: "numeric",

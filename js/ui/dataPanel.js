@@ -5,6 +5,7 @@
 import { uiConfirm, uiAlert } from "./dialogs.js";
 import { enhanceSelectDropdown } from "./selectDropdown.js";
 import { safeAsync } from "./safeAsync.js";
+import { requireEl, getNoopDestroyApi } from "../utils/domGuards.js";
 
 /**
  * @param {{
@@ -39,11 +40,20 @@ export function initDataPanel(deps) {
   } = deps;
   if (!setStatus) throw new Error("initDataPanel requires setStatus");
 
-  const overlay = /** @type {HTMLElement|null} */ (document.getElementById("dataPanelOverlay"));
-  const panel = /** @type {HTMLElement|null} */ (document.getElementById("dataPanelPanel"));
-  const closeBtn = /** @type {HTMLButtonElement|null} */ (document.getElementById("dataPanelClose"));
+  const overlay = /** @type {HTMLElement|null} */ (
+    requireEl("#dataPanelOverlay", document, { prefix: "initDataPanel", warn: false })
+  );
+  const panel = /** @type {HTMLElement|null} */ (
+    requireEl("#dataPanelPanel", document, { prefix: "initDataPanel", warn: false })
+  );
+  const closeBtn = /** @type {HTMLButtonElement|null} */ (
+    requireEl("#dataPanelClose", document, { prefix: "initDataPanel", warn: false })
+  );
 
-  if (!overlay || !panel) return;
+  if (!overlay || !panel) {
+    setStatus("Data panel unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
+  }
 
   const themeSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById("dataPanelThemeSelect"));
 

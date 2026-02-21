@@ -2,14 +2,33 @@
 // Character page Personality panel (traits/ideals/bonds/flaws/notes + collapsible textareas)
 
 import { initCollapsibleTextareas } from "../../../ui/collapsibleTextareas.js";
+import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 function ensureStringField(obj, key) {
   if (typeof obj[key] !== "string") obj[key] = "";
 }
 
 export function initPersonalityPanel(deps = {}) {
-  const { state, bindText } = deps;
+  const { state, bindText, setStatus } = deps;
   if (!state || !bindText) return;
+  if (!setStatus) throw new Error("initPersonalityPanel requires setStatus");
+
+  const criticalSelectors = [
+    "#charPersonalityPanel",
+    "#charTraits",
+    "#charIdeals",
+    "#charBonds",
+    "#charFlaws",
+    "#charCharNotes"
+  ];
+  const missingCritical = criticalSelectors.some(
+    (selector) => !requireEl(selector, document, { prefix: "initPersonalityPanel", warn: false })
+  );
+  if (missingCritical) {
+    setStatus("Personality panel unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
+  }
+
   if (!state.character) state.character = {};
   if (!state.character.personality || typeof state.character.personality !== "object") {
     state.character.personality = {};

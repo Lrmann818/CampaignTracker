@@ -3,6 +3,7 @@
 
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { safeAsync } from "../../../ui/safeAsync.js";
+import { getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _tabsEl = null;
 let _notesBox = null;
@@ -88,13 +89,15 @@ export function initSessionsPanel(deps = {}) {
 
   if (!_state) {
     console.warn("Sessions UI: missing required dependency (state).");
-    return;
+    return getNoopDestroyApi();
   }
   if (!_setStatus) throw new Error("initSessionsPanel requires setStatus");
 
-  if (!_tabsEl || !_notesBox) {
-    console.warn("Sessions UI: missing required elements (tabsEl/notesBox).");
-    return;
+  const missingCritical =
+    !_tabsEl || !_notesBox || !_searchEl || !_addBtn || !_renameBtn || !_deleteBtn;
+  if (missingCritical) {
+    _setStatus("Sessions panel unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
   }
 
   ensureSessionDefaults();

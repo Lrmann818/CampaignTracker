@@ -12,6 +12,7 @@ import { createMoveButton, createCollapseButton } from "./cards/shared/cardHeade
 import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
 import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
 import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
+import { getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -361,7 +362,10 @@ export function initLocationsPanel(deps = {}) {
   const renameSectionBtn = document.getElementById("renameLocSectionBtn");
   const deleteSectionBtn = document.getElementById("deleteLocSectionBtn");
 
-  if (!cardsEl || !addBtn || !searchEl || !filterEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) return null;
+  if (!cardsEl || !addBtn || !searchEl || !filterEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) {
+    setStatus("Locations panel unavailable (missing expected UI elements).");
+    return getNoopDestroyApi();
+  }
 
   // Enhance the type filter so its OPEN menu matches the Map Tools dropdown.
   // Closed control keeps the same size as the panel header select.

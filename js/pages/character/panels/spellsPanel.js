@@ -1,4 +1,5 @@
 import { safeAsync } from "../../../ui/safeAsync.js";
+import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _state = null;
 
@@ -27,6 +28,14 @@ export function initSpellsPanel(deps = {}) {
     if (!_state) throw new Error("initSpellsPanel requires state");
     if (!SaveManager) throw new Error("initSpellsPanel requires SaveManager");
     if (!setStatus) throw new Error("initSpellsPanel requires setStatus");
+
+    const panelEl = requireEl("#charSpellsPanel", document, { prefix: "initSpellsPanel", warn: false });
+    const containerEl = requireEl("#spellLevels", document, { prefix: "initSpellsPanel", warn: false });
+    const addLevelBtnEl = requireEl("#addSpellLevelBtn", document, { prefix: "initSpellsPanel", warn: false });
+    if (!panelEl || !containerEl || !addLevelBtnEl) {
+        setStatus("Spells panel unavailable (missing expected UI elements).");
+        return getNoopDestroyApi();
+    }
 
     // ---------- Spells v2 UI (dynamic levels + spells) ----------
     const _spellNotesCache = new Map(); // spellId -> text
@@ -62,9 +71,8 @@ export function initSpellsPanel(deps = {}) {
     }
 
     function setupSpellsV2() {
-        const container = document.getElementById('spellLevels');
-        const addLevelBtn = document.getElementById('addSpellLevelBtn');
-        if (!container || !addLevelBtn) return;
+        const container = containerEl;
+        const addLevelBtn = addLevelBtnEl;
 
         ensureSpellsV2Shape();
         if (!_state.character.spells.levels.length) {

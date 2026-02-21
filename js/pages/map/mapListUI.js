@@ -2,6 +2,7 @@
 
 import { enhanceSelectDropdown } from "../../ui/selectDropdown.js";
 import { safeAsync } from "../../ui/safeAsync.js";
+import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
 import {
   loadMapBackgroundImage,
   loadMapDrawingLayer
@@ -37,6 +38,13 @@ export function initMapListUI({
   renderMap,
   setStatus
 }) {
+  const NOOP_MAP_LIST_API = {
+    refreshMapSelect: () => { },
+    loadActiveMapIntoCanvas: async () => { },
+    switchMap: async () => { },
+    destroy: getNoopDestroyApi().destroy
+  };
+
   if (!setStatus) throw new Error("initMapListUI requires setStatus");
   if (typeof addOwnedListener !== "function") {
     throw new Error("initMapListUI requires deps.addListener (controller-owned listener attachment)");
@@ -50,10 +58,16 @@ export function initMapListUI({
   mapState.ui ||= {};
   const addListener = addOwnedListener;
 
-  const mapSelect = document.getElementById("mapSelect");
-  const addMapBtn = document.getElementById("addMapBtn");
-  const renameMapBtn = document.getElementById("renameMapBtn");
-  const deleteMapBtn = document.getElementById("deleteMapBtn");
+  const mapSelect = requireEl("#mapSelect", document, { prefix: "initMapListUI", warn: false });
+  const addMapBtn = requireEl("#addMapBtn", document, { prefix: "initMapListUI", warn: false });
+  const renameMapBtn = requireEl("#renameMapBtn", document, { prefix: "initMapListUI", warn: false });
+  const deleteMapBtn = requireEl("#deleteMapBtn", document, { prefix: "initMapListUI", warn: false });
+  const brush = requireEl("#brushSize", document, { prefix: "initMapListUI", warn: false });
+
+  if (!mapSelect || !addMapBtn || !renameMapBtn || !deleteMapBtn || !brush) {
+    setStatus("Map list controls unavailable (missing expected UI elements).");
+    return NOOP_MAP_LIST_API;
+  }
 
   // Enhance the Map <select> so the OPEN menu matches the Map Tools dropdown.
   // Closed control keeps the same sizing/style as the original select.
@@ -89,7 +103,6 @@ export function initMapListUI({
 
     clearHistory();
 
-    const brush = document.getElementById("brushSize");
     brush.value = mapState.ui.brushSize;
     mp.brushSize = mapState.ui.brushSize;
     setActiveToolUI(mapState.ui.activeTool);
