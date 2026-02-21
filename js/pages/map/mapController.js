@@ -16,6 +16,7 @@ import { createMapBackgroundActions } from "./mapBackgroundActions.js";
 import { initMapListUI } from "./mapListUI.js";
 import { initMapToolbarUI } from "./mapToolbarUI.js";
 import { safeAsync } from "../../ui/safeAsync.js";
+import { createStateActions } from "../../domain/stateActions.js";
 
 function toJsonSafe(value, seen = new WeakSet()) {
   if (value === null) return null;
@@ -161,6 +162,7 @@ export function createMapController({
   const safePositionMenuOnScreen =
     typeof positionMenuOnScreen === "function" ? positionMenuOnScreen : () => { };
   const safeUiConfirm = typeof uiConfirm === "function" ? uiConfirm : () => false;
+  const { updateMapField } = createStateActions({ state, SaveManager });
   const runtime = createRuntimeState();
   let mapState = normalizeMapState({ state, ensureMapManager, incomingMapState: state.map, newMapEntry });
 
@@ -252,7 +254,8 @@ export function createMapController({
     runtime.gestures = createMapGestures({
       mapState,
       runtimeState: runtime.gestureSession,
-      SaveManager
+      SaveManager,
+      updateMapField,
     });
     runtime.gestures.initScale({ canvas: runtime.canvas, canvasWrap: runtime.canvasWrap });
 

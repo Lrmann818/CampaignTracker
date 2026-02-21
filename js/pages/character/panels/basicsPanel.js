@@ -2,6 +2,7 @@
 // Character page Basics panel (identity fields + portrait)
 
 import { safeAsync } from "../../../ui/safeAsync.js";
+import { createStateActions } from "../../../domain/stateActions.js";
 
 function formatPossessive(name) {
   const n = (name || "").trim();
@@ -80,6 +81,7 @@ function setupCharacterPortrait(deps) {
     setStatus,
   } = deps;
   if (!setStatus) throw new Error("setupCharacterPortrait requires setStatus");
+  const { updateCharacterField } = createStateActions({ state, SaveManager });
 
   const cardEl = document.getElementById("charPortraitCard");
   const boxEl = document.getElementById("charPortraitTop");
@@ -137,9 +139,7 @@ function setupCharacterPortrait(deps) {
           if (typeof result === "undefined") return;
 
           // delete returns null/""; set to null
-          state.character.imgBlobId = result || null;
-
-          SaveManager.markDirty();
+          updateCharacterField("imgBlobId", result || null);
           await renderPortrait();
         } finally {
           _portraitPicking = false;
@@ -167,14 +167,16 @@ export function initBasicsPanel(deps = {}) {
   if (!state || !SaveManager || !bindText || !bindNumber) return;
   if (!setStatus) throw new Error("initBasicsPanel requires setStatus");
   if (!state.character) state.character = {};
+  const { updateCharacterField } = createStateActions({ state, SaveManager });
 
-  bindText("charName", () => state.character.name, (v) => state.character.name = v);
-  bindText("charClassLevel", () => state.character.classLevel, (v) => state.character.classLevel = v);
-  bindText("charRace", () => state.character.race, (v) => state.character.race = v);
-  bindText("charBackground", () => state.character.background, (v) => state.character.background = v);
-  bindText("charAlignment", () => state.character.alignment, (v) => state.character.alignment = v);
-  bindNumber("charExperience", () => state.character.experience, (v) => state.character.experience = v);
-  bindText("charFeatures", () => state.character.features, (v) => state.character.features = v);
+  // bindText/bindNumber already queue saves via SaveManager; actions only mutate here.
+  bindText("charName", () => state.character.name, (v) => updateCharacterField("name", v, { queueSave: false }));
+  bindText("charClassLevel", () => state.character.classLevel, (v) => updateCharacterField("classLevel", v, { queueSave: false }));
+  bindText("charRace", () => state.character.race, (v) => updateCharacterField("race", v, { queueSave: false }));
+  bindText("charBackground", () => state.character.background, (v) => updateCharacterField("background", v, { queueSave: false }));
+  bindText("charAlignment", () => state.character.alignment, (v) => updateCharacterField("alignment", v, { queueSave: false }));
+  bindNumber("charExperience", () => state.character.experience, (v) => updateCharacterField("experience", v, { queueSave: false }));
+  bindText("charFeatures", () => state.character.features, (v) => updateCharacterField("features", v, { queueSave: false }));
 
   setupTitleSync(state);
   setupAutosizeInputs(autoSizeInput);

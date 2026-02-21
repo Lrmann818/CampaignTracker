@@ -6,6 +6,7 @@ export function createMapGestures({
   mapState,
   runtimeState,
   SaveManager,
+  updateMapField,
   MIN_VIEW_SCALE = 0.6,
   MAX_VIEW_SCALE = 3
 }) {
@@ -30,7 +31,14 @@ export function createMapGestures({
     if (!canvas) return;
 
     runtime.viewScale = clamp(scale, MIN_VIEW_SCALE, MAX_VIEW_SCALE);
-    mapState.ui.viewScale = runtime.viewScale;
+    const updatedByAction =
+      typeof updateMapField === "function"
+        ? updateMapField("ui.viewScale", runtime.viewScale)
+        : false;
+    if (!updatedByAction) {
+      mapState.ui.viewScale = runtime.viewScale;
+      SaveManager?.markDirty?.();
+    }
 
     if (canvasWrap && anchorClientX != null && anchorClientY != null) {
       const wrapRect = canvasWrap.getBoundingClientRect();
@@ -55,8 +63,6 @@ export function createMapGestures({
     canvas.dataset.viewScale = String(runtime.viewScale);
     canvas.style.transformOrigin = "top left";
     canvas.style.transform = `scale(${runtime.viewScale})`;
-
-    SaveManager.markDirty();
   }
 
   function startPanZoomFromPointers({ canvasWrap }) {

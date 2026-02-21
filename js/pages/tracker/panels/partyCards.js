@@ -12,6 +12,7 @@ import { createMoveButton, createCollapseButton } from "./cards/shared/cardHeade
 import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
 import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
 import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
+import { createStateActions } from "../../../domain/stateActions.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -326,6 +327,13 @@ export function initPartyPanel(deps = {}) {
   if (!setStatus) throw new Error("initPartyPanel requires setStatus");
   if (!SaveManager) throw new Error("initPartyPanel: missing SaveManager");
   if (!makePartyMember) throw new Error("initPartyPanel: missing makePartyMember");
+  const {
+    updateTrackerField,
+    updateTrackerCardField,
+    addTrackerCard,
+    removeTrackerCard,
+    swapTrackerCards,
+  } = createStateActions({ state: _state, SaveManager });
 
   // store Popovers for dynamic card dropdown enhancements
   _Popovers = Popovers || null;
@@ -370,8 +378,7 @@ export function initPartyPanel(deps = {}) {
       itemId: memberId,
       getItemById: (id) => _state?.tracker?.party?.find(m => m.id === id) || null,
       getBlobId: (member) => member.imgBlobId,
-      setBlobId: (member, blobId) => {
-        member.imgBlobId = blobId;
+      setBlobId: (_member, blobId) => {
         pickedBlobId = blobId;
       },
       deps: {
@@ -389,9 +396,18 @@ export function initPartyPanel(deps = {}) {
   }
 
   function updateParty(id, patch, rerender = true) {
-    const idx = _state.tracker.party.findIndex(m => m.id === id);
-    if (idx === -1) return;
-    _state.tracker.party[idx] = { ..._state.tracker.party[idx], ...patch };
+    const updates = Object.entries(patch || {});
+    if (!updates.length) return;
+
+    let changed = false;
+    updates.forEach(([field, value]) => {
+      if (updateTrackerCardField("party", id, field, value, { queueSave: false })) {
+        changed = true;
+      }
+    });
+    if (!changed) return;
+
+    // updateTrackerCardField calls above intentionally skip save queuing so patches save once.
     SaveManager.markDirty();
     if (rerender) renderPartyCards();
   }
@@ -410,15 +426,13 @@ export function initPartyPanel(deps = {}) {
       catch (err) { console.warn("Failed to delete party image blob:", err); }
     }
 
-    _state.tracker.party = _state.tracker.party.filter(m => m.id !== id);
-    SaveManager.markDirty();
+    if (!removeTrackerCard("party", id)) return;
     renderPartyTabs();
     renderPartyCards();
   }
 
   function setActiveSection(sectionId) {
-    _state.tracker.partyActiveSectionId = sectionId;
-    SaveManager.markDirty();
+    updateTrackerField("partyActiveSectionId", sectionId);
     renderPartyTabs();
     renderPartyCards();
   }
@@ -451,15 +465,7 @@ export function initPartyPanel(deps = {}) {
     const aId = visible[pos].id;
     const bId = visible[newPos].id;
 
-    const aIdx = _state.tracker.party.findIndex(m => m.id === aId);
-    const bIdx = _state.tracker.party.findIndex(m => m.id === bId);
-    if (aIdx === -1 || bIdx === -1) return;
-
-    const tmp = _state.tracker.party[aIdx];
-    _state.tracker.party[aIdx] = _state.tracker.party[bIdx];
-    _state.tracker.party[bIdx] = tmp;
-
-    SaveManager.markDirty();
+    if (!swapTrackerCards("party", aId, bId)) return;
     renderPartyCards();
   }
 
@@ -479,8 +485,7 @@ export function initPartyPanel(deps = {}) {
   // Bind search
   searchEl.value = _state.tracker.partySearch;
   searchEl.addEventListener("input", () => {
-    _state.tracker.partySearch = searchEl.value;
-    SaveManager.markDirty();
+    updateTrackerField("partySearch", searchEl.value);
     renderPartyTabs();     // tabs react to search
     renderPartyCards();    // cards react to search
   });
@@ -489,8 +494,7 @@ export function initPartyPanel(deps = {}) {
   addBtn.addEventListener("click", () => {
     const member = makePartyMember();
     member.sectionId = _state.tracker.partyActiveSectionId;
-    _state.tracker.party.unshift(member);
-    SaveManager.markDirty();
+    addTrackerCard("party", member, { atStart: true });
     renderPartyTabs();
     renderPartyCards();
   });
