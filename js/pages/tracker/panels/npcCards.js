@@ -4,6 +4,7 @@
 
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
+import { renderSectionTabs, wireSectionCrud } from "./cardsShared.js";
 
 let _cardsEl = null;
 let _Popovers = null;
@@ -562,42 +563,16 @@ export function initNpcsUI(deps = {}) {
   }
 
   function renderNpcTabs() {
-    tabsEl.innerHTML = "";
-
-    const query = (_state.tracker.npcSearch || "").trim().toLowerCase();
-    const sections = _state.tracker.npcSections || [];
-    const activeId = _state.tracker.npcActiveSectionId;
-
-    let toShow = sections.filter(sec => {
-      if (!query) return true;
-      const nameMatch = (sec.name || "").toLowerCase().includes(query);
-      if (nameMatch) return true;
-      return _state.tracker.npcs.some(n => n.sectionId === sec.id && matchesSearch(n, query));
+    renderSectionTabs({
+      tabsEl,
+      sections: _state.tracker.npcSections || [],
+      activeId: _state.tracker.npcActiveSectionId,
+      query: (_state.tracker.npcSearch || "").trim().toLowerCase(),
+      tabClass: "npcTab",
+      sectionMatches: (sec, query) =>
+        _state.tracker.npcs.some(n => n.sectionId === sec.id && matchesSearch(n, query)),
+      onSelect: (id) => setActiveSection(id),
     });
-
-    if (!toShow.some(s => s.id === activeId)) {
-      const active = sections.find(s => s.id === activeId);
-      if (active) toShow = [active, ...toShow];
-    }
-
-    toShow.forEach(sec => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "npcTab" + (sec.id === activeId ? " active" : "");
-      btn.setAttribute("role", "tab");
-      btn.setAttribute("aria-selected", sec.id === activeId ? "true" : "false");
-      btn.textContent = sec.name || "Section";
-      btn.addEventListener("click", () => setActiveSection(sec.id));
-      tabsEl.appendChild(btn);
-    });
-
-    if (toShow.length === 0) {
-      const hint = document.createElement("div");
-      hint.className = "mutedSmall";
-      hint.style.marginLeft = "6px";
-      hint.textContent = "No matching sections.";
-      tabsEl.appendChild(hint);
-    }
   }
 
   // Allow cards' section dropdown to refresh tabs after a move.
@@ -614,74 +589,29 @@ export function initNpcsUI(deps = {}) {
   });
 
   // Section buttons
-  addSectionBtn.addEventListener("click", async () => {
-    if (!uiPrompt) {
-      await uiAlert?.("This action needs the in-app prompt dialog, but it isn't available.", { title: "Missing Dialog" });
-      return;
-    }
-    const nextNum = (_state.tracker.npcSections?.length || 0) + 1;
-    const proposed = await uiPrompt("New section name:", { defaultValue: `Section ${nextNum}`, title: "New NPC Section" });
-    if (proposed === null) return;
-
-    const name = proposed.trim() || `Section ${nextNum}`;
-    const sec = {
-      id: "npcsec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
-      name
-    };
-    _state.tracker.npcSections.push(sec);
-    _state.tracker.npcActiveSectionId = sec.id;
-
-    SaveManager.markDirty();
-    renderNpcTabs();
-    renderNpcCards();
-  });
-
-  renameSectionBtn.addEventListener("click", async () => {
-    const sec = _state.tracker.npcSections.find(s => s.id === _state.tracker.npcActiveSectionId);
-    if (!sec) return;
-
-    if (!uiPrompt) {
-      await uiAlert?.("This action needs the in-app prompt dialog, but it isn't available.", { title: "Missing Dialog" });
-      return;
-    }
-
-    const proposed = await uiPrompt("Rename section to:", { defaultValue: sec.name || "", title: "Rename NPC Section" });
-    if (proposed === null) return;
-
-    sec.name = proposed.trim() || sec.name || "Section";
-    SaveManager.markDirty();
-    renderNpcTabs();
-  });
-
-  deleteSectionBtn.addEventListener("click", async () => {
-    if ((_state.tracker.npcSections?.length || 0) <= 1) {
-      await uiAlert?.("You need at least one section.", { title: "Notice" });
-      return;
-    }
-
-    const sec = _state.tracker.npcSections.find(s => s.id === _state.tracker.npcActiveSectionId);
-    if (!sec) return;
-
-    if (!uiConfirm) {
-      await uiAlert?.("This action needs the in-app confirm dialog, but it isn't available.", { title: "Missing Dialog" });
-      return;
-    }
-
-    const ok = await uiConfirm(`Delete section "${sec.name}"? NPCs in it will be moved to the first section.`, { title: "Delete NPC Section", okText: "Delete" });
-    if (!ok) return;
-
-    const deleteId = sec.id;
-    _state.tracker.npcSections = _state.tracker.npcSections.filter(s => s.id !== deleteId);
-
-    const fallbackId = _state.tracker.npcSections[0].id;
-    _state.tracker.npcs.forEach(n => {
-      if (n.sectionId === deleteId) n.sectionId = fallbackId;
-    });
-
-    _state.tracker.npcActiveSectionId = fallbackId;
-    SaveManager.markDirty();
-    renderNpcTabs();
-    renderNpcCards();
+  wireSectionCrud({
+    state: _state,
+    SaveManager,
+    uiPrompt,
+    uiAlert,
+    uiConfirm,
+    addSectionBtn,
+    renameSectionBtn,
+    deleteSectionBtn,
+    sectionsKey: "npcSections",
+    activeKey: "npcActiveSectionId",
+    idPrefix: "npcsec",
+    newTitle: "New NPC Section",
+    renameTitle: "Rename NPC Section",
+    deleteTitle: "Delete NPC Section",
+    deleteConfirmText: (secName) => `Delete section "${secName}"? NPCs in it will be moved to the first section.`,
+    renderTabs: renderNpcTabs,
+    renderCards: renderNpcCards,
+    onDeleteMoveItems: (deleteId, fallbackId) => {
+      _state.tracker.npcs.forEach(n => {
+        if (n.sectionId === deleteId) n.sectionId = fallbackId;
+      });
+    },
   });
 
   // Initial render

@@ -4,6 +4,7 @@
 
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
+import { renderSectionTabs, wireSectionCrud } from "./cardsShared.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -527,120 +528,51 @@ export function initLocationsUI(deps = {}) {
   }
 
   function renderLocTabs() {
-    tabsEl.innerHTML = "";
-
     const query = (_state.tracker.locSearch || "").trim().toLowerCase();
     const typeFilter = _state.tracker.locFilter || "all";
-    const sections = _state.tracker.locSections || [];
-    const activeId = _state.tracker.locActiveSectionId;
-
-    let toShow = sections.filter(sec => {
-      if (!query) return true;
-      const nameMatch = (sec.name || "").toLowerCase().includes(query);
-      if (nameMatch) return true;
-      return _state.tracker.locationsList.some(l => {
-        if (l.sectionId !== sec.id) return false;
-        if (typeFilter !== "all" && (l.type || "town") !== typeFilter) return false;
-        return matchesSearch(l, query);
-      });
+    renderSectionTabs({
+      tabsEl,
+      sections: _state.tracker.locSections || [],
+      activeId: _state.tracker.locActiveSectionId,
+      query,
+      tabClass: "npcTab",
+      sectionMatches: (sec, query) =>
+        _state.tracker.locationsList.some(l => {
+          if (l.sectionId !== sec.id) return false;
+          if (typeFilter !== "all" && (l.type || "town") !== typeFilter) return false;
+          return matchesSearch(l, query);
+        }),
+      onSelect: (id) => setActiveSection(id),
     });
-
-    if (!toShow.some(s => s.id === activeId)) {
-      const active = sections.find(s => s.id === activeId);
-      if (active) toShow = [active, ...toShow];
-    }
-
-    toShow.forEach(sec => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "npcTab" + (sec.id === activeId ? " active" : "");
-      btn.setAttribute("role", "tab");
-      btn.setAttribute("aria-selected", sec.id === activeId ? "true" : "false");
-      btn.textContent = sec.name || "Section";
-      btn.addEventListener("click", () => setActiveSection(sec.id));
-      tabsEl.appendChild(btn);
-    });
-
-    if (toShow.length === 0) {
-      const hint = document.createElement("div");
-      hint.className = "mutedSmall";
-      hint.style.marginLeft = "6px";
-      hint.textContent = "No matching sections.";
-      tabsEl.appendChild(hint);
-    }
   }
 
   // Allow cards/actions to refresh tabs if needed.
   window.renderLocTabs = renderLocTabs;
 
   // Section buttons
-  addSectionBtn.addEventListener("click", async () => {
-    if (!uiPrompt) {
-      await uiAlert?.("This action needs the in-app prompt dialog, but it isn't available.", { title: "Missing Dialog" });
-      return;
-    }
-    const nextNum = (_state.tracker.locSections?.length || 0) + 1;
-    const proposed = await uiPrompt("New section name:", { defaultValue: `Section ${nextNum}`, title: "New Location Section" });
-    if (proposed === null) return;
-
-    const name = proposed.trim() || `Section ${nextNum}`;
-    const sec = {
-      id: "locsec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
-      name
-    };
-    _state.tracker.locSections.push(sec);
-    _state.tracker.locActiveSectionId = sec.id;
-    SaveManager.markDirty();
-    renderLocTabs();
-    renderLocationCards();
-  });
-
-  renameSectionBtn.addEventListener("click", async () => {
-    const sec = _state.tracker.locSections.find(s => s.id === _state.tracker.locActiveSectionId);
-    if (!sec) return;
-
-    if (!uiPrompt) {
-      await uiAlert?.("This action needs the in-app prompt dialog, but it isn't available.", { title: "Missing Dialog" });
-      return;
-    }
-
-    const proposed = await uiPrompt("Rename section to:", { defaultValue: sec.name || "", title: "Rename Location Section" });
-    if (proposed === null) return;
-
-    sec.name = proposed.trim() || sec.name || "Section";
-    SaveManager.markDirty();
-    renderLocTabs();
-  });
-
-  deleteSectionBtn.addEventListener("click", async () => {
-    if ((_state.tracker.locSections?.length || 0) <= 1) {
-      await uiAlert?.("You need at least one section.", { title: "Notice" });
-      return;
-    }
-
-    const sec = _state.tracker.locSections.find(s => s.id === _state.tracker.locActiveSectionId);
-    if (!sec) return;
-
-    if (!uiConfirm) {
-      await uiAlert?.("This action needs the in-app confirm dialog, but it isn't available.", { title: "Missing Dialog" });
-      return;
-    }
-
-    const ok = await uiConfirm(`Delete section "${sec.name}"? Locations in it will be moved to the first section.`, { title: "Delete Location Section", okText: "Delete" });
-    if (!ok) return;
-
-    const deleteId = sec.id;
-    _state.tracker.locSections = _state.tracker.locSections.filter(s => s.id !== deleteId);
-
-    const fallbackId = _state.tracker.locSections[0].id;
-    _state.tracker.locationsList.forEach(l => {
-      if (l.sectionId === deleteId) l.sectionId = fallbackId;
-    });
-    _state.tracker.locActiveSectionId = fallbackId;
-
-    SaveManager.markDirty();
-    renderLocTabs();
-    renderLocationCards();
+  wireSectionCrud({
+    state: _state,
+    SaveManager,
+    uiPrompt,
+    uiAlert,
+    uiConfirm,
+    addSectionBtn,
+    renameSectionBtn,
+    deleteSectionBtn,
+    sectionsKey: "locSections",
+    activeKey: "locActiveSectionId",
+    idPrefix: "locsec",
+    newTitle: "New Location Section",
+    renameTitle: "Rename Location Section",
+    deleteTitle: "Delete Location Section",
+    deleteConfirmText: (secName) => `Delete section "${secName}"? Locations in it will be moved to the first section.`,
+    renderTabs: renderLocTabs,
+    renderCards: renderLocationCards,
+    onDeleteMoveItems: (deleteId, fallbackId) => {
+      _state.tracker.locationsList.forEach(l => {
+        if (l.sectionId === deleteId) l.sectionId = fallbackId;
+      });
+    },
   });
 
   // Toolbar (search / filter / add)

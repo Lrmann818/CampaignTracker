@@ -4,6 +4,7 @@
 
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
+import { renderSectionTabs, wireSectionCrud } from "./cardsShared.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -472,45 +473,16 @@ export function initPartyUI(deps = {}) {
   }
 
   function renderPartyTabs() {
-    tabsEl.innerHTML = "";
-
-    const query = (_state.tracker.partySearch || "").trim().toLowerCase();
-    const sections = _state.tracker.partySections || [];
-    const activeId = _state.tracker.partyActiveSectionId;
-
-    // Sessions-style filtering: show sections if their NAME matches search
-    // OR if any member inside matches the search
-    let toShow = sections.filter(sec => {
-      if (!query) return true;
-      const nameMatch = (sec.name || "").toLowerCase().includes(query);
-      if (nameMatch) return true;
-      return _state.tracker.party.some(m => m.sectionId === sec.id && matchesSearch(m, query));
+    renderSectionTabs({
+      tabsEl,
+      sections: _state.tracker.partySections || [],
+      activeId: _state.tracker.partyActiveSectionId,
+      query: (_state.tracker.partySearch || "").trim().toLowerCase(),
+      tabClass: "npcTab",
+      sectionMatches: (sec, query) =>
+        _state.tracker.party.some(m => m.sectionId === sec.id && matchesSearch(m, query)),
+      onSelect: (id) => setActiveSection(id),
     });
-
-    // If search would hide the active tab, keep it visible
-    if (!toShow.some(s => s.id === activeId)) {
-      const active = sections.find(s => s.id === activeId);
-      if (active) toShow = [active, ...toShow];
-    }
-
-    toShow.forEach(sec => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "npcTab" + (sec.id === activeId ? " active" : "");
-      btn.setAttribute("role", "tab");
-      btn.setAttribute("aria-selected", sec.id === activeId ? "true" : "false");
-      btn.textContent = sec.name || "Section";
-      btn.addEventListener("click", () => setActiveSection(sec.id));
-      tabsEl.appendChild(btn);
-    });
-
-    if (toShow.length === 0) {
-      const hint = document.createElement("div");
-      hint.className = "mutedSmall";
-      hint.style.marginLeft = "6px";
-      hint.textContent = "No matching sections.";
-      tabsEl.appendChild(hint);
-    }
   }
 
   function movePartyCard(id, dir) {
@@ -573,75 +545,29 @@ export function initPartyUI(deps = {}) {
   });
 
   // Section buttons
-  addSectionBtn.addEventListener("click", async () => {
-    if (!uiPrompt) {
-      await uiAlert?.("This action needs the in-app prompt dialog, but it isn't available.", { title: "Missing Dialog" });
-      return;
-    }
-    const nextNum = (_state.tracker.partySections?.length || 0) + 1;
-    const proposed = await uiPrompt("New section name:", { defaultValue: `Section ${nextNum}`, title: "New Party Section" });
-    if (proposed === null) return;
-
-    const name = proposed.trim() || `Section ${nextNum}`;
-    const sec = {
-      id: "partysec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
-      name
-    };
-    _state.tracker.partySections.push(sec);
-    _state.tracker.partyActiveSectionId = sec.id;
-
-    SaveManager.markDirty();
-    renderPartyTabs();
-    renderPartyCards();
-  });
-
-  renameSectionBtn.addEventListener("click", async () => {
-    const sec = _state.tracker.partySections.find(s => s.id === _state.tracker.partyActiveSectionId);
-    if (!sec) return;
-
-    if (!uiPrompt) {
-      await uiAlert?.("This action needs the in-app prompt dialog, but it isn't available.", { title: "Missing Dialog" });
-      return;
-    }
-
-    const proposed = await uiPrompt("Rename section to:", { defaultValue: sec.name || "", title: "Rename Party Section" });
-    if (proposed === null) return;
-
-    sec.name = proposed.trim() || sec.name || "Section";
-    SaveManager.markDirty();
-    renderPartyTabs();
-  });
-
-  deleteSectionBtn.addEventListener("click", async () => {
-    if ((_state.tracker.partySections?.length || 0) <= 1) {
-      await uiAlert?.("You need at least one section.", { title: "Notice" });
-      return;
-    }
-
-    const sec = _state.tracker.partySections.find(s => s.id === _state.tracker.partyActiveSectionId);
-    if (!sec) return;
-
-    if (!uiConfirm) {
-      await uiAlert?.("This action needs the in-app confirm dialog, but it isn't available.", { title: "Missing Dialog" });
-      return;
-    }
-
-    const ok = await uiConfirm(`Delete section "${sec.name}"? Party members in it will be moved to the first section.`, { title: "Delete Party Section", okText: "Delete" });
-    if (!ok) return;
-
-    const deleteId = sec.id;
-    _state.tracker.partySections = _state.tracker.partySections.filter(s => s.id !== deleteId);
-
-    const fallbackId = _state.tracker.partySections[0].id;
-    _state.tracker.party.forEach(m => {
-      if (m.sectionId === deleteId) m.sectionId = fallbackId;
-    });
-
-    _state.tracker.partyActiveSectionId = fallbackId;
-
-    SaveManager.markDirty();
-    renderPartyTabs();
-    renderPartyCards();
+  wireSectionCrud({
+    state: _state,
+    SaveManager,
+    uiPrompt,
+    uiAlert,
+    uiConfirm,
+    addSectionBtn,
+    renameSectionBtn,
+    deleteSectionBtn,
+    sectionsKey: "partySections",
+    activeKey: "partyActiveSectionId",
+    idPrefix: "partysec",
+    newTitle: "New Party Section",
+    renameTitle: "Rename Party Section",
+    deleteTitle: "Delete Party Section",
+    deleteConfirmText: (secName) => `Delete section "${secName}"? Party members in it will be moved to the first section.`,
+    renderTabs: renderPartyTabs,
+    renderCards: renderPartyCards,
+    onDeleteMoveItems: (deleteId, fallbackId) => {
+      _state.tracker.party.forEach(m => {
+        if (m.sectionId === deleteId) m.sectionId = fallbackId;
+      });
+    },
   });
 
   // Initial render
