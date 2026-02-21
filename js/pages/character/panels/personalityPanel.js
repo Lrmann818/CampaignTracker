@@ -25,7 +25,7 @@ export function initPersonalityPanel(deps = {}) {
     (selector) => !requireEl(selector, document, { prefix: "initPersonalityPanel", warn: false })
   );
   if (missingCritical) {
-    setStatus("Personality panel unavailable (missing expected UI elements).");
+    setStatus("Personality panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

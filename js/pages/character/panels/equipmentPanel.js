@@ -93,7 +93,7 @@ function initInventoryUI(deps = {}) {
   const missingCritical =
     !_tabsEl || !_notesBox || !_searchEl || !_addBtn || !_renameBtn || !_deleteBtn;
   if (missingCritical) {
-    _setStatus("Equipment inventory unavailable (missing expected UI elements).");
+    _setStatus("Equipment inventory unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 
@@ -347,7 +347,7 @@ export function initEquipmentPanel(deps = {}) {
     (selector) => !requireEl(selector, document, { prefix: "initEquipmentPanel", warn: false })
   );
   if (!panelEl || missingCriticalField) {
-    setStatus("Equipment panel unavailable (missing expected UI elements).");
+    setStatus("Equipment panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

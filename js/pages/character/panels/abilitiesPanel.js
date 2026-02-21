@@ -11,12 +11,12 @@ export function initAbilitiesPanel(deps = {}) {
 
   const panel = requireEl("#charAbilitiesPanel", document, { prefix: "initAbilitiesPanel", warn: false });
   if (!panel) {
-    setStatus("Abilities panel unavailable (missing expected UI elements).");
+    setStatus("Abilities panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
   const abilityGrid = requireEl(".abilityGrid", panel, { prefix: "initAbilitiesPanel", warn: false });
   if (!abilityGrid) {
-    setStatus("Abilities panel unavailable (missing .abilityGrid).");
+    setStatus("Abilities panel unavailable (missing .abilityGrid).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

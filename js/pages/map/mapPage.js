@@ -30,7 +30,7 @@ export function setupMapPage(deps = {}) {
     console.error("Map page init failed:", err);
     _activeMapPageController?.destroy?.();
     _activeMapPageController = null;
-    deps.setStatus?.("Map page failed to initialize. Check console for details.");
+    deps.setStatus?.("Map page failed to initialize. Check console for details.", { stickyMs: 5000 });
     return NOOP_MAP_PAGE_API;
   }
 }

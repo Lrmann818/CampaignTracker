@@ -36,7 +36,7 @@ export function initTopbarDiceRoller(deps) {
     const modPlusEl = requireEl("#diceModPlus", document, { prefix: "initTopbarDiceRoller", warn: false });
 
     if (!dd || !btn || !menu || !closeBtn || !countEl || !modEl || !rollBtn || !clearBtn || !histEl || !advBtn || !disBtn) {
-        setStatus?.("Topbar dice roller unavailable (missing expected UI elements).");
+        setStatus?.("Topbar dice roller unavailable (missing expected UI elements).", { stickyMs: 5000 });
         return getNoopDestroyApi();
     }
 

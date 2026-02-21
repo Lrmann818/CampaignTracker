@@ -7,9 +7,18 @@
  */
 export function createStatus(opts = {}) {
   const statusEl = opts.statusEl || null;
+  let lockUntil = 0;
 
-  function setStatus(msg) {
+  function setStatus(msg, opts = {}) {
     if (!statusEl) return;
+    const stickyMs = Number(opts?.stickyMs);
+    lockUntil = stickyMs > 0 ? Date.now() + stickyMs : 0;
+    statusEl.textContent = msg || "";
+  }
+
+  function setSaveStatus(msg) {
+    if (!statusEl) return;
+    if (Date.now() < lockUntil) return;
     statusEl.textContent = msg || "";
   }
 
@@ -42,5 +51,5 @@ export function createStatus(opts = {}) {
     });
   }
 
-  return { setStatus, installGlobalErrorHandlers };
+  return { setStatus, setSaveStatus, installGlobalErrorHandlers };
 }

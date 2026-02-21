@@ -33,7 +33,7 @@ export function initSpellsPanel(deps = {}) {
     const containerEl = requireEl("#spellLevels", document, { prefix: "initSpellsPanel", warn: false });
     const addLevelBtnEl = requireEl("#addSpellLevelBtn", document, { prefix: "initSpellsPanel", warn: false });
     if (!panelEl || !containerEl || !addLevelBtnEl) {
-        setStatus("Spells panel unavailable (missing expected UI elements).");
+        setStatus("Spells panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
         return getNoopDestroyApi();
     }
 

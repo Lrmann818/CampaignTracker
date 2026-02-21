@@ -35,13 +35,13 @@ export function initTopTabsNavigation({
 } = {}) {
   const tabsRoot = requireEl(tabsRootSelector, document, { prefix: "initTopTabsNavigation", warn: false });
   if (!tabsRoot) {
-    setStatus?.("Top navigation unavailable (missing tabs container).");
+    setStatus?.("Top navigation unavailable (missing tabs container).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 
   const tabButtons = Array.from(tabsRoot.querySelectorAll(tabSelector));
   if (!tabButtons.length) {
-    setStatus?.("Top navigation unavailable (no tab buttons found).");
+    setStatus?.("Top navigation unavailable (no tab buttons found).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

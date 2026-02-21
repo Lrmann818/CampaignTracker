@@ -96,7 +96,7 @@ export function initSessionsPanel(deps = {}) {
   const missingCritical =
     !_tabsEl || !_notesBox || !_searchEl || !_addBtn || !_renameBtn || !_deleteBtn;
   if (missingCritical) {
-    _setStatus("Sessions panel unavailable (missing expected UI elements).");
+    _setStatus("Sessions panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

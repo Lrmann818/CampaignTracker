@@ -53,7 +53,7 @@ export function initMapToolbarUI({
   const brush = requireEl("#brushSize", document, { prefix: "initMapToolbarUI", warn: false });
 
   if (!toolBtn || !toolMenu || !colorDropdown || !colorBtn || !colorMenu || !preview || !brush) {
-    setStatus("Map toolbar unavailable (missing expected UI elements).");
+    setStatus("Map toolbar unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return NOOP_TOOLBAR_API;
   }
 

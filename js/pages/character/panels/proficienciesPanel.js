@@ -20,7 +20,7 @@ export function initProficienciesPanel(deps = {}) {
     (selector) => !requireEl(selector, document, { prefix: "initProficienciesPanel", warn: false })
   );
   if (missingCritical) {
-    setStatus("Proficiencies panel unavailable (missing expected UI elements).");
+    setStatus("Proficiencies panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

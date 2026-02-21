@@ -48,7 +48,7 @@ export function setupSettingsPanel(deps) {
   // Settings button opens the modal directly
   const settingsBtn = requireEl("#settingsBtn", document, { prefix: "setupSettingsPanel", warn: false });
   if (!settingsBtn) {
-    setStatus("Settings button unavailable (missing #settingsBtn).");
+    setStatus("Settings button unavailable (missing #settingsBtn).", { stickyMs: 5000 });
     return;
   }
 

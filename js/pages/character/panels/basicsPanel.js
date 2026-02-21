@@ -183,7 +183,7 @@ export function initBasicsPanel(deps = {}) {
     (selector) => !requireEl(selector, document, { prefix: "initBasicsPanel", warn: false })
   );
   if (missingCritical) {
-    setStatus("Character basics panel unavailable (missing expected UI elements).");
+    setStatus("Character basics panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

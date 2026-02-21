@@ -138,7 +138,7 @@ export function initVitalsPanel(deps = {}) {
     || panelEl?.querySelector(".charTiles");
   const addBtn = requireEl("#addResourceBtn", document, { prefix: "initVitalsPanel", warn: false });
   if (missingCritical || !panelEl || !wrap || !addBtn) {
-    setStatus("Vitals panel unavailable (missing expected UI elements).");
+    setStatus("Vitals panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

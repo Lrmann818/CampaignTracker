@@ -1,12 +1,8 @@
 // @ts-nocheck
 // js/ui/panelHeaderCollapse.js
 // Click a panel's header to collapse/expand its body (header stays visible).
+import { createStateActions } from "../domain/stateActions.js";
 import { getNoopDestroyApi } from "../utils/domGuards.js";
-
-function ensureObj(obj, key) {
-  if (!obj[key] || typeof obj[key] !== "object") obj[key] = {};
-  return obj[key];
-}
 
 function isInteractive(target) {
   return !!target?.closest?.(
@@ -36,24 +32,62 @@ function findHeader(panelEl) {
   return null;
 }
 
-function setCollapsed(panelEl, key, collapsedMap, next, SaveManager) {
-  collapsedMap[key] = !!next;
+function isCollapsedState(state, key) {
+  return state?.ui?.panelCollapsed?.[key] === true;
+}
+
+function applyCollapsedUi(panelEl, next) {
   panelEl.dataset.collapsed = next ? "true" : "false";
   // Nice-to-have for accessibility; harmless if header isn't a button.
   panelEl.setAttribute("aria-expanded", next ? "false" : "true");
-  SaveManager.markDirty();
 }
 
-export function initPanelHeaderCollapse({ state, SaveManager, setStatus } = {}) {
-  if (!state) throw new Error("initPanelHeaderCollapse: state is required");
-  if (!SaveManager) throw new Error("initPanelHeaderCollapse: SaveManager is required");
+function resolveSetPathHelper({ state, SaveManager, actions, setPath }) {
+  if (actions && typeof actions.setPath === "function") return actions.setPath.bind(actions);
+  if (typeof setPath === "function") return setPath;
 
-  ensureObj(state, "ui");
-  const collapsedMap = ensureObj(state.ui, "panelCollapsed");
+  const localActions = createStateActions({ state, SaveManager });
+  if (typeof localActions.setPath === "function") return localActions.setPath;
+
+  return null;
+}
+
+function resolveTargetPanelElement({ key, headerEl, fallbackPanelEl }) {
+  if (key) {
+    const byId = document.getElementById(key);
+    if (byId && byId.matches?.("section.panel")) return byId;
+
+    const byDataPanel = Array
+      .from(document.querySelectorAll("section.panel[data-panel]"))
+      .find((el) => el.dataset?.panel === key);
+    if (byDataPanel) return byDataPanel;
+  }
+
+  const byHeaderAncestor = headerEl?.closest?.("section.panel");
+  if (byHeaderAncestor) return byHeaderAncestor;
+
+  if (fallbackPanelEl && document.contains(fallbackPanelEl)) return fallbackPanelEl;
+  return null;
+}
+
+function getPanelLabel({ key, headerEl, fallbackPanelEl }) {
+  if (key) return key;
+  const fromHeaderText = headerEl?.querySelector?.("h2")?.textContent;
+  const fromPanel = fallbackPanelEl?.id || fallbackPanelEl?.dataset?.panel;
+  const label = String(fromHeaderText || fromPanel || "").trim();
+  return label || "<unknown panel>";
+}
+
+export function initPanelHeaderCollapse({ state, SaveManager, setStatus, actions, setPath } = {}) {
+  if (!state) throw new Error("initPanelHeaderCollapse: state is required");
+  const setPathAction = resolveSetPathHelper({ state, SaveManager, actions, setPath });
+  if (typeof setPathAction !== "function") {
+    throw new Error("initPanelHeaderCollapse: expected actions.setPath or setPath helper");
+  }
 
   const panels = Array.from(document.querySelectorAll("section.panel"));
   if (!panels.length) {
-    setStatus?.("Panel collapse controls unavailable (no .panel sections found).");
+    setStatus?.("Panel collapse controls unavailable (no .panel sections found).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
   panels.forEach((panelEl) => {
@@ -81,16 +115,37 @@ export function initPanelHeaderCollapse({ state, SaveManager, setStatus } = {}) 
     headerEl.classList.add("panelHeaderClickable");
 
     // Apply initial state (CSS hides everything except the header)
-    const isCollapsed = collapsedMap[key] === true;
-    panelEl.dataset.collapsed = isCollapsed ? "true" : "false";
-    panelEl.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+    applyCollapsedUi(panelEl, isCollapsedState(state, key));
 
     headerEl.addEventListener("click", (e) => {
       // Don't collapse when clicking header controls
       if (isInteractive(e.target)) return;
 
-      const next = !(collapsedMap[key] === true);
-      setCollapsed(panelEl, key, collapsedMap, next, SaveManager);
+      const targetPanelEl = resolveTargetPanelElement({ key, headerEl, fallbackPanelEl: panelEl });
+      if (!targetPanelEl) {
+        const panelLabel = getPanelLabel({ key, headerEl, fallbackPanelEl: panelEl });
+        const message = `Panel unavailable (missing DOM): ${panelLabel}`;
+        setStatus?.(message);
+        console.warn("initPanelHeaderCollapse: target panel missing on click", {
+          panelKey: key,
+          panelLabel,
+          selectorsTried: [
+            "document.getElementById(<panel key>) as section.panel",
+            "section.panel[data-panel=<panel key>]",
+            "headerEl.closest('section.panel')",
+          ],
+          headerEl,
+        });
+        return;
+      }
+
+      const next = !isCollapsedState(state, key);
+      const updated = setPathAction(`ui.panelCollapsed.${key}`, next);
+      if (updated === false) {
+        console.warn("initPanelHeaderCollapse: failed to update collapsed state", { panelKey: key, next });
+        return;
+      }
+      applyCollapsedUi(targetPanelEl, next);
     });
   });
 }

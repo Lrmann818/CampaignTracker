@@ -32,7 +32,7 @@ export function initTopbarUI(deps) {
       return initFn();
     } catch (err) {
       console.error(`[topbar] ${widgetName} init failed:`, err);
-      setStatus(`${widgetName} failed to initialize. Check console for details.`);
+      setStatus(`${widgetName} failed to initialize. Check console for details.`, { stickyMs: 5000 });
       return getNoopDestroyApi();
     }
   };

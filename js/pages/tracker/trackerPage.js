@@ -60,7 +60,7 @@ export function initTrackerPage(deps) {
 
   const trackerRoot = requireEl("#page-tracker", document, { prefix: "initTrackerPage", warn: false });
   if (!trackerRoot) {
-    setStatus("Tracker page unavailable (missing #page-tracker).");
+    setStatus("Tracker page unavailable (missing #page-tracker).", { stickyMs: 5000 });
     return;
   }
 
@@ -69,7 +69,7 @@ export function initTrackerPage(deps) {
       return initFn();
     } catch (err) {
       console.error(`${panelName} init failed:`, err);
-      setStatus(`${panelName} failed to initialize. Check console for details.`);
+      setStatus(`${panelName} failed to initialize. Check console for details.`, { stickyMs: 5000 });
       return getNoopDestroyApi();
     }
   };

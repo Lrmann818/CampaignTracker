@@ -363,7 +363,7 @@ export function initLocationsPanel(deps = {}) {
   const deleteSectionBtn = document.getElementById("deleteLocSectionBtn");
 
   if (!cardsEl || !addBtn || !searchEl || !filterEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) {
-    setStatus("Locations panel unavailable (missing expected UI elements).");
+    setStatus("Locations panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

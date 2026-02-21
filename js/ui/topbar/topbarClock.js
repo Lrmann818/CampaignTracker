@@ -10,7 +10,7 @@ export function initTopbarClock({ setStatus } = {}) {
 
     const el = requireEl("#topbarClock", document, { prefix: "initTopbarClock", warn: false });
     if (!el) {
-        setStatus?.("Topbar clock unavailable (missing #topbarClock).");
+        setStatus?.("Topbar clock unavailable (missing #topbarClock).", { stickyMs: 5000 });
         return getNoopDestroyApi();
     }
 

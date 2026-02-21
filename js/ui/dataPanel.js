@@ -51,7 +51,7 @@ export function initDataPanel(deps) {
   );
 
   if (!overlay || !panel) {
-    setStatus("Data panel unavailable (missing expected UI elements).");
+    setStatus("Data panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

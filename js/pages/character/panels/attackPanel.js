@@ -32,7 +32,7 @@ export function initAttacksPanel(deps = {}) {
   const addBtn = requireEl("#addAttackBtn", document, { prefix: "initAttacksPanel", warn: false });
 
   if (!panelEl || !listEl || !addBtn) {
-    setStatus("Weapons panel unavailable (missing expected UI elements).");
+    setStatus("Weapons panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

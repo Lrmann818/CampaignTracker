@@ -411,7 +411,7 @@ export function initNpcsPanel(deps = {}) {
   const deleteSectionBtn = document.getElementById("deleteNpcSectionBtn");
 
   if (!cardsEl || !addBtn || !searchEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) {
-    setStatus("NPC panel unavailable (missing expected UI elements).");
+    setStatus("NPC panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

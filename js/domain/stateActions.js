@@ -83,6 +83,15 @@ export function createStateActions({ state, SaveManager } = {}) {
     throw new Error("createStateActions: state is required");
   }
 
+  function setPath(path, value, options = {}) {
+    const updated = withAllowedStateMutation(() => {
+      return setPathValue(state, path, value);
+    });
+    if (!updated) return false;
+    maybeQueueSave(SaveManager, options);
+    return true;
+  }
+
   function updateCharacterField(path, value, options = {}) {
     const updated = withAllowedStateMutation(() => {
       if (!state.character || typeof state.character !== "object") state.character = {};
@@ -179,6 +188,7 @@ export function createStateActions({ state, SaveManager } = {}) {
   }
 
   return {
+    setPath,
     updateCharacterField,
     updateTrackerField,
     updateMapField,

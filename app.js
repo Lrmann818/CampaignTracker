@@ -87,6 +87,7 @@ import { setupMapPage } from "./js/pages/map/mapPage.js";
 // Status line + global error surface
 const StatusApi = {
   setStatus: () => { },
+  setSaveStatus: () => { },
   installGlobalErrorHandlers: () => { }
 };
 
@@ -114,7 +115,7 @@ const saveAll = () => saveAllLocal({
 // ---------- Save Manager (debounced + queued) ----------
 const SaveManager = createSaveManager({
   saveAll,
-  setStatus: (...args) => StatusApi.setStatus(...args),
+  setStatus: (...args) => StatusApi.setSaveStatus(...args),
   debounceMs: 250,
   savedText: "Saved locally.",
   dirtyText: "Unsaved changes",
@@ -150,6 +151,7 @@ function disableAutocompleteGlobally(root = document) {
 
   const Status = createStatus({ statusEl: document.getElementById("statusText") });
   StatusApi.setStatus = Status.setStatus;
+  StatusApi.setSaveStatus = Status.setSaveStatus;
   StatusApi.installGlobalErrorHandlers = Status.installGlobalErrorHandlers;
   StatusApi.installGlobalErrorHandlers();
 

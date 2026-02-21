@@ -65,7 +65,7 @@ export function initMapListUI({
   const brush = requireEl("#brushSize", document, { prefix: "initMapListUI", warn: false });
 
   if (!mapSelect || !addMapBtn || !renameMapBtn || !deleteMapBtn || !brush) {
-    setStatus("Map list controls unavailable (missing expected UI elements).");
+    setStatus("Map list controls unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return NOOP_MAP_LIST_API;
   }
 

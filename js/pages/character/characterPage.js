@@ -46,7 +46,7 @@ export function initCharacterPageUI(deps) {
       return initFn();
     } catch (err) {
       console.error(`${panelName} init failed:`, err);
-      setStatus(`${panelName} failed to initialize. Check console for details.`);
+      setStatus(`${panelName} failed to initialize. Check console for details.`, { stickyMs: 5000 });
       return getNoopDestroyApi();
     }
   };
@@ -55,7 +55,7 @@ export function initCharacterPageUI(deps) {
   function initCharacterUI() {
     const root = requireEl("#page-character", document, { prefix: "initCharacterPageUI", warn: false });
     if (!root) {
-      setStatus("Character page unavailable (missing #page-character).");
+      setStatus("Character page unavailable (missing #page-character).", { stickyMs: 5000 });
       return;
     }
 

@@ -372,7 +372,7 @@ export function initPartyPanel(deps = {}) {
   const deleteSectionBtn = document.getElementById("deletePartySectionBtn");
 
   if (!cardsEl || !addBtn || !searchEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) {
-    setStatus("Party panel unavailable (missing expected UI elements).");
+    setStatus("Party panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
 

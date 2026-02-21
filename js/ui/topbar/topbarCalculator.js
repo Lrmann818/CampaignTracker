@@ -26,7 +26,7 @@ export function initTopbarCalculator(deps) {
     const histEl = requireEl("#calcHistory", document, { prefix: "initTopbarCalculator", warn: false });
 
     if (!dd || !btn || !menu || !closeBtn || !display || !keys || !histEl) {
-        setStatus?.("Topbar calculator unavailable (missing expected UI elements).");
+        setStatus?.("Topbar calculator unavailable (missing expected UI elements).", { stickyMs: 5000 });
         return getNoopDestroyApi();
     }
 
