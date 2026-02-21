@@ -1,6 +1,8 @@
 // js/pages/character/panels/basicsPanel.js
 // Character page Basics panel (identity fields + portrait)
 
+import { safeAsync } from "../../../ui/safeAsync.js";
+
 function formatPossessive(name) {
   const n = (name || "").trim();
   if (!n) return "";
@@ -77,6 +79,7 @@ function setupCharacterPortrait(deps) {
     blobIdToObjectUrl,
     setStatus,
   } = deps;
+  if (!setStatus) throw new Error("setupCharacterPortrait requires setStatus");
 
   const cardEl = document.getElementById("charPortraitCard");
   const boxEl = document.getElementById("charPortraitTop");
@@ -112,34 +115,40 @@ function setupCharacterPortrait(deps) {
   // click anywhere in the portrait box
   if (portraitBindEl.dataset.boundBasicsPortrait !== "1") {
     portraitBindEl.dataset.boundBasicsPortrait = "1";
-    portraitBindEl.addEventListener("click", async () => {
-      if (_portraitPicking) return;
-      _portraitPicking = true;
+    portraitBindEl.addEventListener(
+      "click",
+      safeAsync(async () => {
+        if (_portraitPicking) return;
+        _portraitPicking = true;
 
-      try {
-        const result = await pickCropStorePortrait({
-          picker: ImagePicker,
-          currentBlobId: state.character.imgBlobId,
-          deleteBlob,
-          putBlob,
-          cropImageModal,
-          getPortraitAspect,
-          aspectSelector: "#charPortraitTop",
-          setStatus,
-        });
+        try {
+          const result = await pickCropStorePortrait({
+            picker: ImagePicker,
+            currentBlobId: state.character.imgBlobId,
+            deleteBlob,
+            putBlob,
+            cropImageModal,
+            getPortraitAspect,
+            aspectSelector: "#charPortraitTop",
+            setStatus,
+          });
 
-        // cancel
-        if (typeof result === "undefined") return;
+          // cancel
+          if (typeof result === "undefined") return;
 
-        // delete returns null/""; set to null
-        state.character.imgBlobId = result || null;
+          // delete returns null/""; set to null
+          state.character.imgBlobId = result || null;
 
-        SaveManager.markDirty();
-        await renderPortrait();
-      } finally {
-        _portraitPicking = false;
-      }
-    });
+          SaveManager.markDirty();
+          await renderPortrait();
+        } finally {
+          _portraitPicking = false;
+        }
+      }, (err) => {
+        console.error(err);
+        setStatus("Update portrait failed.");
+      })
+    );
   }
 
   renderPortrait();
@@ -152,9 +161,11 @@ export function initBasicsPanel(deps = {}) {
     bindText,
     bindNumber,
     autoSizeInput,
+    setStatus,
   } = deps;
 
   if (!state || !SaveManager || !bindText || !bindNumber) return;
+  if (!setStatus) throw new Error("initBasicsPanel requires setStatus");
   if (!state.character) state.character = {};
 
   bindText("charName", () => state.character.name, (v) => state.character.name = v);

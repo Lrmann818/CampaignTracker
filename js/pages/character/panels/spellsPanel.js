@@ -1,3 +1,5 @@
+import { safeAsync } from "../../../ui/safeAsync.js";
+
 let _state = null;
 
 
@@ -24,6 +26,7 @@ export function initSpellsPanel(deps = {}) {
 
     if (!_state) throw new Error("initSpellsPanel requires state");
     if (!SaveManager) throw new Error("initSpellsPanel requires SaveManager");
+    if (!setStatus) throw new Error("initSpellsPanel requires setStatus");
 
     // ---------- Spells v2 UI (dynamic levels + spells) ----------
     const _spellNotesCache = new Map(); // spellId -> text
@@ -83,33 +86,39 @@ export function initSpellsPanel(deps = {}) {
             _spellNotesSaveTimers.set(spellId, t);
         };
 
-        addLevelBtn.addEventListener('click', async () => {
-            const suggested = (() => {
-                // Find the highest numbered "<n>th Level" and suggest the next one.
-                const levels = (_state.character?.spells?.levels || []).map(l => String(l.label || ""));
-                let max = 0;
-                for (const lab of levels) {
-                    const m = lab.match(/\b(\d+)\s*(st|nd|rd|th)?\s*level\b/i);
-                    if (!m) continue;
-                    const n = Number(m[1]);
-                    if (Number.isFinite(n) && n > max) max = n;
-                }
-                const next = Math.max(1, max + 1);
-                const ordinal = (n) => {
-                    const s = ["th", "st", "nd", "rd"];
-                    const v = n % 100;
-                    return n + (s[(v - 20) % 10] || s[v] || s[0]);
-                };
-                return `${ordinal(next)} Level`;
-            })();
+        addLevelBtn.addEventListener(
+            'click',
+            safeAsync(async () => {
+                const suggested = (() => {
+                    // Find the highest numbered "<n>th Level" and suggest the next one.
+                    const levels = (_state.character?.spells?.levels || []).map(l => String(l.label || ""));
+                    let max = 0;
+                    for (const lab of levels) {
+                        const m = lab.match(/\b(\d+)\s*(st|nd|rd|th)?\s*level\b/i);
+                        if (!m) continue;
+                        const n = Number(m[1]);
+                        if (Number.isFinite(n) && n > max) max = n;
+                    }
+                    const next = Math.max(1, max + 1);
+                    const ordinal = (n) => {
+                        const s = ["th", "st", "nd", "rd"];
+                        const v = n % 100;
+                        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+                    };
+                    return `${ordinal(next)} Level`;
+                })();
 
-            const label = ((await uiPrompt('New spell level name:', { defaultValue: suggested, title: 'New Spell Level' })) || '').trim();
-            if (!label) return;
-            const isCantrip = label.toLowerCase().includes('cantrip');
-            _state.character.spells.levels.push(newSpellLevel(label, !isCantrip));
-            SaveManager.markDirty();
-            render();
-        });
+                const label = ((await uiPrompt('New spell level name:', { defaultValue: suggested, title: 'New Spell Level' })) || '').trim();
+                if (!label) return;
+                const isCantrip = label.toLowerCase().includes('cantrip');
+                _state.character.spells.levels.push(newSpellLevel(label, !isCantrip));
+                SaveManager.markDirty();
+                render();
+            }, (err) => {
+                console.error(err);
+                setStatus("Add spell level failed.");
+            })
+        );
 
         async function ensureSpellNotesLoaded(spellId) {
             if (_spellNotesCache.has(spellId)) return;
@@ -234,17 +243,23 @@ export function initSpellsPanel(deps = {}) {
             deleteLevelBtn.type = 'button';
             deleteLevelBtn.className = 'danger';
             deleteLevelBtn.textContent = 'X';
-            deleteLevelBtn.addEventListener('click', async () => {
-                if (!(await uiConfirm(`Delete level "${level.label || 'this level'}" and all its spells?`, { title: 'Delete Spell Level', okText: 'Delete' }))) return;
-                // delete associated notes
-                for (const sp of level.spells) {
-                    _spellNotesCache.delete(sp.id);
-                    await deleteText(textKey_spellNotes(sp.id));
-                }
-                _state.character.spells.levels.splice(levelIndex, 1);
-                SaveManager.markDirty();
-                render();
-            });
+            deleteLevelBtn.addEventListener(
+                'click',
+                safeAsync(async () => {
+                    if (!(await uiConfirm(`Delete level "${level.label || 'this level'}" and all its spells?`, { title: 'Delete Spell Level', okText: 'Delete' }))) return;
+                    // delete associated notes
+                    for (const sp of level.spells) {
+                        _spellNotesCache.delete(sp.id);
+                        await deleteText(textKey_spellNotes(sp.id));
+                    }
+                    _state.character.spells.levels.splice(levelIndex, 1);
+                    SaveManager.markDirty();
+                    render();
+                }, (err) => {
+                    console.error(err);
+                    setStatus("Delete spell level failed.");
+                })
+            );
 
             actions.appendChild(addSpellBtn);
             actions.appendChild(resetExpBtn);
@@ -290,18 +305,24 @@ export function initSpellsPanel(deps = {}) {
                 'aria-expanded',
                 spell.notesCollapsed ? 'false' : 'true'
             );
-            collapseBtn.addEventListener('click', async () => {
-                spell.notesCollapsed = !spell.notesCollapsed;
-                if (!spell.notesCollapsed) {
-                    await ensureSpellNotesLoaded(spell.id);
-                }
-                collapseBtn.setAttribute(
-                    'aria-expanded',
-                    spell.notesCollapsed ? 'false' : 'true'
-                );
-                SaveManager.markDirty();
-                render();
-            });
+            collapseBtn.addEventListener(
+                'click',
+                safeAsync(async () => {
+                    spell.notesCollapsed = !spell.notesCollapsed;
+                    if (!spell.notesCollapsed) {
+                        await ensureSpellNotesLoaded(spell.id);
+                    }
+                    collapseBtn.setAttribute(
+                        'aria-expanded',
+                        spell.notesCollapsed ? 'false' : 'true'
+                    );
+                    SaveManager.markDirty();
+                    render();
+                }, (err) => {
+                    console.error(err);
+                    setStatus("Toggle spell notes failed.");
+                })
+            );
 
             const name = document.createElement('input');
             name.className = 'spellName';
@@ -376,14 +397,20 @@ export function initSpellsPanel(deps = {}) {
             del.type = 'button';
             del.className = 'danger';
             del.textContent = 'X';
-            del.addEventListener('click', async () => {
-                if (!(await uiConfirm(`Delete spell "${spell.name || 'this spell'}"?`, { title: 'Delete Spell', okText: 'Delete' }))) return;
-                level.spells.splice(spellIndex, 1);
-                _spellNotesCache.delete(spell.id);
-                await deleteText(textKey_spellNotes(spell.id));
-                SaveManager.markDirty();
-                render();
-            });
+            del.addEventListener(
+                'click',
+                safeAsync(async () => {
+                    if (!(await uiConfirm(`Delete spell "${spell.name || 'this spell'}"?`, { title: 'Delete Spell', okText: 'Delete' }))) return;
+                    level.spells.splice(spellIndex, 1);
+                    _spellNotesCache.delete(spell.id);
+                    await deleteText(textKey_spellNotes(spell.id));
+                    SaveManager.markDirty();
+                    render();
+                }, (err) => {
+                    console.error(err);
+                    setStatus("Delete spell failed.");
+                })
+            );
 
             mini.appendChild(up);
             mini.appendChild(down);

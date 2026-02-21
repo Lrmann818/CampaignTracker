@@ -5,6 +5,8 @@
 // - This module should ONLY own the Attacks panel UI.
 // - It should not call other Character-page wiring helpers (reorder, abilities, etc).
 // - It must be safe if init is called more than once (guard + no double event listeners).
+import { safeAsync } from "../../../ui/safeAsync.js";
+
 let _state = null;
 
 
@@ -13,11 +15,13 @@ export function initAttacksPanel(deps = {}) {
     SaveManager,
     uiConfirm,
     autoSizeInput,
+    setStatus,
   } = deps;
   _state = deps.state;
 
   if (!_state) throw new Error("initAttacksPanel requires state");
   if (!SaveManager) throw new Error("initAttacksPanel requires SaveManager");
+  if (!setStatus) throw new Error("initAttacksPanel requires setStatus");
 
   if (!_state.character) _state.character = {};
   if (!Array.isArray(_state.character.attacks)) _state.character.attacks = [];
@@ -120,11 +124,17 @@ export function initAttacksPanel(deps = {}) {
     del.className = "danger";
     del.textContent = "X";
     del.title = "Delete weapon";
-    del.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      await deleteAttack(a.id);
-    });
+    del.addEventListener(
+      "click",
+      safeAsync(async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await deleteAttack(a.id);
+      }, (err) => {
+        console.error(err);
+        setStatus("Delete weapon failed.");
+      })
+    );
 
     actions.appendChild(del);
 

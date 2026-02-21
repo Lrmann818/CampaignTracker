@@ -27,6 +27,7 @@ export function setupSettingsPanel(deps) {
   if (typeof applyTheme !== "function") throw new Error("setupSettingsPanel: applyTheme() is required");
   if (typeof markDirty !== "function") throw new Error("setupSettingsPanel: markDirty() is required");
   if (typeof flush !== "function") throw new Error("setupSettingsPanel: flush() is required");
+  if (!setStatus) throw new Error("setupSettingsPanel requires setStatus");
 
   initDataPanel({
     state,

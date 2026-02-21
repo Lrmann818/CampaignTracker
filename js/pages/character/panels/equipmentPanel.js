@@ -8,6 +8,7 @@
 
 import { bindNumber } from "../../../ui/bindings.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
+import { safeAsync } from "../../../ui/safeAsync.js";
 let _state = null;
 
 let _tabsEl = null;
@@ -22,6 +23,7 @@ let _SaveManager = null;
 let _uiPrompt = null;
 let _uiAlert = null;
 let _uiConfirm = null;
+let _setStatus = null;
 
 let _wired = false;
 
@@ -63,6 +65,8 @@ function initInventoryUI(deps = {}) {
   _uiPrompt = deps.uiPrompt;
   _uiAlert = deps.uiAlert;
   _uiConfirm = deps.uiConfirm;
+  _setStatus = deps.setStatus;
+  if (!_setStatus) throw new Error("initInventoryUI requires setStatus");
 
   if (!_tabsEl || !_notesBox) {
     console.warn("Inventory UI: missing required elements (tabsEl/notesBox).");
@@ -177,7 +181,9 @@ function wireHandlers() {
 
   // Add item
   // Add item (prompt first, cancel aborts)
-  _addBtn?.addEventListener("click", async () => {
+  _addBtn?.addEventListener(
+    "click",
+    safeAsync(async () => {
     // Save current notes into active item before anything else
     const cur = _state.character.inventoryItems?.[_state.character.activeInventoryIndex];
     if (cur) cur.notes = _notesBox.value;
@@ -210,12 +216,18 @@ function wireHandlers() {
 
     markDirty();
     renderInventoryTabs();
-    _notesBox.focus();
-  });
+      _notesBox.focus();
+    }, (err) => {
+      console.error(err);
+      _setStatus("Add inventory item failed.");
+    })
+  );
 
 
   // Rename item
-  _renameBtn?.addEventListener("click", async () => {
+  _renameBtn?.addEventListener(
+    "click",
+    safeAsync(async () => {
     const cur = _state.character.inventoryItems?.[_state.character.activeInventoryIndex];
     if (!cur) return;
 
@@ -227,11 +239,17 @@ function wireHandlers() {
 
     cur.title = String(proposed).trim() || cur.title || `Item ${_state.character.activeInventoryIndex + 1}`;
     markDirty();
-    renderInventoryTabs();
-  });
+      renderInventoryTabs();
+    }, (err) => {
+      console.error(err);
+      _setStatus("Rename inventory item failed.");
+    })
+  );
 
   // Delete item
-  _deleteBtn?.addEventListener("click", async (e) => {
+  _deleteBtn?.addEventListener(
+    "click",
+    safeAsync(async (e) => {
     if ((_state.character.inventoryItems?.length || 0) <= 1) {
       await _uiAlert?.("You need at least one inventory item.", { title: "Notice" });
       if (e?.target && "value" in e.target) e.target.value = "";
@@ -249,8 +267,12 @@ function wireHandlers() {
     _state.character.activeInventoryIndex = Math.max(0, idx - 1);
 
     markDirty();
-    renderInventoryTabs();
-  });
+      renderInventoryTabs();
+    }, (err) => {
+      console.error(err);
+      _setStatus("Delete inventory item failed.");
+    })
+  );
 }
 
 function switchInventoryItem(idx) {
@@ -272,7 +294,8 @@ export function initEquipmentPanel(deps = {}) {
     uiPrompt, 
     uiAlert, 
     uiConfirm, 
-    autoSizeInput 
+    autoSizeInput,
+    setStatus
   } = deps;
   _state = state;
 
@@ -280,6 +303,7 @@ export function initEquipmentPanel(deps = {}) {
     console.warn("initEquipmentPanel: missing state");
     return;
   }
+  if (!setStatus) throw new Error("initEquipmentPanel requires setStatus");
 
   // ---- Inventory tabs UI ----
   initInventoryUI({
@@ -293,6 +317,7 @@ export function initEquipmentPanel(deps = {}) {
     uiPrompt,
     uiAlert,
     uiConfirm,
+    setStatus,
   });
 
   // ---- Money tiles ----

@@ -4,6 +4,7 @@
 
 import { uiConfirm, uiAlert } from "./dialogs.js";
 import { enhanceSelectDropdown } from "./selectDropdown.js";
+import { safeAsync } from "./safeAsync.js";
 
 /**
  * @param {{
@@ -17,7 +18,7 @@ import { enhanceSelectDropdown } from "./selectDropdown.js";
  *  resetAll: ()=>Promise<any>|any,
  *  clearAllBlobs: ()=>Promise<any>|any,
  *  clearAllTexts: ()=>Promise<any>|any,
- *  setStatus?: (msg:string)=>void,
+ *  setStatus: (msg:string)=>void,
  *  Popovers?: any,
  * }} deps
  */
@@ -36,6 +37,7 @@ export function initDataPanel(deps) {
     setStatus,
     Popovers
   } = deps;
+  if (!setStatus) throw new Error("initDataPanel requires setStatus");
 
   const overlay = /** @type {HTMLElement|null} */ (document.getElementById("dataPanelOverlay"));
   const panel = /** @type {HTMLElement|null} */ (document.getElementById("dataPanelPanel"));
@@ -129,17 +131,25 @@ export function initDataPanel(deps) {
   if (exportBtn) exportBtn.addEventListener("click", () => exportBackup());
   if (importFile) importFile.addEventListener("change", (e) => importBackup(e));
 
-  if (resetAllBtn) resetAllBtn.addEventListener("click", async () => {
-    close();
-    await resetAll();
-  });
+  if (resetAllBtn) resetAllBtn.addEventListener(
+    "click",
+    safeAsync(async () => {
+      close();
+      await resetAll();
+    }, (err) => {
+      console.error(err);
+      setStatus("Reset all failed.");
+    })
+  );
 
-  if (resetUiBtn) resetUiBtn.addEventListener("click", async () => {
+  if (resetUiBtn) resetUiBtn.addEventListener(
+    "click",
+    safeAsync(async () => {
     const ok = await uiConfirm("Reset UI settings only?\n\nThis will reset theme + UI layout prefs (like last active tab). It will NOT delete your campaign data.");
     if (!ok) return;
 
     try {
-      setStatus?.("Resetting UI…");
+      setStatus("Resetting UI…");
       await flush?.();
 
       // Clear UI-only localStorage keys
@@ -154,21 +164,27 @@ export function initDataPanel(deps) {
       markDirty();
       await flush?.();
 
-      setStatus?.("UI reset. Reloading…");
+      setStatus("UI reset. Reloading…");
       location.reload();
     } catch (err) {
       console.error(err);
       await uiAlert("Could not reset UI settings. See console for details.");
-      setStatus?.("Reset UI failed");
+      setStatus("Reset UI failed");
     }
-  });
+    }, (err) => {
+      console.error(err);
+      setStatus("Reset UI failed.");
+    })
+  );
 
-  if (clearImagesBtn) clearImagesBtn.addEventListener("click", async () => {
+  if (clearImagesBtn) clearImagesBtn.addEventListener(
+    "click",
+    safeAsync(async () => {
     const ok = await uiConfirm("Clear ALL saved images?\n\nThis removes portraits and map images stored in your browser. Your campaign data stays.");
     if (!ok) return;
 
     try {
-      setStatus?.("Clearing images…");
+      setStatus("Clearing images…");
       await flush?.();
 
       // Remove blob references from state to avoid dangling ids
@@ -180,33 +196,45 @@ export function initDataPanel(deps) {
       // Clear IndexedDB blobs
       await clearAllBlobs?.();
 
-      setStatus?.("Images cleared. Reloading…");
+      setStatus("Images cleared. Reloading…");
       location.reload();
     } catch (err) {
       console.error(err);
       await uiAlert("Could not clear images. See console for details.");
-      setStatus?.("Clear images failed");
+      setStatus("Clear images failed");
     }
-  });
+    }, (err) => {
+      console.error(err);
+      setStatus("Clear images failed.");
+    })
+  );
 
-  if (clearTextsBtn) clearTextsBtn.addEventListener("click", async () => {
+  if (clearTextsBtn) clearTextsBtn.addEventListener(
+    "click",
+    safeAsync(async () => {
     const ok = await uiConfirm("Clear ALL saved long texts (notes) stored in the browser?\n\nThis does not delete your campaign cards, but it will remove any large notes stored separately.");
     if (!ok) return;
 
     try {
-      setStatus?.("Clearing texts…");
+      setStatus("Clearing texts…");
       await flush?.();
       await clearAllTexts?.();
-      setStatus?.("Texts cleared. Reloading…");
+      setStatus("Texts cleared. Reloading…");
       location.reload();
     } catch (err) {
       console.error(err);
       await uiAlert("Could not clear texts. See console for details.");
-      setStatus?.("Clear texts failed");
+      setStatus("Clear texts failed");
     }
-  });
+    }, (err) => {
+      console.error(err);
+      setStatus("Clear texts failed.");
+    })
+  );
 
-  if (aboutBtn) aboutBtn.addEventListener("click", async () => {
+  if (aboutBtn) aboutBtn.addEventListener(
+    "click",
+    safeAsync(async () => {
     const appName = (state?.tracker && typeof state.tracker.campaignTitle === "string" && state.tracker.campaignTitle.trim())
       ? state.tracker.campaignTitle.trim()
       : "My Campaign Tracker";
@@ -227,8 +255,12 @@ export function initDataPanel(deps) {
       `• UI tab: ${storageKeys?.ACTIVE_TAB_KEY || "(unknown)"}`,
     ].filter(Boolean);
 
-    await uiAlert(lines.join("\n"), { title: "About" });
-  });
+      await uiAlert(lines.join("\n"), { title: "About" });
+    }, (err) => {
+      console.error(err);
+      setStatus("Open about failed.");
+    })
+  );
 }
 
 function buildThemeOptions(select) {

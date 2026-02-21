@@ -339,6 +339,7 @@ export function initNpcsPanel(deps = {}) {
   if (!_state) throw new Error("initNpcsPanel requires state");
   if (!_blobIdToObjectUrl) throw new Error("initNpcsPanel requires blobIdToObjectUrl");
   if (!_autoSizeInput) throw new Error("initNpcsPanel requires autoSizeInput");
+  if (!setStatus) throw new Error("initNpcsPanel requires setStatus");
   if (!SaveManager) throw new Error("initNpcsPanel: missing SaveManager");
   if (!makeNpc) throw new Error("initNpcsPanel: missing makeNpc");
 
@@ -543,6 +544,7 @@ export function initNpcsPanel(deps = {}) {
     uiPrompt,
     uiAlert,
     uiConfirm,
+    setStatus,
     addSectionBtn,
     renameSectionBtn,
     deleteSectionBtn,

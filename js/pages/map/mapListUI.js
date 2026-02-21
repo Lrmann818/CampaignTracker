@@ -1,6 +1,7 @@
 // js/pages/map/mapListUI.js
 
 import { enhanceSelectDropdown } from "../../ui/selectDropdown.js";
+import { safeAsync } from "../../ui/safeAsync.js";
 import {
   loadMapBackgroundImage,
   loadMapDrawingLayer
@@ -31,8 +32,11 @@ export function initMapListUI({
   // UI helpers from toolbar module / mapPage:
   setActiveToolUI,
   setActiveColorUI,
-  renderMap
+  renderMap,
+  setStatus
 }) {
+  if (!setStatus) throw new Error("initMapListUI requires setStatus");
+
   const mapSelect = document.getElementById("mapSelect");
   const addMapBtn = document.getElementById("addMapBtn");
   const renameMapBtn = document.getElementById("renameMapBtn");
@@ -92,50 +96,74 @@ export function initMapListUI({
     await loadActiveMapIntoCanvas();
   }
 
-  addMapBtn?.addEventListener("click", async () => {
-    const name = await uiPrompt("Name for the new map?", { defaultValue: "New Map", title: "New Map" });
-    if (name == null) return;
-    const mp = newMapEntry(name.trim() || "New Map");
-    state.map.maps.push(mp);
-    await switchMap(mp.id);
-  });
+  addMapBtn?.addEventListener(
+    "click",
+    safeAsync(async () => {
+      const name = await uiPrompt("Name for the new map?", { defaultValue: "New Map", title: "New Map" });
+      if (name == null) return;
+      const mp = newMapEntry(name.trim() || "New Map");
+      state.map.maps.push(mp);
+      await switchMap(mp.id);
+    }, (err) => {
+      console.error(err);
+      setStatus("Add map failed.");
+    })
+  );
 
-  renameMapBtn?.addEventListener("click", async () => {
-    const mp = getActiveMap();
-    const name = await uiPrompt("Rename map", { defaultValue: mp.name || "Map", title: "Rename Map" });
-    if (name == null) return;
-    mp.name = name.trim() || mp.name;
-    SaveManager.markDirty(); refreshMapSelect();
-  });
+  renameMapBtn?.addEventListener(
+    "click",
+    safeAsync(async () => {
+      const mp = getActiveMap();
+      const name = await uiPrompt("Rename map", { defaultValue: mp.name || "Map", title: "Rename Map" });
+      if (name == null) return;
+      mp.name = name.trim() || mp.name;
+      SaveManager.markDirty(); refreshMapSelect();
+    }, (err) => {
+      console.error(err);
+      setStatus("Rename map failed.");
+    })
+  );
 
-  deleteMapBtn?.addEventListener("click", async () => {
-    if (state.map.maps.length <= 1) {
-      await uiAlert("You must keep at least one map.", { title: "Notice" });
-      return;
-    }
-    const mp = getActiveMap();
-    const ok = await uiConfirm(`Delete map "${mp.name || "Map"}"? This cannot be undone.`, { title: "Delete Map", okText: "Delete" });
-    if (!ok) return;
+  deleteMapBtn?.addEventListener(
+    "click",
+    safeAsync(async () => {
+      if (state.map.maps.length <= 1) {
+        await uiAlert("You must keep at least one map.", { title: "Notice" });
+        return;
+      }
+      const mp = getActiveMap();
+      const ok = await uiConfirm(`Delete map "${mp.name || "Map"}"? This cannot be undone.`, { title: "Delete Map", okText: "Delete" });
+      if (!ok) return;
 
-    if (mp.bgBlobId) {
-      try { await deleteBlob(mp.bgBlobId); }
-      catch (err) { console.warn("Failed to delete map image blob:", err); }
-    }
-    if (mp.drawingBlobId) {
-      try { await deleteBlob(mp.drawingBlobId); }
-      catch (err) { console.warn("Failed to delete map image blob:", err); }
-    }
+      if (mp.bgBlobId) {
+        try { await deleteBlob(mp.bgBlobId); }
+        catch (err) { console.warn("Failed to delete map image blob:", err); }
+      }
+      if (mp.drawingBlobId) {
+        try { await deleteBlob(mp.drawingBlobId); }
+        catch (err) { console.warn("Failed to delete map image blob:", err); }
+      }
 
-    state.map.maps = state.map.maps.filter(m => m.id !== mp.id);
-    if (!state.map.maps.length) state.map.maps = [newMapEntry("World Map")];
-    state.map.activeMapId = state.map.maps[0].id;
-    SaveManager.markDirty(); refreshMapSelect();
-    await loadActiveMapIntoCanvas();
-  });
+      state.map.maps = state.map.maps.filter(m => m.id !== mp.id);
+      if (!state.map.maps.length) state.map.maps = [newMapEntry("World Map")];
+      state.map.activeMapId = state.map.maps[0].id;
+      SaveManager.markDirty(); refreshMapSelect();
+      await loadActiveMapIntoCanvas();
+    }, (err) => {
+      console.error(err);
+      setStatus("Delete map failed.");
+    })
+  );
 
-  mapSelect?.addEventListener("change", async () => {
-    await switchMap(mapSelect.value);
-  });
+  mapSelect?.addEventListener(
+    "change",
+    safeAsync(async () => {
+      await switchMap(mapSelect.value);
+    }, (err) => {
+      console.error(err);
+      setStatus("Switch map failed.");
+    })
+  );
 
   refreshMapSelect();
   loadActiveMapIntoCanvas();

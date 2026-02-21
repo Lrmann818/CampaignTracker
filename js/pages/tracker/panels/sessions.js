@@ -2,6 +2,7 @@
 // Renders the Sessions tab strip + notes box and wires the toolbar buttons.
 
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
+import { safeAsync } from "../../../ui/safeAsync.js";
 
 let _tabsEl = null;
 let _notesBox = null;
@@ -17,6 +18,7 @@ let _uiPrompt = null;
 let _uiAlert = null;
 let _uiConfirm = null;
 let _state = null;
+let _setStatus = null;
 
 let _wired = false;
 
@@ -61,11 +63,13 @@ export function initSessionsPanel(deps = {}) {
   _uiPrompt = deps.uiPrompt;
   _uiAlert = deps.uiAlert;
   _uiConfirm = deps.uiConfirm;
+  _setStatus = deps.setStatus;
 
   if (!_state) {
     console.warn("Sessions UI: missing required dependency (state).");
     return;
   }
+  if (!_setStatus) throw new Error("initSessionsPanel requires setStatus");
 
   if (!_tabsEl || !_notesBox) {
     console.warn("Sessions UI: missing required elements (tabsEl/notesBox).");
@@ -183,43 +187,55 @@ function wireHandlers() {
   });
 
   // Rename session
-  _renameBtn?.addEventListener("click", async () => {
-    const cur = _state.tracker.sessions?.[_state.tracker.activeSessionIndex];
-    if (!cur) return;
+  _renameBtn?.addEventListener(
+    "click",
+    safeAsync(async () => {
+      const cur = _state.tracker.sessions?.[_state.tracker.activeSessionIndex];
+      if (!cur) return;
 
-    const proposed = await _uiPrompt?.("Rename session tab to:", {
-      defaultValue: cur.title || "",
-      title: "Rename Session"
-    });
-    if (proposed === null || proposed === undefined) return; // cancelled
+      const proposed = await _uiPrompt?.("Rename session tab to:", {
+        defaultValue: cur.title || "",
+        title: "Rename Session"
+      });
+      if (proposed === null || proposed === undefined) return; // cancelled
 
-    cur.title = String(proposed).trim() || cur.title || `Session ${_state.tracker.activeSessionIndex + 1}`;
-    markDirty();
-    renderSessionTabs();
-  });
+      cur.title = String(proposed).trim() || cur.title || `Session ${_state.tracker.activeSessionIndex + 1}`;
+      markDirty();
+      renderSessionTabs();
+    }, (err) => {
+      console.error(err);
+      _setStatus("Rename session failed.");
+    })
+  );
 
   // Delete session
-  _deleteBtn?.addEventListener("click", async (e) => {
-    if ((_state.tracker.sessions?.length || 0) <= 1) {
-      await _uiAlert?.("You need at least one session.", { title: "Notice" });
-      // (legacy) some handlers tried to clear inputs; keep harmless
-      if (e?.target && "value" in e.target) e.target.value = "";
-      return;
-    }
+  _deleteBtn?.addEventListener(
+    "click",
+    safeAsync(async (e) => {
+      if ((_state.tracker.sessions?.length || 0) <= 1) {
+        await _uiAlert?.("You need at least one session.", { title: "Notice" });
+        // (legacy) some handlers tried to clear inputs; keep harmless
+        if (e?.target && "value" in e.target) e.target.value = "";
+        return;
+      }
 
-    const ok = await _uiConfirm?.("Delete this session? This cannot be undone.", {
-      title: "Delete Session",
-      okText: "Delete"
-    });
-    if (!ok) return;
+      const ok = await _uiConfirm?.("Delete this session? This cannot be undone.", {
+        title: "Delete Session",
+        okText: "Delete"
+      });
+      if (!ok) return;
 
-    const idx = _state.tracker.activeSessionIndex;
-    _state.tracker.sessions.splice(idx, 1);
-    _state.tracker.activeSessionIndex = Math.max(0, idx - 1);
+      const idx = _state.tracker.activeSessionIndex;
+      _state.tracker.sessions.splice(idx, 1);
+      _state.tracker.activeSessionIndex = Math.max(0, idx - 1);
 
-    markDirty();
-    renderSessionTabs();
-  });
+      markDirty();
+      renderSessionTabs();
+    }, (err) => {
+      console.error(err);
+      _setStatus("Delete session failed.");
+    })
+  );
 }
 
 function switchSession(newIndex) {

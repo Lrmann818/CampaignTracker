@@ -55,6 +55,7 @@ export function initTrackerPage(deps) {
 
   if (!state) throw new Error("initTrackerPage: state is required");
   if (!SaveManager) throw new Error("initTrackerPage: SaveManager is required");
+  if (!setStatus) throw new Error("initTrackerPage requires setStatus");
 
   // ----- Campaign title -----
   bindContentText({
@@ -95,6 +96,7 @@ export function initTrackerPage(deps) {
     uiPrompt,
     uiAlert,
     uiConfirm,
+    setStatus,
   });
 
   // ----- Cards UIs -----

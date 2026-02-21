@@ -1,5 +1,7 @@
 // js/pages/map/mapToolbarUI.js
 
+import { safeAsync } from "../../ui/safeAsync.js";
+
 export function initMapToolbarUI({
   state,
   SaveManager,
@@ -11,8 +13,11 @@ export function initMapToolbarUI({
   colorFromKey,
   undo,
   redo,
-  clearDrawing
+  clearDrawing,
+  setStatus
 }) {
+  if (!setStatus) throw new Error("initMapToolbarUI requires setStatus");
+
   const safePositionMenuOnScreen =
     typeof positionMenuOnScreen === "function" ? positionMenuOnScreen : () => { };
   const toolBtn = document.getElementById("toolDropdownBtn");
@@ -173,7 +178,15 @@ export function initMapToolbarUI({
 
   document.getElementById("undoBtn")?.addEventListener("click", undo);
   document.getElementById("redoBtn")?.addEventListener("click", redo);
-  document.getElementById("clearMapBtn")?.addEventListener("click", async () => { await clearDrawing(); });
+  document.getElementById("clearMapBtn")?.addEventListener(
+    "click",
+    safeAsync(async () => {
+      await clearDrawing();
+    }, (err) => {
+      console.error(err);
+      setStatus("Clear map failed.");
+    })
+  );
 
   return { applyMapInteractionMode, setActiveToolUI, setActiveColorUI };
 }

@@ -312,6 +312,7 @@ export function initLocationsPanel(deps = {}) {
   _blobIdToObjectUrl = blobIdToObjectUrl || _blobIdToObjectUrl;
   if (!_state) throw new Error("initLocationsPanel requires state");
   if (!_blobIdToObjectUrl) throw new Error("initLocationsPanel requires blobIdToObjectUrl");
+  if (!setStatus) throw new Error("initLocationsPanel requires setStatus");
   if (!SaveManager) throw new Error("initLocationsPanel: missing SaveManager");
   if (!makeLocation) throw new Error("initLocationsPanel: missing makeLocation");
 
@@ -505,6 +506,7 @@ export function initLocationsPanel(deps = {}) {
     uiPrompt,
     uiAlert,
     uiConfirm,
+    setStatus,
     addSectionBtn,
     renameSectionBtn,
     deleteSectionBtn,

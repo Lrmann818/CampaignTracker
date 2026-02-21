@@ -16,6 +16,7 @@ import { createMapPointerHandlers } from "./mapPointerHandlers.js";
 import { createMapBackgroundActions } from "./mapBackgroundActions.js";
 import { initMapListUI } from "./mapListUI.js";
 import { initMapToolbarUI } from "./mapToolbarUI.js";
+import { safeAsync } from "../../ui/safeAsync.js";
 
 let _uiAlert = null;
 
@@ -43,11 +44,11 @@ export function setupMapPage({
   if (!getActiveMap) throw new Error("setupMapPage: getActiveMap is required");
   if (!newMapEntry) throw new Error("setupMapPage: newMapEntry is required");
   if (!uiAlert) throw new Error("setupMapPage: uiAlert is required");
+  if (!setStatus) throw new Error("setupMapPage requires setStatus");
 
   _uiAlert = uiAlert;
 
   // Make optional deps safe to call (prevents "is not a function" crashes)
-  const safeSetStatus = typeof setStatus === "function" ? setStatus : () => { };
   const safePositionMenuOnScreen =
     typeof positionMenuOnScreen === "function" ? positionMenuOnScreen : () => { };
   const safeUiConfirm = typeof uiConfirm === "function" ? uiConfirm : () => false;
@@ -116,7 +117,7 @@ export function setupMapPage({
     });
 
     const bgActions = createMapBackgroundActions({
-      setStatus: safeSetStatus,
+      setStatus,
       uiAlert: _uiAlert,
       SaveManager,
       getActiveMap,
@@ -148,7 +149,8 @@ export function setupMapPage({
       colorFromKey,
       undo,
       redo,
-      clearDrawing
+      clearDrawing,
+      setStatus
     });
 
     initMapListUI({
@@ -172,11 +174,18 @@ export function setupMapPage({
       commitDrawingSnapshot,
       setActiveToolUI,
       setActiveColorUI,
-      renderMap
+      renderMap,
+      setStatus
     });
 
     document.getElementById("mapImageInput").addEventListener("change", bgActions.setMapImage);
-    document.getElementById("removeMapImageBtn").addEventListener("click", bgActions.removeMapImage);
+    document.getElementById("removeMapImageBtn").addEventListener(
+      "click",
+      safeAsync(bgActions.removeMapImage, (err) => {
+        console.error(err);
+        setStatus("Remove map image failed.");
+      })
+    );
 
     canvas.addEventListener("pointerdown", pointerHandlers.onPointerDown);
     canvas.addEventListener("pointermove", pointerHandlers.onPointerMove);

@@ -38,6 +38,7 @@ export function initCharacterPageUI(deps) {
 
   if (!state) throw new Error("initCharacterPageUI: state is required");
   if (!SaveManager) throw new Error("initCharacterPageUI: SaveManager is required");
+  if (!setStatus) throw new Error("initCharacterPageUI requires setStatus");
 
   // Initialize spells panel
   initSpellsPanel(deps);

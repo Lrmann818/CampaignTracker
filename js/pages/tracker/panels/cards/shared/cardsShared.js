@@ -1,3 +1,5 @@
+import { safeAsync } from "../../../../../ui/safeAsync.js";
+
 export function makeSectionId(prefix) {
   return `${prefix}_` + Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -64,6 +66,7 @@ export function wireSectionCrud({
   uiPrompt,
   uiAlert,
   uiConfirm,
+  setStatus,
 
   addSectionBtn,
   renameSectionBtn,
@@ -91,75 +94,95 @@ export function wireSectionCrud({
   missingConfirmMessage = "This action needs the in-app confirm dialog, but it isn't available.",
   missingConfirmTitle = "Missing Dialog",
 }) {
-  addSectionBtn.addEventListener("click", async () => {
-    if (!uiPrompt) {
-      await uiAlert?.(missingPromptMessage, { title: missingPromptTitle });
-      return;
-    }
+  if (!setStatus) throw new Error("wireSectionCrud requires setStatus");
 
-    const nextNum = (state.tracker[sectionsKey]?.length || 0) + 1;
-    const proposed = await uiPrompt(newPromptLabel, {
-      defaultValue: `Section ${nextNum}`,
-      title: newTitle,
-    });
-    if (proposed === null) return;
+  addSectionBtn.addEventListener(
+    "click",
+    safeAsync(async () => {
+      if (!uiPrompt) {
+        await uiAlert?.(missingPromptMessage, { title: missingPromptTitle });
+        return;
+      }
 
-    const name = proposed.trim() || `Section ${nextNum}`;
-    const sec = { id: makeSectionId(idPrefix), name };
-    state.tracker[sectionsKey].push(sec);
-    state.tracker[activeKey] = sec.id;
+      const nextNum = (state.tracker[sectionsKey]?.length || 0) + 1;
+      const proposed = await uiPrompt(newPromptLabel, {
+        defaultValue: `Section ${nextNum}`,
+        title: newTitle,
+      });
+      if (proposed === null) return;
 
-    SaveManager.markDirty();
-    renderTabs();
-    renderCards();
-  });
+      const name = proposed.trim() || `Section ${nextNum}`;
+      const sec = { id: makeSectionId(idPrefix), name };
+      state.tracker[sectionsKey].push(sec);
+      state.tracker[activeKey] = sec.id;
 
-  renameSectionBtn.addEventListener("click", async () => {
-    const sec = state.tracker[sectionsKey].find(s => s.id === state.tracker[activeKey]);
-    if (!sec) return;
+      SaveManager.markDirty();
+      renderTabs();
+      renderCards();
+    }, (err) => {
+      console.error(err);
+      setStatus("Add section failed.");
+    })
+  );
 
-    if (!uiPrompt) {
-      await uiAlert?.(missingPromptMessage, { title: missingPromptTitle });
-      return;
-    }
+  renameSectionBtn.addEventListener(
+    "click",
+    safeAsync(async () => {
+      const sec = state.tracker[sectionsKey].find(s => s.id === state.tracker[activeKey]);
+      if (!sec) return;
 
-    const proposed = await uiPrompt(renamePromptLabel, {
-      defaultValue: sec.name || "",
-      title: renameTitle,
-    });
-    if (proposed === null) return;
+      if (!uiPrompt) {
+        await uiAlert?.(missingPromptMessage, { title: missingPromptTitle });
+        return;
+      }
 
-    sec.name = proposed.trim() || sec.name || "Section";
-    SaveManager.markDirty();
-    renderTabs();
-  });
+      const proposed = await uiPrompt(renamePromptLabel, {
+        defaultValue: sec.name || "",
+        title: renameTitle,
+      });
+      if (proposed === null) return;
 
-  deleteSectionBtn.addEventListener("click", async () => {
-    if ((state.tracker[sectionsKey]?.length || 0) <= 1) {
-      await uiAlert?.(minSectionsMessage, { title: minSectionsTitle });
-      return;
-    }
+      sec.name = proposed.trim() || sec.name || "Section";
+      SaveManager.markDirty();
+      renderTabs();
+    }, (err) => {
+      console.error(err);
+      setStatus("Rename section failed.");
+    })
+  );
 
-    const sec = state.tracker[sectionsKey].find(s => s.id === state.tracker[activeKey]);
-    if (!sec) return;
+  deleteSectionBtn.addEventListener(
+    "click",
+    safeAsync(async () => {
+      if ((state.tracker[sectionsKey]?.length || 0) <= 1) {
+        await uiAlert?.(minSectionsMessage, { title: minSectionsTitle });
+        return;
+      }
 
-    if (!uiConfirm) {
-      await uiAlert?.(missingConfirmMessage, { title: missingConfirmTitle });
-      return;
-    }
+      const sec = state.tracker[sectionsKey].find(s => s.id === state.tracker[activeKey]);
+      if (!sec) return;
 
-    const ok = await uiConfirm(deleteConfirmText(sec.name), { title: deleteTitle, okText: "Delete" });
-    if (!ok) return;
+      if (!uiConfirm) {
+        await uiAlert?.(missingConfirmMessage, { title: missingConfirmTitle });
+        return;
+      }
 
-    const deleteId = sec.id;
-    state.tracker[sectionsKey] = state.tracker[sectionsKey].filter(s => s.id !== deleteId);
-    const fallbackId = state.tracker[sectionsKey][0].id;
+      const ok = await uiConfirm(deleteConfirmText(sec.name), { title: deleteTitle, okText: "Delete" });
+      if (!ok) return;
 
-    onDeleteMoveItems(deleteId, fallbackId);
-    state.tracker[activeKey] = fallbackId;
+      const deleteId = sec.id;
+      state.tracker[sectionsKey] = state.tracker[sectionsKey].filter(s => s.id !== deleteId);
+      const fallbackId = state.tracker[sectionsKey][0].id;
 
-    SaveManager.markDirty();
-    renderTabs();
-    renderCards();
-  });
+      onDeleteMoveItems(deleteId, fallbackId);
+      state.tracker[activeKey] = fallbackId;
+
+      SaveManager.markDirty();
+      renderTabs();
+      renderCards();
+    }, (err) => {
+      console.error(err);
+      setStatus("Delete section failed.");
+    })
+  );
 }

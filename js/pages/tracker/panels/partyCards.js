@@ -323,6 +323,7 @@ export function initPartyPanel(deps = {}) {
   if (!_state) throw new Error("initPartyPanel requires state");
   if (!_blobIdToObjectUrl) throw new Error("initPartyPanel requires blobIdToObjectUrl");
   if (!_autoSizeInput) throw new Error("initPartyPanel requires autoSizeInput");
+  if (!setStatus) throw new Error("initPartyPanel requires setStatus");
   if (!SaveManager) throw new Error("initPartyPanel: missing SaveManager");
   if (!makePartyMember) throw new Error("initPartyPanel: missing makePartyMember");
 
@@ -501,6 +502,7 @@ export function initPartyPanel(deps = {}) {
     uiPrompt,
     uiAlert,
     uiConfirm,
+    setStatus,
     addSectionBtn,
     renameSectionBtn,
     deleteSectionBtn,

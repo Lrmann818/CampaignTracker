@@ -1,6 +1,8 @@
 // js/features/imageCropper.js
 // Shared portrait-cropping modal + aspect helper.
 
+import { safeAsync } from "../ui/safeAsync.js";
+
 /**
  * Returns the aspect ratio (width/height) of the first element matching selector.
  * Falls back to 1 if the element is missing or has zero size.
@@ -25,9 +27,12 @@ export async function cropImageModal(
     aspect = 1, // 1 = square
     outSize = 512, // output width/height in px
     mime = "image/webp",
-    quality = 0.9
+    quality = 0.9,
+    setStatus
   } = {}
 ) {
+  if (!setStatus) throw new Error("cropImageModal requires setStatus");
+
   // Basic feature detection for webp
   const test = document.createElement("canvas");
   const canWebp = test.toDataURL("image/webp").startsWith("data:image/webp");
@@ -240,31 +245,37 @@ export async function cropImageModal(
       resolve(null);
     });
 
-    saveBtn.addEventListener("click", async () => {
-      // Render final crop to output canvas
-      const out = document.createElement("canvas");
-      out.width = outSize;
-      out.height = Math.round(outSize / aspect);
-      const octx = out.getContext("2d");
+    saveBtn.addEventListener(
+      "click",
+      safeAsync(async () => {
+        // Render final crop to output canvas
+        const out = document.createElement("canvas");
+        out.width = outSize;
+        out.height = Math.round(outSize / aspect);
+        const octx = out.getContext("2d");
 
-      // Map from canvas draw back to image coordinates
-      const drawW = img.width * scale;
-      const drawH = img.height * scale;
-      const x = (canvas.width - drawW) / 2 + offsetX;
-      const y = (canvas.height - drawH) / 2 + offsetY;
+        // Map from canvas draw back to image coordinates
+        const drawW = img.width * scale;
+        const drawH = img.height * scale;
+        const x = (canvas.width - drawW) / 2 + offsetX;
+        const y = (canvas.height - drawH) / 2 + offsetY;
 
-      // We want the visible canvas region; compute which part of the image is visible
-      const sx = (0 - x) / scale;
-      const sy = (0 - y) / scale;
-      const sw = canvas.width / scale;
-      const sh = canvas.height / scale;
+        // We want the visible canvas region; compute which part of the image is visible
+        const sx = (0 - x) / scale;
+        const sy = (0 - y) / scale;
+        const sw = canvas.width / scale;
+        const sh = canvas.height / scale;
 
-      octx.drawImage(img, sx, sy, sw, sh, 0, 0, out.width, out.height);
+        octx.drawImage(img, sx, sy, sw, sh, 0, 0, out.width, out.height);
 
-      const blob = await new Promise((res) => out.toBlob(res, mime, quality));
-      cleanup();
-      resolve(blob);
-    });
+        const blob = await new Promise((res) => out.toBlob(res, mime, quality));
+        cleanup();
+        resolve(blob);
+      }, (err) => {
+        console.error(err);
+        setStatus("Save image failed.");
+      })
+    );
 
     // Initial draw
     clampPan();

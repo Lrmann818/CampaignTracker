@@ -2,6 +2,7 @@
 // Character page Vitals panel (Vitals numbers + resource trackers)
 
 import { numberOrNull } from "../../../utils/number.js";
+import { safeAsync } from "../../../ui/safeAsync.js";
 
 function setupVitalsTileReorder({ state, SaveManager, panelEl, gridEl }) {
   const panel = panelEl || document.getElementById("charVitalsPanel");
@@ -105,9 +106,11 @@ export function initVitalsPanel(deps = {}) {
     autoSizeInput,
     enhanceNumberSteppers,
     uiConfirm,
+    setStatus,
   } = deps;
 
   if (!state || !SaveManager || !bindNumber) return;
+  if (!setStatus) throw new Error("initVitalsPanel requires setStatus");
 
   if (!state.character) state.character = {};
 
@@ -233,17 +236,23 @@ export function initVitalsPanel(deps = {}) {
       del.title = "Remove this resource";
       del.textContent = "✖";
       del.disabled = (state.character.resources.length <= 1);
-      del.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (state.character.resources.length <= 1) return;
-        const name = (r.name || "").trim();
-        const label = name ? `"${name}"` : "this resource tracker";
-        if (!(await uiConfirm(`Delete ${label}?`, { title: "Delete Resource", okText: "Delete" }))) return;
-        state.character.resources.splice(idx, 1);
-        setAndSave();
-        renderResources();
-      });
+      del.addEventListener(
+        "click",
+        safeAsync(async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (state.character.resources.length <= 1) return;
+          const name = (r.name || "").trim();
+          const label = name ? `"${name}"` : "this resource tracker";
+          if (!(await uiConfirm(`Delete ${label}?`, { title: "Delete Resource", okText: "Delete" }))) return;
+          state.character.resources.splice(idx, 1);
+          setAndSave();
+          renderResources();
+        }, (err) => {
+          console.error(err);
+          setStatus("Delete resource failed.");
+        })
+      );
 
       header.appendChild(title);
 
