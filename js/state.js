@@ -100,6 +100,79 @@ export const state = {
   ui: { theme: "system", textareaHeights: {}, panelCollapsed: {} }
 };
 
+const DICE_LAST_DEFAULTS = Object.freeze({
+  count: 1,
+  sides: 20,
+  mod: 0,
+  mode: "normal"
+});
+
+function clampDiceSides(value) {
+  const n = Math.trunc(Number(value));
+  if (!Number.isFinite(n)) return DICE_LAST_DEFAULTS.sides;
+  return Math.max(2, Math.min(1000, n));
+}
+
+function normalizeDiceMode(mode) {
+  return (mode === "adv" || mode === "dis") ? mode : DICE_LAST_DEFAULTS.mode;
+}
+
+/**
+ * Apply runtime-only UI defaults after load/import migration.
+ * Dice count/mod are always reset on full load.
+ */
+export function normalizeState(data) {
+  if (!data || typeof data !== "object") return data;
+  if (!data.ui || typeof data.ui !== "object") data.ui = {};
+  if (!data.ui.dice || typeof data.ui.dice !== "object") data.ui.dice = {};
+  data.ui.dice.history = [];
+
+  const prevLast = (data.ui.dice.last && typeof data.ui.dice.last === "object") ? data.ui.dice.last : {};
+  data.ui.dice.last = {
+    ...prevLast,
+    count: DICE_LAST_DEFAULTS.count,
+    mod: DICE_LAST_DEFAULTS.mod,
+    sides: clampDiceSides(prevLast.sides),
+    mode: normalizeDiceMode(prevLast.mode)
+  };
+  if (!data.ui.calc || typeof data.ui.calc !== "object") data.ui.calc = {};
+  data.ui.calc.history = [];
+
+  return data;
+}
+
+/**
+ * Remove ephemeral UI from persistence/export payloads.
+ */
+export function sanitizeForSave(source, opts = {}) {
+  const { currentSchemaVersion = CURRENT_SCHEMA_VERSION } = opts;
+  const input = (source && typeof source === "object") ? source : {};
+
+  const serializableMap = { ...(input.map || {}) };
+  delete serializableMap.undo;
+  delete serializableMap.redo;
+
+  const serializableUi = { ...(input.ui || {}) };
+  delete serializableUi.dice;
+  if (serializableUi.calc && typeof serializableUi.calc === "object") {
+    const serializableCalc = { ...serializableUi.calc };
+    delete serializableCalc.history;
+    if (Object.keys(serializableCalc).length === 0) {
+      delete serializableUi.calc;
+    } else {
+      serializableUi.calc = serializableCalc;
+    }
+  }
+
+  return {
+    schemaVersion: input.schemaVersion ?? currentSchemaVersion,
+    tracker: input.tracker,
+    character: input.character,
+    map: serializableMap,
+    ui: serializableUi
+  };
+}
+
 
 // ---------- Map manager (multiple maps) ----------
 export function newMapEntry(name = "World Map") {
@@ -341,5 +414,5 @@ export function migrateState(raw) {
   }
 
   data.schemaVersion = CURRENT_SCHEMA_VERSION;
-  return data;
+  return normalizeState(data);
 }

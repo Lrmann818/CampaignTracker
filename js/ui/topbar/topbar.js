@@ -5,7 +5,12 @@ import { initTopbarClock } from "./topbarClock.js";
 import { initTopbarDiceRoller } from "./topbarDiceRoller.js";
 import { initTopbarCalculator } from "./topbarCalculator.js";
 
+let _activeTopbarUI = null;
+
 export function initTopbarUI(deps) {
+  _activeTopbarUI?.destroy?.();
+  _activeTopbarUI = null;
+
   const {
     state,
     SaveManager,
@@ -18,11 +23,23 @@ export function initTopbarUI(deps) {
   if (!state || !SaveManager || !Popovers || !positionMenuOnScreen || !setStatus) {
     // In production you could just return, but during refactor this is safer.
     console.warn("[topbar] Missing deps; calculator/dice not initialized.");
-    return;
+    return { destroy() { } };
   }
 
   // Boot widgets
-  initTopbarClock();
-  initTopbarCalculator({ state, SaveManager, Popovers, positionMenuOnScreen, setStatus });
-  initTopbarDiceRoller({ state, SaveManager, Popovers, positionMenuOnScreen, setStatus });
+  const clock = initTopbarClock();
+  const calculator = initTopbarCalculator({ state, SaveManager, Popovers, positionMenuOnScreen, setStatus });
+  const diceRoller = initTopbarDiceRoller({ state, SaveManager, Popovers, positionMenuOnScreen, setStatus });
+
+  const api = {
+    destroy() {
+      clock?.destroy?.();
+      calculator?.destroy?.();
+      diceRoller?.destroy?.();
+      if (_activeTopbarUI === api) _activeTopbarUI = null;
+    }
+  };
+
+  _activeTopbarUI = api;
+  return api;
 }

@@ -1,7 +1,13 @@
 // js/ui/topbar/topbarClock.js
+
+let _activeTopbarClock = null;
+
 export function initTopbarClock() {
+    _activeTopbarClock?.destroy?.();
+    _activeTopbarClock = null;
+
     const el = document.getElementById("topbarClock");
-    if (!el) return;
+    if (!el) return { destroy() { } };
 
     const fmt = new Intl.DateTimeFormat(undefined, {
         hour: "numeric",
@@ -16,6 +22,9 @@ export function initTopbarClock() {
         minute: "2-digit",
     });
 
+    let minuteAlignTimeout = 0;
+    let minuteInterval = 0;
+
     const tick = () => {
         const now = new Date();
         el.textContent = fmt.format(now);
@@ -25,8 +34,25 @@ export function initTopbarClock() {
     tick();
     // align updates to the minute boundary
     const msToNextMinute = 60000 - (Date.now() % 60000);
-    setTimeout(() => {
+    minuteAlignTimeout = window.setTimeout(() => {
         tick();
-        setInterval(tick, 60000);
+        minuteInterval = window.setInterval(tick, 60000);
     }, msToNextMinute);
+
+    const api = {
+        destroy() {
+            if (minuteAlignTimeout) {
+                clearTimeout(minuteAlignTimeout);
+                minuteAlignTimeout = 0;
+            }
+            if (minuteInterval) {
+                clearInterval(minuteInterval);
+                minuteInterval = 0;
+            }
+            if (_activeTopbarClock === api) _activeTopbarClock = null;
+        }
+    };
+
+    _activeTopbarClock = api;
+    return api;
 }

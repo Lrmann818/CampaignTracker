@@ -2,7 +2,12 @@
 
 import { createTopbarPopover } from "./topbarPopover.js";
 
+let _activeTopbarCalculator = null;
+
 export function initTopbarCalculator(deps) {
+    _activeTopbarCalculator?.destroy?.();
+    _activeTopbarCalculator = null;
+
     const {
         state,
         SaveManager,
@@ -19,7 +24,18 @@ export function initTopbarCalculator(deps) {
     const keys = menu?.querySelector(".calcKeys");
     const histEl = document.getElementById("calcHistory");
 
-    if (!dd || !btn || !menu || !closeBtn || !display || !keys || !histEl) return;
+    if (!dd || !btn || !menu || !closeBtn || !display || !keys || !histEl) return { destroy() { } };
+
+    const listenerController = new AbortController();
+    const listenerSignal = listenerController.signal;
+    const addListener = (target, type, handler, options) => {
+        if (!target || typeof target.addEventListener !== "function") return;
+        const listenerOptions =
+            typeof options === "boolean"
+                ? { capture: options }
+                : (options || {});
+        target.addEventListener(type, handler, { ...listenerOptions, signal: listenerSignal });
+    };
 
     // persisted state bucket
     if (!state.ui) state.ui = {};
@@ -62,7 +78,7 @@ export function initTopbarCalculator(deps) {
             row.className = "calcHistItem";
             row.textContent = item;
             row.title = "Click to copy result back to input";
-            row.addEventListener("click", () => {
+            addListener(row, "click", () => {
                 // item format: "2+2 = 4"
                 const parts = String(item).split("=");
                 const rhs = (parts[1] || "").trim();
@@ -334,19 +350,19 @@ export function initTopbarCalculator(deps) {
         display.focus();
     }
 
-    keys.addEventListener("click", (e) => {
+    addListener(keys, "click", (e) => {
         const b = e.target.closest("button[data-k]");
         if (!b) return;
         doKey(b.dataset.k);
     });
 
     // If they type directly, that’s fine too.
-    display.addEventListener("input", () => {
+    addListener(display, "input", () => {
         // no autosave needed; only save on successful equals / history change
     });
 
     // Make keyboard/numpad behave like clicking the on-screen keys
-    display.addEventListener("keydown", (e) => {
+    addListener(display, "keydown", (e) => {
         if (menu.hidden) return; // only when calculator is open
 
         const k = e.key;
@@ -402,4 +418,15 @@ export function initTopbarCalculator(deps) {
     });
 
     renderHistory();
+
+    const api = {
+        destroy() {
+            pop?.destroy?.();
+            listenerController.abort();
+            if (_activeTopbarCalculator === api) _activeTopbarCalculator = null;
+        }
+    };
+
+    _activeTopbarCalculator = api;
+    return api;
 }

@@ -3,7 +3,12 @@
 
 import { createTopbarPopover } from "./topbarPopover.js";
 
+let _activeTopbarDiceRoller = null;
+
 export function initTopbarDiceRoller(deps) {
+    _activeTopbarDiceRoller?.destroy?.();
+    _activeTopbarDiceRoller = null;
+
     const {
         state,
         SaveManager,
@@ -29,15 +34,24 @@ export function initTopbarDiceRoller(deps) {
     const presetBtns = menu?.querySelectorAll(".dicePreset");
     const modPlusEl = document.getElementById("diceModPlus");
 
-    if (!dd || !btn || !menu || !closeBtn || !countEl || !modEl || !rollBtn || !clearBtn || !histEl || !advBtn || !disBtn) return;
+    if (!dd || !btn || !menu || !closeBtn || !countEl || !modEl || !rollBtn || !clearBtn || !histEl || !advBtn || !disBtn) return { destroy() { } };
 
-    // persisted state bucket
+    const listenerController = new AbortController();
+    const listenerSignal = listenerController.signal;
+    const addListener = (target, type, handler, options) => {
+        if (!target || typeof target.addEventListener !== "function") return;
+        const listenerOptions =
+            typeof options === "boolean"
+                ? { capture: options }
+                : (options || {});
+        target.addEventListener(type, handler, { ...listenerOptions, signal: listenerSignal });
+    };
+
+    // Runtime state bucket.
     if (!state.ui) state.ui = {};
     if (!state.ui.dice) state.ui.dice = { history: [], last: { count: 1, sides: 20, mod: 0, mode: "normal" } };
     if (!Array.isArray(state.ui.dice.history)) state.ui.dice.history = [];
     if (!state.ui.dice.last) state.ui.dice.last = { count: 1, sides: 20, mod: 0, mode: "normal" };
-    // ✅ ALWAYS start Mod at 0 on page refresh
-    state.ui.dice.last.mod = 0;
     const HISTORY_MAX = 20;
 
     const syncModPlus = () => {
@@ -134,7 +148,7 @@ export function initTopbarDiceRoller(deps) {
             row.className = "diceHistRow";
             row.title = "Tap to copy";
             row.textContent = entry.text;
-            row.addEventListener("click", () => tryCopy(entry.text));
+            addListener(row, "click", () => tryCopy(entry.text));
             histEl.appendChild(row);
         });
     };
@@ -207,21 +221,21 @@ export function initTopbarDiceRoller(deps) {
 
 
     // buttons
-    rollBtn.addEventListener("click", (e) => {
+    addListener(rollBtn, "click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         state.ui.dice.last.mode = "normal";
         doRoll();
     });
 
-    advBtn.addEventListener("click", (e) => {
+    addListener(advBtn, "click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         state.ui.dice.last.mode = "adv";
         doRoll();
     });
 
-    disBtn.addEventListener("click", (e) => {
+    addListener(disBtn, "click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         state.ui.dice.last.mode = "dis";
@@ -229,7 +243,7 @@ export function initTopbarDiceRoller(deps) {
     });
 
     [countEl, modEl].forEach((el) => {
-        el.addEventListener("keydown", (e) => {
+        addListener(el, "keydown", (e) => {
             if (e.key === "Enter") {
                 e.preventDefault();
                 doRoll();
@@ -237,7 +251,7 @@ export function initTopbarDiceRoller(deps) {
         });
     });
 
-    clearBtn.addEventListener("click", (e) => {
+    addListener(clearBtn, "click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         state.ui.dice.history = [];
@@ -246,7 +260,7 @@ export function initTopbarDiceRoller(deps) {
     });
 
     presetBtns?.forEach((b) => {
-        b.addEventListener("click", (e) => {
+        addListener(b, "click", (e) => {
             e.preventDefault();
             e.stopPropagation();
 
@@ -263,12 +277,23 @@ export function initTopbarDiceRoller(deps) {
     });
 
 
-    modEl.addEventListener("input", syncModPlus);
-    modEl.addEventListener("change", syncModPlus);
+    addListener(modEl, "input", syncModPlus);
+    addListener(modEl, "change", syncModPlus);
 
     // Initial UI
     writeUi(state.ui.dice.last);
     syncModPlus();
     updateDiceIcon(Number(state.ui.dice.last.sides || 20));
     renderHistory();
+
+    const api = {
+        destroy() {
+            pop?.destroy?.();
+            listenerController.abort();
+            if (_activeTopbarDiceRoller === api) _activeTopbarDiceRoller = null;
+        }
+    };
+
+    _activeTopbarDiceRoller = api;
+    return api;
 }

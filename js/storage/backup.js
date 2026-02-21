@@ -65,8 +65,42 @@ function normalizeIncomingBackup(parsed) {
   return { incomingState: parsed, incomingBlobs: {}, incomingTexts: {} };
 }
 
+function sanitizeBackupState(state, sanitizeForSave) {
+  if (typeof sanitizeForSave === "function") return sanitizeForSave(state);
+
+  const serializableMap = { ...(state?.map || {}) };
+  delete serializableMap.undo;
+  delete serializableMap.redo;
+  const serializableUi = { ...(state?.ui || {}) };
+  delete serializableUi.dice;
+  if (serializableUi.calc && typeof serializableUi.calc === "object") {
+    const serializableCalc = { ...serializableUi.calc };
+    delete serializableCalc.history;
+    if (Object.keys(serializableCalc).length === 0) {
+      delete serializableUi.calc;
+    } else {
+      serializableUi.calc = serializableCalc;
+    }
+  }
+
+  return {
+    schemaVersion: state?.schemaVersion,
+    tracker: state?.tracker,
+    character: state?.character,
+    map: serializableMap,
+    ui: serializableUi
+  };
+}
+
 export async function exportBackup(deps) {
-  const { state, ensureMapManager, getBlob, blobToDataUrl, getAllTexts } = deps;
+  const {
+    state,
+    ensureMapManager,
+    getBlob,
+    blobToDataUrl,
+    getAllTexts,
+    sanitizeForSave
+  } = deps;
 
   // Collect all blob IDs used by state
   const ids = new Set();
@@ -96,10 +130,7 @@ export async function exportBackup(deps) {
   const backup = {
     version: 2,
     exportedAt: new Date().toISOString(),
-    state: {
-      ...state,
-      map: { ...state.map, undo: [], redo: [] }
-    },
+    state: sanitizeBackupState(state, sanitizeForSave),
     blobs,
     texts: await getAllTexts()
   };
@@ -130,7 +161,8 @@ export async function importBackup(e, deps) {
     putText,
     ACTIVE_TAB_KEY,
     STORAGE_KEY,
-    afterImport
+    afterImport,
+    sanitizeForSave
   } = deps;
 
   const file = e.target.files?.[0];
@@ -267,7 +299,7 @@ export async function importBackup(e, deps) {
     ensureMapManager?.();
 
     // Persist + active tab
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizeBackupState(state, sanitizeForSave))); } catch (_) {}
     try { localStorage.setItem(ACTIVE_TAB_KEY, state.ui?.activeTab || "tracker"); } catch (_) {}
 
     try { saveAll?.(); } catch (err) { console.warn("saveAll hook failed:", err); }

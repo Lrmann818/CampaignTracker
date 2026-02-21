@@ -2,6 +2,9 @@
 // Shared popover wiring for topbar widgets (calculator, dice roller, etc.).
 // Keeps topbar modules small + consistent while still allowing per-widget behavior.
 
+const popoverRegistrationByButton = new WeakMap();
+const activePopoverByButton = new WeakMap();
+
 export function createTopbarPopover(opts) {
   const {
     button,
@@ -27,9 +30,26 @@ export function createTopbarPopover(opts) {
 
   if (!button || !menu) return null;
 
+  const previousPopover = activePopoverByButton.get(button);
+  previousPopover?.destroy?.();
+  if (previousPopover) activePopoverByButton.delete(button);
+
+  const listenerController = new AbortController();
+  const listenerSignal = listenerController.signal;
+  const addListener = (target, type, handler, options) => {
+    if (!target || typeof target.addEventListener !== "function") return;
+    const listenerOptions =
+      typeof options === "boolean"
+        ? { capture: options }
+        : (options || {});
+    target.addEventListener(type, handler, { ...listenerOptions, signal: listenerSignal });
+  };
+
   const setExpanded = (isOpen) => {
     button.setAttribute("aria-expanded", isOpen ? "true" : "false");
   };
+
+  let popoverRegEntryForInstance = null;
 
   const position = () => {
     if (typeof positionMenuOnScreen === "function") {
@@ -53,30 +73,30 @@ export function createTopbarPopover(opts) {
     }
   };
 
-  const close = () => {
+  const close = ({ focus = focusReturnToButton } = {}) => {
     menu.hidden = true;
     setExpanded(false);
     if (typeof onClose === "function") onClose();
 
-    if (focusReturnToButton) {
+    if (focus) {
       button.focus?.({ preventScroll: true });
     }
   };
 
   const toggle = () => {
     if (menu.hidden) open();
-    else close();
+    else close({ focus: focusReturnToButton });
   };
 
   // --- Wiring ---
-  button.addEventListener("click", (e) => {
+  addListener(button, "click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     toggle();
   });
 
   if (closeButton) {
-    closeButton.addEventListener("click", (e) => {
+    addListener(closeButton, "click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       close();
@@ -84,11 +104,11 @@ export function createTopbarPopover(opts) {
   }
 
   if (stopInsideClick) {
-    menu.addEventListener("click", (e) => e.stopPropagation());
+    addListener(menu, "click", (e) => e.stopPropagation());
   }
 
   if (closeOnEsc) {
-    document.addEventListener("keydown", (e) => {
+    addListener(document, "keydown", (e) => {
       if (menu.hidden) return;
       if (e.key === "Escape") {
         e.preventDefault();
@@ -98,7 +118,8 @@ export function createTopbarPopover(opts) {
   }
 
   if (closeOnOutside) {
-    document.addEventListener(
+    addListener(
+      document,
       "click",
       (e) => {
         if (menu.hidden) return;
@@ -109,29 +130,59 @@ export function createTopbarPopover(opts) {
 
         close();
       },
-      true
+      { capture: true }
     );
   }
 
   // Register with centralized popover manager for resize reposition.
   // We keep Popovers' own close behavior disabled so we don't have two systems.
   if (Popovers && typeof Popovers.register === "function") {
-    Popovers.register({
-      button,
-      menu,
-      preferRight,
-      closeOnOutside: false,
-      closeOnEsc: false,
-      stopInsideClick: false,
-      wireButton: false,
-    });
+    const existingReg = popoverRegistrationByButton.get(button);
+    if (existingReg?.popovers === Popovers && existingReg?.menu === menu) {
+      popoverRegEntryForInstance = existingReg;
+    } else {
+      existingReg?.popoverReg?.destroy?.();
+      const popoverReg = Popovers.register({
+        button,
+        menu,
+        preferRight,
+        closeOnOutside: false,
+        closeOnEsc: false,
+        stopInsideClick: false,
+        wireButton: false,
+      });
+      const regEntry = { popovers: Popovers, menu, popoverReg };
+      popoverRegistrationByButton.set(button, regEntry);
+      popoverRegEntryForInstance = regEntry;
+    }
   }
 
-  return {
+  const api = {
+    menu,
     open,
-    close,
+    close: () => close({ focus: focusReturnToButton }),
     toggle,
     position,
     isOpen: () => !menu.hidden,
+    destroy: () => {
+      close({ focus: false });
+      listenerController.abort();
+      const storedReg = popoverRegistrationByButton.get(button);
+      if (
+        storedReg &&
+        storedReg === popoverRegEntryForInstance &&
+        storedReg.popovers === Popovers &&
+        storedReg.menu === menu
+      ) {
+        storedReg.popoverReg?.destroy?.();
+        popoverRegistrationByButton.delete(button);
+      }
+      if (activePopoverByButton.get(button) === api) {
+        activePopoverByButton.delete(button);
+      }
+    }
   };
+
+  activePopoverByButton.set(button, api);
+  return api;
 }

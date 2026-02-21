@@ -13,23 +13,43 @@
  * NOTE: Undo/redo are in-memory only and are intentionally excluded.
  */
 export function saveAllLocal(opts) {
-  const { storageKey, state, currentSchemaVersion } = opts || {};
+  const {
+    storageKey,
+    state,
+    currentSchemaVersion,
+    sanitizeForSave
+  } = opts || {};
 
   if (!storageKey) throw new Error("saveAllLocal: storageKey is required");
   if (!state) throw new Error("saveAllLocal: state is required");
 
-  // Persist only serializable state. Undo/redo are in-memory only.
-  const serializableMap = { ...(state.map || {}) };
-  delete serializableMap.undo;
-  delete serializableMap.redo;
+  const payload = (typeof sanitizeForSave === "function")
+    ? sanitizeForSave(state, { currentSchemaVersion })
+    : (() => {
+      // Fallback path keeps behavior deterministic if caller does not inject a sanitizer.
+      const serializableMap = { ...(state.map || {}) };
+      delete serializableMap.undo;
+      delete serializableMap.redo;
+      const serializableUi = { ...(state.ui || {}) };
+      delete serializableUi.dice;
+      if (serializableUi.calc && typeof serializableUi.calc === "object") {
+        const serializableCalc = { ...serializableUi.calc };
+        delete serializableCalc.history;
+        if (Object.keys(serializableCalc).length === 0) {
+          delete serializableUi.calc;
+        } else {
+          serializableUi.calc = serializableCalc;
+        }
+      }
 
-  const payload = {
-    schemaVersion: state.schemaVersion ?? currentSchemaVersion,
-    tracker: state.tracker,
-    character: state.character,
-    map: serializableMap,
-    ui: state.ui
-  };
+      return {
+        schemaVersion: state.schemaVersion ?? currentSchemaVersion,
+        tracker: state.tracker,
+        character: state.character,
+        map: serializableMap,
+        ui: serializableUi
+      };
+    })();
 
   try {
     localStorage.setItem(storageKey, JSON.stringify(payload));

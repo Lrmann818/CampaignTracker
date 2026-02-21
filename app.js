@@ -17,6 +17,7 @@ import {
   CURRENT_SCHEMA_VERSION,
   state,
   migrateState,
+  sanitizeForSave,
   ensureMapManager,
   getActiveMap,
   newMapEntry
@@ -91,7 +92,8 @@ const ImagePicker = createFilePicker({ accept: "image/*" });
 const saveAll = () => saveAllLocal({
   storageKey: STORAGE_KEY,
   state,
-  currentSchemaVersion: CURRENT_SCHEMA_VERSION
+  currentSchemaVersion: CURRENT_SCHEMA_VERSION,
+  sanitizeForSave
 });
 
 // ---------- Save Manager (debounced + queued) ----------
@@ -168,12 +170,14 @@ function disableAutocompleteGlobally(root = document) {
       ensureMapManager,
       getBlob,
       blobToDataUrl,
-      getAllTexts
+      getAllTexts,
+      sanitizeForSave
     }),
     importBackup: (e) => _importBackup(e, {
       state,
       ensureMapManager,
       migrateState,
+      sanitizeForSave,
       saveAll,
       putBlob,
       dataUrlToBlob,
