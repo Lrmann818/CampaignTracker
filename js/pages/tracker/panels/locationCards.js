@@ -6,6 +6,11 @@ import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { renderSectionTabs, wireSectionCrud } from "./cardsShared.js";
 import { pickAndStorePortrait } from "./cardPortraitShared.js";
+import { makeFieldSearchMatcher } from "./cardSearchShared.js";
+import { attachCardSearchHighlights } from "./cardSearchHighlightShared.js";
+import { createMoveButton, createCollapseButton } from "./cardHeaderControlsShared.js";
+import { enhanceSelectOnce } from "./cardSelectShared.js";
+import { createDeleteButton } from "./cardFooterShared.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -82,14 +87,7 @@ function initLocationCards(deps = {}) {
   _deleteLoc = deps.deleteLoc;
 }
 
-function matchesSearch(loc, q) {
-  if (!q) return true;
-  const s = q.toLowerCase();
-  return (
-    (loc.title || "").toLowerCase().includes(s) ||
-    (loc.notes || "").toLowerCase().includes(s)
-  );
-}
+const matchesSearch = makeFieldSearchMatcher(["title", "notes"]);
 
 export function renderLocationCards() {
   if (!_cardsEl) return;
@@ -165,38 +163,25 @@ export function renderLocationCard(loc) {
   titleInput.value = loc.title || "";
   titleInput.addEventListener("input", () => _updateLoc(loc.id, { title: titleInput.value }, false));
 
-  const moveUp = document.createElement("button");
-  moveUp.type = "button";
-  moveUp.className = "moveBtn";
-  moveUp.textContent = "↑";
-  moveUp.title = "Move card up";
-  moveUp.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    _moveLocCard(loc.id, -1);
+  const moveUp = createMoveButton({
+    direction: -1,
+    onMove: () => {
+      _moveLocCard(loc.id, -1);
+    },
   });
 
-  const moveDown = document.createElement("button");
-  moveDown.type = "button";
-  moveDown.className = "moveBtn";
-  moveDown.textContent = "↓";
-  moveDown.title = "Move card down";
-  moveDown.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    _moveLocCard(loc.id, +1);
+  const moveDown = createMoveButton({
+    direction: +1,
+    onMove: () => {
+      _moveLocCard(loc.id, +1);
+    },
   });
 
-  const toggle = document.createElement("button");
-  toggle.type = "button";
-  toggle.className = "cardCollapseBtn";
-  toggle.setAttribute("aria-label", isCollapsed ? "Expand card" : "Collapse card");
-  toggle.setAttribute("aria-expanded", (!isCollapsed).toString());
-  toggle.textContent = isCollapsed ? "▼" : "▲";
-  toggle.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    _updateLoc(loc.id, { collapsed: !isCollapsed }, true);
+  const toggle = createCollapseButton({
+    isCollapsed,
+    onToggle: () => {
+      _updateLoc(loc.id, { collapsed: !isCollapsed }, true);
+    },
   });
 
   headerRow.appendChild(titleInput);
@@ -232,16 +217,15 @@ export function renderLocationCard(loc) {
 
   // Enhance the OPEN menu styling (closed look stays the same size as .cardSelect).
   // Must be called AFTER the select is attached to a parent element.
-  if (_Popovers && !typeSelect.dataset.dropdownEnhanced) {
-    enhanceSelectDropdown({
-      select: typeSelect,
-      Popovers: _Popovers,
-      buttonClass: "cardSelectBtn",
-      optionClass: "swatchOption",
-      groupLabelClass: "dropdownGroupLabel",
-      preferRight: true
-    });
-  }
+  enhanceSelectOnce({
+    select: typeSelect,
+    Popovers: _Popovers,
+    enhanceSelectDropdown,
+    buttonClass: "cardSelectBtn",
+    optionClass: "swatchOption",
+    groupLabelClass: "dropdownGroupLabel",
+    preferRight: true
+  });
 
   const notesBlock = document.createElement("div");
   notesBlock.className = "npcBlock";
@@ -293,22 +277,21 @@ sectionWrap.appendChild(sectionLabel);
 sectionWrap.appendChild(sectionSelect);
 
 // Enhance OPEN menu styling (closed sizing stays the same).
-if (_Popovers && !sectionSelect.dataset.dropdownEnhanced) {
-  enhanceSelectDropdown({
-    select: sectionSelect,
-    Popovers: _Popovers,
-    buttonClass: "cardSelectBtn",
-    optionClass: "swatchOption",
-    groupLabelClass: "dropdownGroupLabel",
-    preferRight: true
-  });
-}
+enhanceSelectOnce({
+  select: sectionSelect,
+  Popovers: _Popovers,
+  enhanceSelectDropdown,
+  buttonClass: "cardSelectBtn",
+  optionClass: "swatchOption",
+  groupLabelClass: "dropdownGroupLabel",
+  preferRight: true
+});
 
-const del = document.createElement("button");
-  del.type = "button";
-  del.className = "npcSmallBtn danger";
-  del.textContent = "Delete";
-  del.addEventListener("click", () => _deleteLoc(loc.id));
+const del = createDeleteButton({
+  className: "npcSmallBtn danger",
+  text: "Delete",
+  onDelete: () => _deleteLoc(loc.id),
+});
 
   footer.appendChild(sectionWrap);
   footer.appendChild(del);
@@ -330,8 +313,11 @@ const del = document.createElement("button");
   
     // True in-field search highlight (every occurrence)
     const _getLocQuery = () => (_state.tracker.locSearch || "");
-    card.querySelectorAll("input, textarea").forEach(el => {
-      attachSearchHighlightOverlay(el, _getLocQuery);
+    attachCardSearchHighlights({
+      cardEl: card,
+      getQuery: _getLocQuery,
+      attachSearchHighlightOverlay,
+      selector: "input, textarea",
     });
 
 return card;
@@ -424,15 +410,6 @@ export function initLocationsUI(deps = {}) {
   }
 
   // (filterEl enhancement handled above)
-
-  function matchesSearch(loc, q) {
-    if (!q) return true;
-    const s = q.toLowerCase();
-    return (
-      (loc.title || "").toLowerCase().includes(s) ||
-      (loc.notes || "").toLowerCase().includes(s)
-    );
-  }
 
   function updateLoc(id, patch, rerender = true) {
     const idx = _state.tracker.locationsList.findIndex(l => l.id === id);

@@ -6,6 +6,11 @@ import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { renderSectionTabs, wireSectionCrud } from "./cardsShared.js";
 import { pickAndStorePortrait } from "./cardPortraitShared.js";
+import { makeFieldSearchMatcher } from "./cardSearchShared.js";
+import { attachCardSearchHighlights } from "./cardSearchHighlightShared.js";
+import { createMoveButton, createCollapseButton } from "./cardHeaderControlsShared.js";
+import { enhanceSelectOnce } from "./cardSelectShared.js";
+import { createDeleteButton } from "./cardFooterShared.js";
 
 let _cardsEl = null;
 let _Popovers = null;
@@ -22,6 +27,8 @@ let _moveNpcCard = null;
 let _moveNpc = null;
 let _deleteNpc = null;
 let _numberOrNull = null;
+
+const matchesSearch = makeFieldSearchMatcher(["name", "className", "status", "notes"]);
 
 function initNpcCards(deps = {}) {
   _state = deps.state || _state;
@@ -113,51 +120,37 @@ function renderNpcCard(npc) {
   nameInput.value = npc.name || "";
   nameInput.addEventListener("input", () => _updateNpc(npc.id, { name: nameInput.value }, false));
 
-  const moveUp = document.createElement("button");
-  moveUp.type = "button";
-  moveUp.className = "moveBtn";
-  moveUp.textContent = "↑";
-  moveUp.title = "Move card up";
-  moveUp.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    _moveNpcCard(npc.id, -1);
+  const moveUp = createMoveButton({
+    direction: -1,
+    onMove: () => {
+      _moveNpcCard(npc.id, -1);
+    },
   });
 
-  const moveDown = document.createElement("button");
-  moveDown.type = "button";
-  moveDown.className = "moveBtn";
-  moveDown.textContent = "↓";
-  moveDown.title = "Move card down";
-  moveDown.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    _moveNpcCard(npc.id, +1);
+  const moveDown = createMoveButton({
+    direction: +1,
+    onMove: () => {
+      _moveNpcCard(npc.id, +1);
+    },
   });
 
-  const toggle = document.createElement("button");
-  toggle.type = "button";
-  toggle.className = "cardCollapseBtn";
-  toggle.setAttribute("aria-label", isCollapsed ? "Expand card" : "Collapse card");
-  toggle.setAttribute("aria-expanded", (!isCollapsed).toString());
-  toggle.textContent = isCollapsed ? "▼" : "▲";
-  toggle.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const toggle = createCollapseButton({
+    isCollapsed,
+    onToggle: () => {
+      // Preserve page scroll position. NPC re-render rebuilds the card DOM,
+      // which can cause the browser to jump to the top when the focused button disappears.
+      const x = window.scrollX;
+      const y = window.scrollY;
 
-    // Preserve page scroll position. NPC re-render rebuilds the card DOM,
-    // which can cause the browser to jump to the top when the focused button disappears.
-    const x = window.scrollX;
-    const y = window.scrollY;
+      _updateNpc(npc.id, { collapsed: !isCollapsed }, true);
 
-    _updateNpc(npc.id, { collapsed: !isCollapsed }, true);
-
-    requestAnimationFrame(() => {
-      window.scrollTo(x, y);
-      // Re-focus the new toggle button without scrolling.
-      const btn = _cardsEl?.querySelector(`.npcCard[data-npc-id="${npc.id}"] .cardCollapseBtn`);
-      try { btn?.focus({ preventScroll: true }); } catch { btn?.focus?.(); }
-    });
+      requestAnimationFrame(() => {
+        window.scrollTo(x, y);
+        // Re-focus the new toggle button without scrolling.
+        const btn = _cardsEl?.querySelector(`.npcCard[data-npc-id="${npc.id}"] .cardCollapseBtn`);
+        try { btn?.focus({ preventScroll: true }); } catch { btn?.focus?.(); }
+      });
+    },
   });
 
   headerRow.appendChild(nameInput);
@@ -303,23 +296,22 @@ function renderNpcCard(npc) {
   sectionWrap.appendChild(sectionSelect);
 
   // Enhance OPEN menu styling (closed select sizing stays the same).
-  if (_Popovers && !sectionSelect.dataset.dropdownEnhanced) {
-    enhanceSelectDropdown({
-      select: sectionSelect,
-      Popovers: _Popovers,
-      buttonClass: "cardSelectBtn",
-      optionClass: "swatchOption",
-      groupLabelClass: "dropdownGroupLabel",
-      preferRight: true
-    });
-  }
+  enhanceSelectOnce({
+    select: sectionSelect,
+    Popovers: _Popovers,
+    enhanceSelectDropdown,
+    buttonClass: "cardSelectBtn",
+    optionClass: "swatchOption",
+    groupLabelClass: "dropdownGroupLabel",
+    preferRight: true
+  });
 
 
-  const del = document.createElement("button");
-  del.type = "button";
-  del.className = "npcSmallBtn danger";
-  del.textContent = "Delete";
-  del.addEventListener("click", () => _deleteNpc(npc.id));
+  const del = createDeleteButton({
+    className: "npcSmallBtn danger",
+    text: "Delete",
+    onDelete: () => _deleteNpc(npc.id),
+  });
 
   footer.appendChild(sectionWrap);
   footer.appendChild(del);
@@ -343,8 +335,10 @@ function renderNpcCard(npc) {
   // True in-field search highlight (every occurrence)
   const _getNpcQuery = () => (_state.tracker.npcSearch || "");
   // Search highlight: exclude HP inputs entirely (cur/max) so numeric HP never gets marked.
-  card.querySelectorAll("input:not(.npcHpInput), textarea").forEach(el => {
-    attachSearchHighlightOverlay(el, _getNpcQuery);
+  attachCardSearchHighlights({
+    cardEl: card,
+    getQuery: _getNpcQuery,
+    attachSearchHighlightOverlay,
   });
 
   return card;
@@ -451,18 +445,6 @@ export function initNpcsUI(deps = {}) {
   const deleteSectionBtn = document.getElementById("deleteNpcSectionBtn");
 
   if (!cardsEl || !addBtn || !searchEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) return;
-
-  // Local helpers
-  function matchesSearch(npc, q) {
-    if (!q) return true;
-    const s = q.toLowerCase();
-    return (
-      (npc.name || "").toLowerCase().includes(s) ||
-      (npc.className || "").toLowerCase().includes(s) ||
-      (npc.status || "").toLowerCase().includes(s) ||
-      (npc.notes || "").toLowerCase().includes(s)
-    );
-  }
 
   function updateNpc(id, patch, rerender = true) {
     const idx = _state.tracker.npcs.findIndex(n => n.id === id);

@@ -6,6 +6,11 @@ import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { renderSectionTabs, wireSectionCrud } from "./cardsShared.js";
 import { pickAndStorePortrait } from "./cardPortraitShared.js";
+import { makeFieldSearchMatcher } from "./cardSearchShared.js";
+import { attachCardSearchHighlights } from "./cardSearchHighlightShared.js";
+import { createMoveButton, createCollapseButton } from "./cardHeaderControlsShared.js";
+import { enhanceSelectOnce } from "./cardSelectShared.js";
+import { createDeleteButton } from "./cardFooterShared.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -24,6 +29,8 @@ let _movePartyCard = null;
 let _deleteParty = null;
 let _numberOrNull = null;
 let _renderPartyTabs = null;
+
+const matchesSearch = makeFieldSearchMatcher(["name", "className", "status", "notes"]);
 
 function initPartyCards(deps = {}) {
   _state = deps.state || _state;
@@ -113,38 +120,25 @@ function renderPartyCard(m) {
   nameInput.value = m.name || "";
   nameInput.addEventListener("input", () => _updateParty(m.id, { name: nameInput.value }, false));
 
-  const moveUp = document.createElement("button");
-  moveUp.type = "button";
-  moveUp.className = "moveBtn";
-  moveUp.textContent = "↑";
-  moveUp.title = "Move card up";
-  moveUp.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    _movePartyCard(m.id, -1);
+  const moveUp = createMoveButton({
+    direction: -1,
+    onMove: () => {
+      _movePartyCard(m.id, -1);
+    },
   });
 
-  const moveDown = document.createElement("button");
-  moveDown.type = "button";
-  moveDown.className = "moveBtn";
-  moveDown.textContent = "↓";
-  moveDown.title = "Move card down";
-  moveDown.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    _movePartyCard(m.id, +1);
+  const moveDown = createMoveButton({
+    direction: +1,
+    onMove: () => {
+      _movePartyCard(m.id, +1);
+    },
   });
 
-  const toggle = document.createElement("button");
-  toggle.type = "button";
-  toggle.className = "cardCollapseBtn";
-  toggle.setAttribute("aria-label", isCollapsed ? "Expand card" : "Collapse card");
-  toggle.setAttribute("aria-expanded", (!isCollapsed).toString());
-  toggle.textContent = isCollapsed ? "▼" : "▲";
-  toggle.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    _updateParty(m.id, { collapsed: !isCollapsed }, true);
+  const toggle = createCollapseButton({
+    isCollapsed,
+    onToggle: () => {
+      _updateParty(m.id, { collapsed: !isCollapsed }, true);
+    },
   });
 
   headerRow.appendChild(nameInput);
@@ -293,23 +287,22 @@ function renderPartyCard(m) {
 
   // Enhance the OPEN menu styling (closed look stays the same size as .cardSelect).
   // Call only after the select is appended (needs a parentElement).
-  if (_Popovers && !sectionSelect.dataset.dropdownEnhanced) {
-    enhanceSelectDropdown({
-      select: sectionSelect,
-      Popovers: _Popovers,
-      buttonClass: "cardSelectBtn",
-      optionClass: "swatchOption",
-      groupLabelClass: "dropdownGroupLabel",
-      preferRight: true
-    });
-  }
+  enhanceSelectOnce({
+    select: sectionSelect,
+    Popovers: _Popovers,
+    enhanceSelectDropdown,
+    buttonClass: "cardSelectBtn",
+    optionClass: "swatchOption",
+    groupLabelClass: "dropdownGroupLabel",
+    preferRight: true
+  });
 
 
-  const del = document.createElement("button");
-  del.type = "button";
-  del.className = "npcSmallBtn danger";
-  del.textContent = "Delete";
-  del.addEventListener("click", () => _deleteParty(m.id));
+  const del = createDeleteButton({
+    className: "npcSmallBtn danger",
+    text: "Delete",
+    onDelete: () => _deleteParty(m.id),
+  });
 
   footer.appendChild(sectionWrap);
   footer.appendChild(del);
@@ -327,8 +320,10 @@ function renderPartyCard(m) {
   // True in-field search highlight (every occurrence)
   const _getPartyQuery = () => (_state.tracker.partySearch || "");
   // Search highlight: exclude HP inputs entirely (cur/max) so numeric HP never gets marked.
-  card.querySelectorAll("input:not(.npcHpInput), textarea").forEach(el => {
-    attachSearchHighlightOverlay(el, _getPartyQuery);
+  attachCardSearchHighlights({
+    cardEl: card,
+    getQuery: _getPartyQuery,
+    attachSearchHighlightOverlay,
   });
 
   return card;
@@ -403,17 +398,6 @@ export function initPartyUI(deps = {}) {
   const deleteSectionBtn = document.getElementById("deletePartySectionBtn");
 
   if (!cardsEl || !addBtn || !searchEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) return null;
-
-  function matchesSearch(m, q) {
-    if (!q) return true;
-    const s = q.toLowerCase();
-    return (
-      (m.name || "").toLowerCase().includes(s) ||
-      (m.className || "").toLowerCase().includes(s) ||
-      (m.status || "").toLowerCase().includes(s) ||
-      (m.notes || "").toLowerCase().includes(s)
-    );
-  }
 
   async function pickPartyImage(memberId) {
     let pickedBlobId = null;
