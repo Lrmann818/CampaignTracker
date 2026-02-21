@@ -1,3 +1,4 @@
+// @ts-check
 // js/ui/popovers.js
 // Centralized popover / dropdown manager.
 //
@@ -14,24 +15,34 @@
  * @property {boolean} closeOnOutside
  * @property {boolean} closeOnEsc
  * @property {boolean} stopInsideClick
- * @property {() => void | null} onOpen
- * @property {() => void | null} onClose
+ * @property {(() => void) | null} onOpen
+ * @property {(() => void) | null} onClose
  */
 
 /**
- * @param {{ positionFn: (menu: HTMLElement, anchor: HTMLElement, opts?: any) => void }} cfg
+ * @typedef {{ preferRight?: boolean }} PositionMenuOptions
+ */
+
+/**
+ * @typedef {(menu: HTMLElement, anchor: HTMLElement, opts?: PositionMenuOptions) => void} PositionMenuFn
+ */
+
+/**
+ * @param {{ positionFn?: PositionMenuFn }} [cfg]
  */
 export function createPopoverManager(cfg) {
   const positionFn = cfg?.positionFn;
   /** @type {Set<PopoverRegistration>} */
   const registrations = new Set();
+  /** @type {WeakMap<HTMLElement, PopoverRegistration>} */
   const menuToReg = new WeakMap();
   let installed = false;
 
   // When a popover is opened, we record the anchor's viewport position.
   // If the user scrolls enough that the anchor moves (relative to viewport),
   // we close the popover to mimic native <select> behavior.
-  const openAnchorPos = new Map(); // reg -> { top, left }
+  /** @type {Map<PopoverRegistration, { top: number, left: number }>} */
+  const openAnchorPos = new Map();
   const SCROLL_CLOSE_PX = 10;
 
   const isOpen = (reg) => reg && reg.menu && !reg.menu.hidden;
@@ -99,6 +110,7 @@ export function createPopoverManager(cfg) {
     // Without listening for scroll events, the menu can appear to "stay" in
     // the old spot while its button moves.
     let raf = 0;
+    /** @type {EventTarget | null} */
     let lastScrollTarget = null;
     const requestRepositionAll = () => {
       if (raf) return;
@@ -110,8 +122,8 @@ export function createPopoverManager(cfg) {
           // Native dropdowns close as soon as you scroll the page/list.
           // We mimic that by closing on any scroll that didn't originate from
           // inside the open menu or its button.
-          if (lastScrollTarget && typeof lastScrollTarget === "object") {
-            const t = /** @type {any} */ (lastScrollTarget);
+          if (lastScrollTarget instanceof Node) {
+            const t = lastScrollTarget;
             if (!reg.menu.contains(t) && !reg.button.contains(t)) {
               close(reg);
               return;
@@ -155,6 +167,7 @@ export function createPopoverManager(cfg) {
         if (!reg.closeOnOutside) return;
         if (!isOpen(reg)) return;
         const t = e.target;
+        if (!(t instanceof Node)) return;
         if (reg.button.contains(t)) return;
         if (reg.menu.contains(t)) return;
         close(reg);
@@ -238,8 +251,28 @@ export function createPopoverManager(cfg) {
   /**
    * For dynamically-created menus where you don't want to auto-wire the button.
    * This returns a stable registration (stored in a WeakMap) per menu element.
+   * @param {{
+   *  button?: HTMLElement | null,
+   *  menu?: HTMLElement | null,
+   *  preferRight?: boolean,
+   *  closeOnOutside?: boolean,
+   *  closeOnEsc?: boolean,
+   *  stopInsideClick?: boolean,
+   *  onOpen?: (() => void) | null,
+   *  onClose?: (() => void) | null
+   * }} [args]
    */
-  const trackDynamic = ({ button, menu, preferRight = false, closeOnOutside = true, closeOnEsc = true, stopInsideClick = true, onOpen, onClose } = {}) => {
+  const trackDynamic = (args = {}) => {
+    const {
+      button,
+      menu,
+      preferRight = false,
+      closeOnOutside = true,
+      closeOnEsc = true,
+      stopInsideClick = true,
+      onOpen,
+      onClose
+    } = args;
     if (!button || !menu) return null;
     let reg = menuToReg.get(menu);
     if (!reg) {

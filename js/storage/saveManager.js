@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-check
 // js/storage/saveManager.js — debounced + queued local save manager
 //
 // Dependency-injected so app.js can provide saveAll() and setStatus()
@@ -9,6 +9,44 @@
 //   SaveManager.init();
 //   SaveManager.markDirty();
 
+/**
+ * @typedef {"SAVED" | "DIRTY" | "SAVING" | "ERROR"} SaveLifecycleState
+ */
+
+/**
+ * @typedef {{ stickyMs?: number }} SaveStatusOptions
+ */
+
+/**
+ * @typedef {{ stateNow: SaveLifecycleState, dirty: boolean, saving: boolean }} SaveManagerStatus
+ */
+
+/**
+ * @typedef {{
+ *   markDirty: () => void,
+ *   flush: () => Promise<boolean>,
+ *   init: () => void,
+ *   getStatus: () => SaveManagerStatus
+ * }} SaveManager
+ */
+
+/**
+ * @typedef {{
+ *   saveAll: () => boolean,
+ *   setStatus: (message: string, opts?: SaveStatusOptions) => void,
+ *   debounceMs?: number,
+ *   dirtyDelayMs?: number,
+ *   savedText?: string,
+ *   dirtyText?: string,
+ *   savingText?: string,
+ *   errorText?: string
+ * }} SaveManagerOptions
+ */
+
+/**
+ * @param {SaveManagerOptions} [opts]
+ * @returns {SaveManager}
+ */
 export function createSaveManager(opts) {
   const {
     saveAll,
@@ -27,18 +65,21 @@ export function createSaveManager(opts) {
   if (typeof saveAll !== "function") throw new Error("createSaveManager: saveAll() is required");
   if (typeof setStatus !== "function") throw new Error("createSaveManager: setStatus() is required");
 
-  const SaveState = {
+  const SaveState = /** @type {const} */ ({
     SAVED: "SAVED",
     DIRTY: "DIRTY",
     SAVING: "SAVING",
     ERROR: "ERROR"
-  };
+  });
 
+  /** @type {SaveLifecycleState} */
   let stateNow = SaveState.SAVED;
   let dirty = false;
   let saving = false;
   let saveRequested = false;
+  /** @type {ReturnType<typeof setTimeout> | null} */
   let debounceTimer = null;
+  /** @type {ReturnType<typeof setTimeout> | null} */
   let dirtyUiTimer = null;
 
   function renderStatus() {

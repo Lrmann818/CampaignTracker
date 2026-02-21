@@ -18,6 +18,16 @@ import { createStateActions } from "../../domain/stateActions.js";
 
 const MAP_HISTORY_MAX_LEN = 50;
 
+/**
+ * @typedef {{
+ *   init: () => void,
+ *   destroy: () => void,
+ *   render: () => void,
+ *   load: (incomingMapState?: unknown) => void,
+ *   serialize: () => unknown
+ * }} MapController
+ */
+
 function toJsonSafe(value, seen = new WeakSet()) {
   if (value === null) return null;
 
@@ -128,6 +138,9 @@ function createRuntimeState() {
   };
 }
 
+/**
+ * @returns {MapController}
+ */
 export function createMapController({
   state,
   SaveManager,

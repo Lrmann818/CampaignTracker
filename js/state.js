@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-check
 // js/state.js — app-wide state + schema migration
 
 export const STORAGE_KEY = "localCampaignTracker_v1";
@@ -32,6 +32,36 @@ export const SCHEMA_MIGRATION_HISTORY = Object.freeze([
   }
 ]);
 
+/**
+ * Broad app state shape used for lightweight JS type-checking.
+ *
+ * @typedef {Record<string, any>} LooseObject
+ */
+
+/**
+ * @typedef {{
+ *   schemaVersion: number,
+ *   tracker: LooseObject,
+ *   character: LooseObject,
+ *   map: {
+ *     activeMapId: string | null,
+ *     maps: LooseObject[],
+ *     undo: unknown[],
+ *     redo: unknown[],
+ *     ui?: LooseObject,
+ *     [key: string]: unknown
+ *   },
+ *   ui: {
+ *     theme: string,
+ *     textareaHeights: Record<string, number>,
+ *     panelCollapsed: Record<string, boolean>,
+ *     [key: string]: unknown
+ *   },
+ *   [key: string]: unknown
+ * }} State
+ */
+
+/** @type {State} */
 export const state = {
   // Used to migrate older saves/backups as the app evolves.
   schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -145,6 +175,8 @@ function normalizeDiceMode(mode) {
 /**
  * Apply runtime-only UI defaults after load/import migration.
  * Dice count/mod are always reset on full load.
+ * @param {State | LooseObject | null | undefined} data
+ * @returns {State | LooseObject | null | undefined}
  */
 export function normalizeState(data) {
   if (!data || typeof data !== "object") return data;
@@ -168,6 +200,8 @@ export function normalizeState(data) {
 
 /**
  * Remove ephemeral UI from persistence/export payloads.
+ * @param {State | LooseObject | null | undefined} source
+ * @param {{ currentSchemaVersion?: number }} [opts]
  */
 export function sanitizeForSave(source, opts = {}) {
   const { currentSchemaVersion = CURRENT_SCHEMA_VERSION } = opts;
@@ -200,6 +234,21 @@ export function sanitizeForSave(source, opts = {}) {
 
 
 // ---------- Map manager (multiple maps) ----------
+/**
+ * @typedef {{
+ *   id: string,
+ *   name: string,
+ *   bgBlobId: string | null,
+ *   drawingBlobId: string | null,
+ *   brushSize: number,
+ *   colorKey: string
+ * }} MapEntry
+ */
+
+/**
+ * @param {string} [name]
+ * @returns {MapEntry}
+ */
 export function newMapEntry(name = "World Map") {
   return {
     id: `map_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`,
@@ -245,13 +294,22 @@ export function ensureMapManager() {
   if (!Number.isFinite(state.map.ui.brushSize)) state.map.ui.brushSize = (active?.brushSize ?? 6);
 }
 
+/**
+ * @returns {MapEntry}
+ */
 export function getActiveMap() {
   ensureMapManager();
-  return state.map.maps.find(m => m.id === state.map.activeMapId) || state.map.maps[0];
+  return /** @type {MapEntry} */ (
+    state.map.maps.find(m => m.id === state.map.activeMapId) || state.map.maps[0]
+  );
 }
 
 /************************ Save / Load ***********************/
 
+/**
+ * @param {unknown} raw
+ * @returns {State}
+ */
 export function migrateState(raw) {
   // Accept either a full state object or a partial/legacy blob.
   const data = (raw && typeof raw === "object") ? raw : {};

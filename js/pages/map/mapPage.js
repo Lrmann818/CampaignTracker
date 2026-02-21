@@ -1,11 +1,39 @@
+// @ts-check
 // js/pages/map/mapPage.js
 
 import { createMapController } from "./mapController.js";
 import { getNoopDestroyApi } from "../../utils/domGuards.js";
 
-let _activeMapPageController = null;
-const NOOP_MAP_PAGE_API = getNoopDestroyApi();
+/**
+ * @typedef {{
+ *   init: () => void,
+ *   load: (incomingMapState?: unknown) => void,
+ *   destroy: () => void,
+ *   render?: () => void,
+ *   serialize?: () => unknown
+ * }} MapController
+ */
 
+/**
+ * @typedef {{
+ *   state?: { map?: unknown },
+ *   setStatus?: (message: string, opts?: { stickyMs?: number }) => void,
+ *   [key: string]: unknown
+ * }} MapPageDeps
+ */
+
+/**
+ * @typedef {{ destroy: () => void }} MapPageApi
+ */
+
+/** @type {MapController | null} */
+let _activeMapPageController = null;
+const NOOP_MAP_PAGE_API = /** @type {MapPageApi} */ (getNoopDestroyApi());
+
+/**
+ * @param {MapPageDeps} [deps]
+ * @returns {MapPageApi}
+ */
 export function setupMapPage(deps = {}) {
   if (_activeMapPageController?.destroy) {
     _activeMapPageController.destroy();
@@ -13,7 +41,7 @@ export function setupMapPage(deps = {}) {
   }
 
   try {
-    const controller = createMapController(deps);
+    const controller = /** @type {MapController} */ (createMapController(deps));
     _activeMapPageController = controller;
     controller.load(deps.state?.map);
     controller.init();
