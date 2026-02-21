@@ -7,6 +7,8 @@ import { enhanceSelectDropdown } from "./selectDropdown.js";
 import { safeAsync } from "./safeAsync.js";
 import { requireEl, getNoopDestroyApi } from "../utils/domGuards.js";
 
+let _activeDataPanel = null;
+
 /**
  * @param {{
  *  state: any,
@@ -24,6 +26,9 @@ import { requireEl, getNoopDestroyApi } from "../utils/domGuards.js";
  * }} deps
  */
 export function initDataPanel(deps) {
+  _activeDataPanel?.destroy?.();
+  _activeDataPanel = null;
+
   const {
     state,
     storageKeys,
@@ -54,6 +59,17 @@ export function initDataPanel(deps) {
     setStatus("Data panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
+
+  const listenerController = new AbortController();
+  const listenerSignal = listenerController.signal;
+  const addListener = (target, type, handler, options) => {
+    if (!target || typeof target.addEventListener !== "function") return;
+    const listenerOptions =
+      typeof options === "boolean"
+        ? { capture: options }
+        : (options || {});
+    target.addEventListener(type, handler, { ...listenerOptions, signal: listenerSignal });
+  };
 
   const themeSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById("dataPanelThemeSelect"));
 
@@ -105,17 +121,17 @@ export function initDataPanel(deps) {
   window.openDataPanel = open;
 
   // Close interactions
-  if (closeBtn) closeBtn.addEventListener("click", close);
-  overlay.addEventListener("click", (e) => {
+  if (closeBtn) addListener(closeBtn, "click", close);
+  addListener(overlay, "click", (e) => {
     if (e.target === overlay) close();
   });
-  document.addEventListener("keydown", (e) => {
+  addListener(document, "keydown", (e) => {
     if (e.key === "Escape" && !overlay.hidden) close();
   });
 
   // Theme change
   if (themeSelect) {
-    themeSelect.addEventListener("change", () => {
+    addListener(themeSelect, "change", () => {
       const val = themeSelect.value || "system";
       applyTheme(val);
       // Preserve whichever UI bucket exists (legacy tracker.ui or root ui).
@@ -137,11 +153,10 @@ export function initDataPanel(deps) {
   const clearTextsBtn = document.getElementById("dataClearTextsBtn");
   const aboutBtn = document.getElementById("dataAboutBtn");
 
-  if (exportBtn) exportBtn.addEventListener("click", () => exportBackup());
-  if (importFile) importFile.addEventListener("change", (e) => importBackup(e));
+  if (exportBtn) addListener(exportBtn, "click", () => exportBackup());
+  if (importFile) addListener(importFile, "change", (e) => importBackup(e));
 
-  if (resetAllBtn) resetAllBtn.addEventListener(
-    "click",
+  if (resetAllBtn) addListener(resetAllBtn, "click",
     safeAsync(async () => {
       close();
       await resetAll();
@@ -151,8 +166,7 @@ export function initDataPanel(deps) {
     })
   );
 
-  if (resetUiBtn) resetUiBtn.addEventListener(
-    "click",
+  if (resetUiBtn) addListener(resetUiBtn, "click",
     safeAsync(async () => {
     const ok = await uiConfirm("Reset UI settings only?\n\nThis will reset theme + UI layout prefs (like last active tab). It will NOT delete your campaign data.");
     if (!ok) return;
@@ -186,8 +200,7 @@ export function initDataPanel(deps) {
     })
   );
 
-  if (clearImagesBtn) clearImagesBtn.addEventListener(
-    "click",
+  if (clearImagesBtn) addListener(clearImagesBtn, "click",
     safeAsync(async () => {
     const ok = await uiConfirm("Clear ALL saved images?\n\nThis removes portraits and map images stored in your browser. Your campaign data stays.");
     if (!ok) return;
@@ -218,8 +231,7 @@ export function initDataPanel(deps) {
     })
   );
 
-  if (clearTextsBtn) clearTextsBtn.addEventListener(
-    "click",
+  if (clearTextsBtn) addListener(clearTextsBtn, "click",
     safeAsync(async () => {
     const ok = await uiConfirm("Clear ALL saved long texts (notes) stored in the browser?\n\nThis does not delete your campaign cards, but it will remove any large notes stored separately.");
     if (!ok) return;
@@ -241,8 +253,7 @@ export function initDataPanel(deps) {
     })
   );
 
-  if (aboutBtn) aboutBtn.addEventListener(
-    "click",
+  if (aboutBtn) addListener(aboutBtn, "click",
     safeAsync(async () => {
     const appName = (state?.tracker && typeof state.tracker.campaignTitle === "string" && state.tracker.campaignTitle.trim())
       ? state.tracker.campaignTitle.trim()
@@ -270,6 +281,19 @@ export function initDataPanel(deps) {
       setStatus("Open about failed.");
     })
   );
+
+  const api = {
+    destroy() {
+      listenerController.abort();
+      if (window.openDataPanel === open) {
+        delete window.openDataPanel;
+      }
+      if (_activeDataPanel === api) _activeDataPanel = null;
+    }
+  };
+
+  _activeDataPanel = api;
+  return api;
 }
 
 function buildThemeOptions(select) {

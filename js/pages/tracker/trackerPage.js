@@ -11,10 +11,19 @@ import { initPartyPanel } from "./panels/partyCards.js";
 import { initLocationsPanel } from "./panels/locationCards.js";
 import { initCharacterPageUI } from "../character/characterPage.js";
 import { initPanelHeaderCollapse } from "../../ui/panelHeaderCollapse.js";
-import { bindText, bindContentText } from "../../ui/bindings.js";
 import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
 
+let _activeTrackerPageController = null;
+const _singletonTrackerPanelInits = {
+  npcs: false,
+  party: false,
+  locations: false
+};
+
 export function initTrackerPage(deps) {
+  _activeTrackerPageController?.destroy?.();
+  _activeTrackerPageController = null;
+
   const {
     state,
     SaveManager,
@@ -61,12 +70,36 @@ export function initTrackerPage(deps) {
   const trackerRoot = requireEl("#page-tracker", document, { prefix: "initTrackerPage", warn: false });
   if (!trackerRoot) {
     setStatus("Tracker page unavailable (missing #page-tracker).", { stickyMs: 5000 });
-    return;
+    return getNoopDestroyApi();
   }
 
-  const runPanelInit = (panelName, initFn) => {
+  const destroyFns = [];
+  const addDestroy = (destroyFn) => {
+    if (typeof destroyFn === "function") destroyFns.push(destroyFn);
+  };
+  const listenerController = new AbortController();
+  const listenerSignal = listenerController.signal;
+  addDestroy(() => listenerController.abort());
+
+  const addListener = (target, type, handler, options) => {
+    if (!target || typeof target.addEventListener !== "function") return;
+    const listenerOptions =
+      typeof options === "boolean"
+        ? { capture: options }
+        : (options || {});
+    target.addEventListener(type, handler, { ...listenerOptions, signal: listenerSignal });
+  };
+
+  const runPanelInit = (panelName, initFn, { singletonKey } = {}) => {
+    if (singletonKey && _singletonTrackerPanelInits[singletonKey]) {
+      return getNoopDestroyApi();
+    }
+
     try {
-      return initFn();
+      const panelApi = initFn();
+      if (panelApi?.destroy) addDestroy(() => panelApi.destroy());
+      else if (singletonKey) _singletonTrackerPanelInits[singletonKey] = true;
+      return panelApi || getNoopDestroyApi();
     } catch (err) {
       console.error(`${panelName} init failed:`, err);
       setStatus(`${panelName} failed to initialize. Check console for details.`, { stickyMs: 5000 });
@@ -75,30 +108,30 @@ export function initTrackerPage(deps) {
   };
 
   // ----- Campaign title -----
-  bindContentText({
-    id: "campaignTitle",
-    get: () => state.tracker.campaignTitle || "My Campaign",
-    set: (raw) => {
+  const campaignTitleEl = document.getElementById("campaignTitle");
+  if (campaignTitleEl) {
+    campaignTitleEl.textContent = state.tracker.campaignTitle || "My Campaign";
+    addListener(campaignTitleEl, "input", () => {
+      const raw = campaignTitleEl.textContent ?? "";
       const normalized = String(raw ?? "").replace(/\s+/g, " ").trim();
       state.tracker.campaignTitle = normalized || "My Campaign";
-    },
-    SaveManager,
-  });
+      SaveManager.markDirty();
+    });
+  }
 
   // ----- Simple textareas -----
   ["misc"].forEach((id) => {
-    bindText({
-      id,
-      get: () => state.tracker[id],
-      set: (value) => {
-        state.tracker[id] = value;
-      },
-      SaveManager,
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = state.tracker[id] ?? "";
+    addListener(el, "input", () => {
+      state.tracker[id] = el.value;
+      SaveManager.markDirty();
     });
   });
 
   // ----- Tracker section reordering (panels) -----
-  setupTrackerSectionReorder({ state, SaveManager });
+  runPanelInit("Tracker section reordering", () => setupTrackerSectionReorder({ state, SaveManager }));
 
   // ----- Sessions UI -----
   runPanelInit("Sessions panel", () => initSessionsPanel({
@@ -136,7 +169,7 @@ export function initTrackerPage(deps) {
     getPortraitAspect,
     blobIdToObjectUrl,
     autoSizeInput,
-  }));
+  }), { singletonKey: "npcs" });
 
   runPanelInit("Party panel", () => initPartyPanel({
     state,
@@ -157,7 +190,7 @@ export function initTrackerPage(deps) {
     setStatus,
     blobIdToObjectUrl,
     autoSizeInput,
-  }));
+  }), { singletonKey: "party" });
 
   runPanelInit("Locations panel", () => initLocationsPanel({
     state,
@@ -176,7 +209,7 @@ export function initTrackerPage(deps) {
     setStatus,
     blobIdToObjectUrl,
     autoSizeInput,
-  }));
+  }), { singletonKey: "locations" });
 
   // ----- Character sheet UI -----
   runPanelInit("Character page", () => initCharacterPageUI({
@@ -206,4 +239,18 @@ export function initTrackerPage(deps) {
   runPanelInit("Panel collapse wiring", () => initPanelHeaderCollapse({ state, SaveManager, setStatus }));
 
   runPanelInit("Number steppers", () => enhanceNumberSteppers(document));
+
+  const api = {
+    destroy() {
+      for (let i = destroyFns.length - 1; i >= 0; i--) {
+        destroyFns[i]?.();
+      }
+      if (_activeTrackerPageController === api) {
+        _activeTrackerPageController = null;
+      }
+    }
+  };
+
+  _activeTrackerPageController = api;
+  return api;
 }

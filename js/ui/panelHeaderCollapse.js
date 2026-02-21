@@ -4,6 +4,9 @@
 import { createStateActions } from "../domain/stateActions.js";
 import { getNoopDestroyApi } from "../utils/domGuards.js";
 
+/** @type {(() => void) | null} */
+let activePanelHeaderCollapseDestroy = null;
+
 function isInteractive(target) {
   return !!target?.closest?.(
     "button, input, select, textarea, a, label, summary, [role='button'], [role='link']"
@@ -84,6 +87,15 @@ export function initPanelHeaderCollapse({ state, SaveManager, setStatus, actions
   if (typeof setPathAction !== "function") {
     throw new Error("initPanelHeaderCollapse: expected actions.setPath or setPath helper");
   }
+  if (typeof activePanelHeaderCollapseDestroy === "function") {
+    activePanelHeaderCollapseDestroy();
+  }
+
+  const ac = new AbortController();
+  const { signal } = ac;
+  let destroyed = false;
+  /** @type {HTMLElement[]} */
+  const boundHeaders = [];
 
   const panels = Array.from(document.querySelectorAll("section.panel"));
   if (!panels.length) {
@@ -111,41 +123,62 @@ export function initPanelHeaderCollapse({ state, SaveManager, setStatus, actions
     // Idempotency (avoid double-binding when pages re-init)
     if (headerEl.dataset.panelCollapseBound === "1") return;
     headerEl.dataset.panelCollapseBound = "1";
+    boundHeaders.push(headerEl);
 
     headerEl.classList.add("panelHeaderClickable");
 
     // Apply initial state (CSS hides everything except the header)
     applyCollapsedUi(panelEl, isCollapsedState(state, key));
 
-    headerEl.addEventListener("click", (e) => {
-      // Don't collapse when clicking header controls
-      if (isInteractive(e.target)) return;
+    headerEl.addEventListener(
+      "click",
+      (e) => {
+        // Don't collapse when clicking header controls
+        if (isInteractive(e.target)) return;
 
-      const targetPanelEl = resolveTargetPanelElement({ key, headerEl, fallbackPanelEl: panelEl });
-      if (!targetPanelEl) {
-        const panelLabel = getPanelLabel({ key, headerEl, fallbackPanelEl: panelEl });
-        const message = `Panel unavailable (missing DOM): ${panelLabel}`;
-        setStatus?.(message);
-        console.warn("initPanelHeaderCollapse: target panel missing on click", {
-          panelKey: key,
-          panelLabel,
-          selectorsTried: [
-            "document.getElementById(<panel key>) as section.panel",
-            "section.panel[data-panel=<panel key>]",
-            "headerEl.closest('section.panel')",
-          ],
-          headerEl,
-        });
-        return;
-      }
+        const targetPanelEl = resolveTargetPanelElement({ key, headerEl, fallbackPanelEl: panelEl });
+        if (!targetPanelEl) {
+          const panelLabel = getPanelLabel({ key, headerEl, fallbackPanelEl: panelEl });
+          const message = `Panel unavailable (missing DOM): ${panelLabel}`;
+          setStatus?.(message);
+          console.warn("initPanelHeaderCollapse: target panel missing on click", {
+            panelKey: key,
+            panelLabel,
+            selectorsTried: [
+              "document.getElementById(<panel key>) as section.panel",
+              "section.panel[data-panel=<panel key>]",
+              "headerEl.closest('section.panel')",
+            ],
+            headerEl,
+          });
+          return;
+        }
 
-      const next = !isCollapsedState(state, key);
-      const updated = setPathAction(`ui.panelCollapsed.${key}`, next);
-      if (updated === false) {
-        console.warn("initPanelHeaderCollapse: failed to update collapsed state", { panelKey: key, next });
-        return;
-      }
-      applyCollapsedUi(targetPanelEl, next);
-    });
+        const next = !isCollapsedState(state, key);
+        const updated = setPathAction(`ui.panelCollapsed.${key}`, next);
+        if (updated === false) {
+          console.warn("initPanelHeaderCollapse: failed to update collapsed state", { panelKey: key, next });
+          return;
+        }
+        applyCollapsedUi(targetPanelEl, next);
+      },
+      { signal }
+    );
   });
+
+  const destroy = () => {
+    if (destroyed) return;
+    destroyed = true;
+    ac.abort();
+    boundHeaders.forEach((headerEl) => {
+      headerEl?.removeAttribute?.("data-panel-collapse-bound");
+    });
+    boundHeaders.length = 0;
+    if (activePanelHeaderCollapseDestroy === destroy) {
+      activePanelHeaderCollapseDestroy = null;
+    }
+  };
+  activePanelHeaderCollapseDestroy = destroy;
+
+  return { destroy };
 }

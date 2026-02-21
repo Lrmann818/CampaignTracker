@@ -47,12 +47,13 @@ export function initTopbarUI(deps) {
     "Topbar dice roller",
     () => initTopbarDiceRoller({ state, SaveManager, Popovers, positionMenuOnScreen, setStatus })
   );
+  const childDestroyFns = [clock, calculator, diceRoller].map(
+    (widgetApi) => () => widgetApi?.destroy?.()
+  );
 
   const api = {
     destroy() {
-      clock?.destroy?.();
-      calculator?.destroy?.();
-      diceRoller?.destroy?.();
+      for (const destroyChild of childDestroyFns) destroyChild();
       if (_activeTopbarUI === api) _activeTopbarUI = null;
     }
   };

@@ -10,10 +10,19 @@ import { initBasicsPanel } from "../character/panels/basicsPanel.js";
 import { initProficienciesPanel } from "../character/panels/proficienciesPanel.js";
 import { initAbilitiesPanel } from "../character/panels/abilitiesPanel.js";
 import { initPersonalityPanel, setupCharacterCollapsibleTextareas } from "../character/panels/personalityPanel.js";
-import { bindText as bindTextInput, bindNumber as bindNumberInput } from "../../ui/bindings.js";
+import { numberOrNull } from "../../utils/number.js";
 import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
 
+let _activeCharacterPageController = null;
+const _singletonCharacterPanelInits = {
+  spells: false,
+  equipment: false
+};
+
 export function initCharacterPageUI(deps) {
+  _activeCharacterPageController?.destroy?.();
+  _activeCharacterPageController = null;
+
   const {
     state,
     SaveManager,
@@ -41,9 +50,72 @@ export function initCharacterPageUI(deps) {
   if (!SaveManager) throw new Error("initCharacterPageUI: SaveManager is required");
   if (!setStatus) throw new Error("initCharacterPageUI requires setStatus");
 
-  const runPanelInit = (panelName, initFn) => {
+  const destroyFns = [];
+  const addDestroy = (destroyFn) => {
+    if (typeof destroyFn === "function") destroyFns.push(destroyFn);
+  };
+  const listenerController = new AbortController();
+  const listenerSignal = listenerController.signal;
+  addDestroy(() => listenerController.abort());
+
+  const addListener = (target, type, handler, options) => {
+    if (!target || typeof target.addEventListener !== "function") return;
+    const listenerOptions =
+      typeof options === "boolean"
+        ? { capture: options }
+        : (options || {});
+    target.addEventListener(type, handler, { ...listenerOptions, signal: listenerSignal });
+  };
+
+  const bindText = (id, getter, setter) => {
+    const target = document.getElementById(id);
+    if (!target) return null;
+
+    target.value = getter?.() ?? "";
+    addListener(target, "input", () => {
+      setter?.(target.value);
+      SaveManager.markDirty();
+    });
+
+    return target;
+  };
+
+  const bindNumber = (id, getter, setter, autosizeOpts) => {
+    const target = document.getElementById(id);
+    if (!target) return null;
+
+    const sizeOpts = autosizeOpts || { min: 30, max: 80 };
+    const initial = getter?.();
+    target.value = (initial === null || initial === undefined) ? "" : String(initial);
+
+    if (typeof autoSizeInput === "function") {
+      target.classList.add("autosize");
+      autoSizeInput(target, sizeOpts);
+    }
+
+    addListener(target, "input", () => {
+      setter?.(numberOrNull(target.value));
+
+      if (typeof autoSizeInput === "function") {
+        autoSizeInput(target, sizeOpts);
+      }
+
+      SaveManager.markDirty();
+    });
+
+    return target;
+  };
+
+  const runPanelInit = (panelName, initFn, { singletonKey } = {}) => {
+    if (singletonKey && _singletonCharacterPanelInits[singletonKey]) {
+      return getNoopDestroyApi();
+    }
+
     try {
-      return initFn();
+      const panelApi = initFn();
+      if (panelApi?.destroy) addDestroy(() => panelApi.destroy());
+      else if (singletonKey) _singletonCharacterPanelInits[singletonKey] = true;
+      return panelApi || getNoopDestroyApi();
     } catch (err) {
       console.error(`${panelName} init failed:`, err);
       setStatus(`${panelName} failed to initialize. Check console for details.`, { stickyMs: 5000 });
@@ -66,28 +138,14 @@ export function initCharacterPageUI(deps) {
     if (!state.character.money) state.character.money = { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
     if (!state.character.personality) state.character.personality = {};
 
-    const bindText = (id, getter, setter) =>
-      bindTextInput({
-        id,
-        get: getter,
-        set: setter,
-        SaveManager,
-      });
-
-    const bindNumber = (id, getter, setter, autosizeOpts) =>
-      bindNumberInput({
-        id,
-        get: getter,
-        set: setter,
-        SaveManager,
-        autoSizeInput,
-        autosizeOpts,
-      });
-
-    runPanelInit("Spells panel", () => initSpellsPanel(deps));
+    runPanelInit("Spells panel", () => initSpellsPanel(deps), { singletonKey: "spells" });
     runPanelInit("Attacks panel", () => initAttacksPanel(deps));
 
-    runPanelInit("Equipment panel", () => initEquipmentPanel({ ...deps, bindNumber }));
+    runPanelInit(
+      "Equipment panel",
+      () => initEquipmentPanel({ ...deps, bindNumber }),
+      { singletonKey: "equipment" }
+    );
 
     runPanelInit("Basics panel", () => initBasicsPanel({
       ...deps,
@@ -117,4 +175,18 @@ export function initCharacterPageUI(deps) {
 
   // Boot character page bindings
   initCharacterUI();
+
+  const api = {
+    destroy() {
+      for (let i = destroyFns.length - 1; i >= 0; i--) {
+        destroyFns[i]?.();
+      }
+      if (_activeCharacterPageController === api) {
+        _activeCharacterPageController = null;
+      }
+    }
+  };
+
+  _activeCharacterPageController = api;
+  return api;
 }

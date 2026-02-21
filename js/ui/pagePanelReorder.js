@@ -6,6 +6,9 @@
 //
 // This is intentionally “headless”: page modules provide selectors + header wiring.
 
+/** @type {Map<string, () => void>} */
+const activePagePanelReorderDestroyByPage = new Map();
+
 export function setupPagePanelReorder({
   state,
   SaveManager,
@@ -33,6 +36,12 @@ export function setupPagePanelReorder({
   breakpointQuery = "(max-width: 600px)",
   storeApplyFnKey = null, // e.g. "_applySectionOrder" if you want to expose applyOrder
 }) {
+  const destroyKey = pageId ? String(pageId) : "";
+  if (destroyKey) {
+    const prevDestroy = activePagePanelReorderDestroyByPage.get(destroyKey);
+    if (typeof prevDestroy === "function") prevDestroy();
+  }
+
   const pageEl = document.getElementById(pageId);
   if (!pageEl) return;
 
@@ -49,6 +58,12 @@ export function setupPagePanelReorder({
 
   const ui = getUiState?.(state);
   if (!ui) return;
+
+  const ac = new AbortController();
+  const { signal } = ac;
+  let destroyed = false;
+  /** @type {HTMLElement[]} */
+  const createdMoveWraps = [];
 
   // Collect panels (wherever they currently live inside wrapper)
   const panels = Array.from(columnsWrap.querySelectorAll(panelSelector));
@@ -109,11 +124,15 @@ export function setupPagePanelReorder({
     b.className = "moveBtn";
     b.textContent = label;
     b.title = title;
-    b.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onClick();
-    });
+    b.addEventListener(
+      "click",
+      (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      },
+      { signal }
+    );
     return b;
   }
 
@@ -141,6 +160,7 @@ export function setupPagePanelReorder({
     wrap.appendChild(makeMoveBtn("↓", "Move section down", () => moveSection(panelId, +1)));
 
     headerEl.appendChild(wrap);
+    createdMoveWraps.push(wrap);
   }
 
   // Initial apply
@@ -151,10 +171,36 @@ export function setupPagePanelReorder({
 
   // Re-apply on resize breakpoint changes
   let t = null;
-  window.addEventListener("resize", () => {
-    clearTimeout(t);
-    t = setTimeout(applyOrder, 120);
-  });
+  window.addEventListener(
+    "resize",
+    () => {
+      clearTimeout(t);
+      t = setTimeout(applyOrder, 120);
+    },
+    { signal }
+  );
 
   if (storeApplyFnKey) ui[storeApplyFnKey] = applyOrder;
+
+  const destroy = () => {
+    if (destroyed) return;
+    destroyed = true;
+    clearTimeout(t);
+    t = null;
+    ac.abort();
+    createdMoveWraps.forEach((wrap) => {
+      wrap?.remove?.();
+    });
+    createdMoveWraps.length = 0;
+    if (storeApplyFnKey && ui[storeApplyFnKey] === applyOrder) {
+      delete ui[storeApplyFnKey];
+    }
+    if (destroyKey && activePagePanelReorderDestroyByPage.get(destroyKey) === destroy) {
+      activePagePanelReorderDestroyByPage.delete(destroyKey);
+    }
+  };
+
+  if (destroyKey) activePagePanelReorderDestroyByPage.set(destroyKey, destroy);
+
+  return { applyOrder, destroy };
 }

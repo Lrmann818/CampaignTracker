@@ -8,6 +8,9 @@
 // - Deep linking (#tracker/#character/#map) + state persistence
 import { requireEl, getNoopDestroyApi } from "../utils/domGuards.js";
 
+/** @type {(() => void) | null} */
+let activeTopTabsNavigationDestroy = null;
+
 /**
  * Initialize the top page tabs.
  *
@@ -33,6 +36,10 @@ export function initTopTabsNavigation({
   defaultTab = "tracker",
   updateHash = true
 } = {}) {
+  if (typeof activeTopTabsNavigationDestroy === "function") {
+    activeTopTabsNavigationDestroy();
+  }
+
   const tabsRoot = requireEl(tabsRootSelector, document, { prefix: "initTopTabsNavigation", warn: false });
   if (!tabsRoot) {
     setStatus?.("Top navigation unavailable (missing tabs container).", { stickyMs: 5000 });
@@ -44,6 +51,10 @@ export function initTopTabsNavigation({
     setStatus?.("Top navigation unavailable (no tab buttons found).", { stickyMs: 5000 });
     return getNoopDestroyApi();
   }
+
+  const ac = new AbortController();
+  const { signal } = ac;
+  let destroyed = false;
 
   // Build the page registry from the DOM so adding pages is declarative.
   const pages = Object.create(null);
@@ -113,25 +124,29 @@ export function initTopTabsNavigation({
 
   // Click to switch
   tabButtons.forEach((btn) => {
-    btn.addEventListener("click", () => applyActiveTab(btn.getAttribute("data-tab")));
+    btn.addEventListener("click", () => applyActiveTab(btn.getAttribute("data-tab")), { signal });
   });
 
   // Keyboard: left/right arrows to move between tabs
-  tabsRoot.addEventListener("keydown", (e) => {
-    const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
-    if (!keys.includes(e.key)) return;
-    const idx = tabButtons.findIndex((b) => b.classList.contains("active"));
-    if (idx < 0) return;
+  tabsRoot.addEventListener(
+    "keydown",
+    (e) => {
+      const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+      if (!keys.includes(e.key)) return;
+      const idx = tabButtons.findIndex((b) => b.classList.contains("active"));
+      if (idx < 0) return;
 
-    e.preventDefault();
-    let next = idx;
-    if (e.key === "ArrowLeft") next = (idx - 1 + tabButtons.length) % tabButtons.length;
-    if (e.key === "ArrowRight") next = (idx + 1) % tabButtons.length;
-    if (e.key === "Home") next = 0;
-    if (e.key === "End") next = tabButtons.length - 1;
-    tabButtons[next].focus();
-    applyActiveTab(tabButtons[next].getAttribute("data-tab"));
-  });
+      e.preventDefault();
+      let next = idx;
+      if (e.key === "ArrowLeft") next = (idx - 1 + tabButtons.length) % tabButtons.length;
+      if (e.key === "ArrowRight") next = (idx + 1) % tabButtons.length;
+      if (e.key === "Home") next = 0;
+      if (e.key === "End") next = tabButtons.length - 1;
+      tabButtons[next].focus();
+      applyActiveTab(tabButtons[next].getAttribute("data-tab"));
+    },
+    { signal }
+  );
 
   // Initial: prefer hash (#tracker/#character/#map), else localStorage, else state, else default
   // NOTE: We intentionally persist active tab in localStorage without marking the campaign "dirty".
@@ -153,16 +168,31 @@ export function initTopTabsNavigation({
   applyActiveTab(initial, { markDirty: false });
 
   // Optional: respond to manual hash changes (back/forward, pasted URL)
-  window.addEventListener("hashchange", () => {
-    const h = (location.hash || "").replace("#", "").trim();
-    if (!h) return;
-    if (!pages[h]) return;
-    applyActiveTab(h, { markDirty: false });
-  });
+  window.addEventListener(
+    "hashchange",
+    () => {
+      const h = (location.hash || "").replace("#", "").trim();
+      if (!h) return;
+      if (!pages[h]) return;
+      applyActiveTab(h, { markDirty: false });
+    },
+    { signal }
+  );
+
+  const destroy = () => {
+    if (destroyed) return;
+    destroyed = true;
+    ac.abort();
+    if (activeTopTabsNavigationDestroy === destroy) {
+      activeTopTabsNavigationDestroy = null;
+    }
+  };
+  activeTopTabsNavigationDestroy = destroy;
 
   // Public API
   return {
     applyActiveTab,
-    getActiveTab: () => normalizeTabName(state?.ui?.activeTab || location.hash)
+    getActiveTab: () => normalizeTabName(state?.ui?.activeTab || location.hash),
+    destroy
   };
 }
