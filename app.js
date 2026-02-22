@@ -19,7 +19,11 @@ import {
 import {
   DEV_MODE,
   DEV_STATE_GUARD_MODE,
+  DEV_DOCS_URL,
+  DEV_QUERY_PARAM,
+  STATE_GUARD_QUERY_PARAM,
   installStateMutationGuard,
+  installStateMutationAllowanceLifecycle,
   withAllowedStateMutationAsync
 } from "./js/utils/dev.js";
 
@@ -91,8 +95,16 @@ const StateGuard = installStateMutationGuard(state, {
   helperHint: "Use createStateActions(...) helpers for mutations so changes stay explicit and save-aware."
 });
 const appState = StateGuard.state;
+if (DEV_MODE) {
+  globalThis.__APP_STATE__ = appState;
+  console.info(`[dev] DEV enabled (${DEV_QUERY_PARAM}=1).`);
+  console.info(`[dev] stateGuard mode: ${StateGuard.mode} (${STATE_GUARD_QUERY_PARAM}=warn|throw|off).`);
+  console.info(`[dev] docs: ${DEV_DOCS_URL}`);
+  console.info("[dev] test guard: __APP_STATE__.tracker.campaignTitle = 'test'");
+}
 if (DEV_MODE && StateGuard.enabled) {
-  console.info(`[dev] state mutation guard is active (${StateGuard.mode}). Use ?stateGuard=off or ?dev=0 to disable.`);
+  installStateMutationAllowanceLifecycle();
+  console.info("[dev] state mutation guard is active for out-of-scope direct writes.");
 }
 
 /************************ Shared file picker ************************/

@@ -59,13 +59,29 @@ Optional output folder:
 - The app uses a strict CSP in `index.html`.
 - Images use `blob:` + `data:` URLs and are stored via the storage layer.
 
-## Dev mutation guard
+## DEV flags
 
 Development mode is auto-enabled on local hosts (`localhost`, `127.0.0.1`, `::1`, `*.local`).
 
-- Force enable DEV mode: add `?dev=1`
-- Force disable DEV mode: add `?dev=0`
-- Mutation guard modes: `?stateGuard=warn` (default in DEV), `?stateGuard=throw`, `?stateGuard=off`
+- `?dev=1` enables DEV mode.
+- `?dev=0` disables DEV mode.
+- `?stateGuard=warn` enables warning-only mutation guard mode.
+- `?stateGuard=throw` enables throwing mutation guard mode.
+- `?stateGuard=off` disables the mutation guard.
+
+Recommended querystrings:
+- `/?dev=1&stateGuard=warn`
+- `/?dev=1&stateGuard=throw`
+- `/?dev=1&stateGuard=off`
+
+Behavior summary:
+- DEV off: mutation guard is off unless explicitly requested.
+- DEV on + warn: direct out-of-scope state writes warn once per path.
+- DEV on + throw: direct out-of-scope state writes throw with a helper message.
+- Normal app UI usage remains functional in DEV guard modes because registered UI lifecycle callbacks are treated as allowed mutation scopes.
+
+Quick guard check from console in DEV mode:
+- `__APP_STATE__.tracker.campaignTitle = "Guard test"`
 
 When enabled, direct state writes outside action helpers log warnings (or throw in `throw` mode) and point to `createStateActions(...)` helpers.
 

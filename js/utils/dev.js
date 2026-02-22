@@ -1,6 +1,10 @@
 // @ts-nocheck
 // Development-only toggles and state mutation guardrails.
 
+export const DEV_QUERY_PARAM = "dev";
+export const STATE_GUARD_QUERY_PARAM = "stateGuard";
+export const DEV_DOCS_URL = "README.md#dev-flags";
+
 const TRUE_VALUES = new Set(["1", "true", "on", "yes"]);
 const FALSE_VALUES = new Set(["0", "false", "off", "no"]);
 const DEFAULT_HELPER_HINT = "Use createStateActions(...) helpers (updateCharacterField, updateTrackerField, updateMapField, updateTrackerCardField).";
@@ -45,13 +49,13 @@ function isLocalDevHost(locationObj = globalThis?.location) {
 }
 
 export function detectDevMode(locationObj = globalThis?.location) {
-  const explicit = parseBooleanFlag(readQueryParam("dev", locationObj));
+  const explicit = parseBooleanFlag(readQueryParam(DEV_QUERY_PARAM, locationObj));
   if (explicit != null) return explicit;
   return isLocalDevHost(locationObj);
 }
 
 export function detectStateGuardMode(locationObj = globalThis?.location, devMode = detectDevMode(locationObj)) {
-  const explicit = normalizeGuardMode(readQueryParam("stateGuard", locationObj));
+  const explicit = normalizeGuardMode(readQueryParam(STATE_GUARD_QUERY_PARAM, locationObj));
   if (explicit) return explicit;
   return devMode ? DEFAULT_DEV_GUARD_MODE : "off";
 }
@@ -62,6 +66,8 @@ export const DEV_STATE_GUARD_MODE = detectStateGuardMode();
 let allowedMutationDepth = 0;
 const warnedMutations = new Set();
 const proxyCache = new WeakMap();
+let lifecycleAllowanceInstalled = false;
+let restoreLifecycleAllowance = null;
 
 function withMutationAllowance(fn) {
   allowedMutationDepth += 1;
@@ -91,6 +97,144 @@ export function withAllowedStateMutation(fn) {
 export async function withAllowedStateMutationAsync(fn) {
   if (typeof fn !== "function") return undefined;
   return withMutationAllowance(async () => await fn());
+}
+
+function wrapLifecycleCallback(callback) {
+  if (typeof callback !== "function") return callback;
+  return function wrappedMutationAllowedCallback(...args) {
+    return withMutationAllowance(() => callback.apply(this, args));
+  };
+}
+
+function getListenerCapture(options) {
+  if (typeof options === "boolean") return options;
+  return !!options?.capture;
+}
+
+function installEventListenerAllowance() {
+  const proto = globalThis?.EventTarget?.prototype;
+  if (!proto?.addEventListener || !proto?.removeEventListener) return null;
+
+  const originalAdd = proto.addEventListener;
+  const originalRemove = proto.removeEventListener;
+  const listenerWraps = new WeakMap();
+
+  const getWrapped = (target, type, listener, capture) => {
+    const targetMap = listenerWraps.get(target);
+    const typeMap = targetMap?.get(type);
+    const entry = typeMap?.get(listener);
+    if (!entry) return null;
+    return capture ? entry.capture : entry.bubble;
+  };
+
+  const setWrapped = (target, type, listener, capture, wrapped) => {
+    let targetMap = listenerWraps.get(target);
+    if (!targetMap) {
+      targetMap = new Map();
+      listenerWraps.set(target, targetMap);
+    }
+    let typeMap = targetMap.get(type);
+    if (!typeMap) {
+      typeMap = new WeakMap();
+      targetMap.set(type, typeMap);
+    }
+    const entry = typeMap.get(listener) || {};
+    if (capture) entry.capture = wrapped;
+    else entry.bubble = wrapped;
+    typeMap.set(listener, entry);
+    return wrapped;
+  };
+
+  proto.addEventListener = function patchedAddEventListener(type, listener, options) {
+    if (typeof listener === "function") {
+      const capture = getListenerCapture(options);
+      let wrapped = getWrapped(this, type, listener, capture);
+      if (!wrapped) {
+        wrapped = setWrapped(this, type, listener, capture, wrapLifecycleCallback(listener));
+      }
+      return originalAdd.call(this, type, wrapped, options);
+    }
+    return originalAdd.call(this, type, listener, options);
+  };
+
+  proto.removeEventListener = function patchedRemoveEventListener(type, listener, options) {
+    if (typeof listener === "function") {
+      const capture = getListenerCapture(options);
+      const wrapped = getWrapped(this, type, listener, capture);
+      return originalRemove.call(this, type, wrapped || listener, options);
+    }
+    return originalRemove.call(this, type, listener, options);
+  };
+
+  return () => {
+    proto.addEventListener = originalAdd;
+    proto.removeEventListener = originalRemove;
+  };
+}
+
+function installTimerAllowance() {
+  const originalTimeout = globalThis?.setTimeout;
+  const originalInterval = globalThis?.setInterval;
+  const originalRaf = globalThis?.requestAnimationFrame;
+  if (typeof originalTimeout !== "function" || typeof originalInterval !== "function") return null;
+
+  globalThis.setTimeout = function patchedSetTimeout(callback, delay, ...args) {
+    return originalTimeout.call(this, wrapLifecycleCallback(callback), delay, ...args);
+  };
+
+  globalThis.setInterval = function patchedSetInterval(callback, delay, ...args) {
+    return originalInterval.call(this, wrapLifecycleCallback(callback), delay, ...args);
+  };
+
+  if (typeof originalRaf === "function") {
+    globalThis.requestAnimationFrame = function patchedRequestAnimationFrame(callback) {
+      return originalRaf.call(this, wrapLifecycleCallback(callback));
+    };
+  }
+
+  return () => {
+    globalThis.setTimeout = originalTimeout;
+    globalThis.setInterval = originalInterval;
+    if (typeof originalRaf === "function") {
+      globalThis.requestAnimationFrame = originalRaf;
+    }
+  };
+}
+
+export function installStateMutationAllowanceLifecycle() {
+  if (lifecycleAllowanceInstalled) {
+    return { installed: true };
+  }
+
+  const restores = [];
+  const restoreEvents = installEventListenerAllowance();
+  const restoreTimers = installTimerAllowance();
+  if (typeof restoreEvents === "function") restores.push(restoreEvents);
+  if (typeof restoreTimers === "function") restores.push(restoreTimers);
+
+  if (restores.length === 0) {
+    return { installed: false };
+  }
+
+  lifecycleAllowanceInstalled = true;
+  restoreLifecycleAllowance = () => {
+    for (const restore of restores) {
+      try {
+        restore();
+      } catch (_) {
+        // Best effort in DEV only.
+      }
+    }
+    lifecycleAllowanceInstalled = false;
+    restoreLifecycleAllowance = null;
+  };
+  return { installed: true };
+}
+
+export function uninstallStateMutationAllowanceLifecycle() {
+  if (typeof restoreLifecycleAllowance === "function") {
+    restoreLifecycleAllowance();
+  }
 }
 
 function shouldGuardObject(value) {

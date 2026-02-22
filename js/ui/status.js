@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { DEV_MODE } from "../utils/dev.js";
 
 /**
  * Creates a lightweight status line helper and installs global error handlers.
@@ -35,19 +36,22 @@ export function createStatus(opts = {}) {
       setStatus("Something went wrong. Check console for details.");
     });
 
-    // CSP violations are not normal JS errors, so capture them explicitly
-    document.addEventListener("securitypolicyviolation", (e) => {
-      console.error("CSP violation:", {
-        blockedURI: e.blockedURI,
-        violatedDirective: e.violatedDirective,
-        effectiveDirective: e.effectiveDirective,
-        sourceFile: e.sourceFile,
-        lineNumber: e.lineNumber,
-        columnNumber: e.columnNumber
-      });
+    if (!DEV_MODE) return;
 
-      // Show a user-facing status message.
-      setStatus(`Blocked by security policy: ${e.effectiveDirective || e.violatedDirective}`);
+    // CSP violations are not normal JS errors, so capture them explicitly (DEV only).
+    document.addEventListener("securitypolicyviolation", (e) => {
+      const details = {
+        violatedDirective: e.violatedDirective || "(unknown)",
+        blockedURI: e.blockedURI || "(unknown)",
+        effectiveDirective: e.effectiveDirective || "(unknown)",
+        documentURI: e.documentURI || location.href
+      };
+      if (e.sample) details.sample = e.sample;
+
+      console.error("[DEV][CSP VIOLATION] securitypolicyviolation event", details);
+
+      // Optional, non-invasive indicator in existing status line.
+      setStatus(`CSP violation: ${details.effectiveDirective}`, { stickyMs: 5000 });
     });
   }
 
