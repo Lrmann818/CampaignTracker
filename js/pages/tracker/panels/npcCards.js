@@ -47,7 +47,7 @@ function initNpcCards(deps = {}) {
 
 function renderNpcCards() {
   if (!_state) return;
-  const prevScroll = _cardsEl.scrollTop; // ✅ keep scroll position
+  const prevScroll = _cardsEl.scrollTop; // keep scroll position
 
   const sectionId = _state.tracker.npcActiveSectionId;
   const q = (_state.tracker.npcSearch || "").trim();
@@ -66,14 +66,14 @@ function renderNpcCards() {
       : "No NPCs in this section yet. Click “+ Add NPC”.";
     _cardsEl.appendChild(empty);
 
-    _cardsEl.scrollTop = prevScroll; // ✅ restore even on empty
+    _cardsEl.scrollTop = prevScroll; // restore even on empty
     return;
   }
 
   list.forEach(npc => _cardsEl.appendChild(renderNpcCard(npc)));
   _enhanceNumberSteppers(_cardsEl);
 
-  _cardsEl.scrollTop = prevScroll; // ✅ restore after DOM rebuild
+  _cardsEl.scrollTop = prevScroll; // restore after DOM rebuild
 }
 
 function renderNpcCard(npc) {

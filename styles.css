@@ -2732,7 +2732,7 @@ select.npcField:focus {
   text-align: left;
   padding: 6px 8px;
   max-width: 100%;
-  /* ✅ prevents running out of the grid/panel */
+  /* prevents running out of the grid/panel */
 }
 
 .charBasicsGrid input[type="number"].autosize {
@@ -3810,18 +3810,18 @@ input[type="range"] {
     0 0 0 1px var(--shadow-inset) inset,
     0 6px 16px var(--shadow-drop);
 
-  /* ✅ default: allow normal 1-finger panning/scrolling */
+  /* default: allow normal 1-finger panning/scrolling */
   touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
 
-/* ✅ while drawing, we block scrolling so strokes feel right */
+/* while drawing, we block scrolling so strokes feel right */
 .canvasWrap.drawingMode {
   touch-action: none;
 }
 
-/* ✅ while a 2-finger gesture is active, we block browser handling */
+/* while a 2-finger gesture is active, we block browser handling */
 .canvasWrap.gestureMode {
   touch-action: none;
 }

@@ -19,10 +19,18 @@ Then open the served URL (not a `file://` path).
 
 ## Release
 
-Build a release zip and verify it does not contain dev-only content (`.git/`, `node_modules/`, `dist/`, `.vscode/`, `.DS_Store`, `Thumbs.db`):
+Build a release zip and verify it does not contain dev-only content (`.git/`, `node_modules/`, `dist/`, `.vscode/`, `.DS_Store`, `Thumbs.db`). The scripts automatically verify this and fail if banned entries are present.
+
+Windows (PowerShell):
 
 ```powershell
 .\scripts\make-zip.ps1
+```
+
+Linux/Mac/Chromebook (Bash):
+
+```bash
+bash scripts/make-zip.sh
 ```
 
 Output format:
@@ -33,6 +41,10 @@ Optional output folder:
 
 ```powershell
 .\scripts\make-zip.ps1 -OutputDir .\exports
+```
+
+```bash
+bash scripts/make-zip.sh ./exports
 ```
 
 ## Project structure (high level)

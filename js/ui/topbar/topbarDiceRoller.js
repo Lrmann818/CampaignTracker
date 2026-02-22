@@ -205,7 +205,7 @@ export function initTopbarDiceRoller(deps) {
                 (mode === "dis") ? `d20 dis${formatMod(v.mod)}` :
                     `${v.count}d${v.sides}${formatMod(v.mod)}`;
 
-        // ✅ IMPORTANT: don't append mod twice
+        // IMPORTANT: don't append mod twice
         const text = `${expr} = ${total}${detail}`;
 
         state.ui.dice.history.unshift({ t: Date.now(), text });
