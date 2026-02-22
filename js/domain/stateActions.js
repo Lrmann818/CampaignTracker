@@ -83,6 +83,38 @@ export function createStateActions({ state, SaveManager } = {}) {
     throw new Error("createStateActions: state is required");
   }
 
+  function mutateState(mutator, options = {}) {
+    if (typeof mutator !== "function") return false;
+    const result = withAllowedStateMutation(() => {
+      return mutator(state);
+    });
+    if (result === false) return false;
+    maybeQueueSave(SaveManager, options);
+    return result;
+  }
+
+  function mutateCharacter(mutator, options = {}) {
+    if (typeof mutator !== "function") return false;
+    const result = withAllowedStateMutation(() => {
+      if (!state.character || typeof state.character !== "object") state.character = {};
+      return mutator(state.character, state);
+    });
+    if (result === false) return false;
+    maybeQueueSave(SaveManager, options);
+    return result;
+  }
+
+  function mutateTracker(mutator, options = {}) {
+    if (typeof mutator !== "function") return false;
+    const result = withAllowedStateMutation(() => {
+      if (!state.tracker || typeof state.tracker !== "object") state.tracker = {};
+      return mutator(state.tracker, state);
+    });
+    if (result === false) return false;
+    maybeQueueSave(SaveManager, options);
+    return result;
+  }
+
   function setPath(path, value, options = {}) {
     const updated = withAllowedStateMutation(() => {
       return setPathValue(state, path, value);
@@ -188,6 +220,9 @@ export function createStateActions({ state, SaveManager } = {}) {
   }
 
   return {
+    mutateState,
+    mutateCharacter,
+    mutateTracker,
     setPath,
     updateCharacterField,
     updateTrackerField,

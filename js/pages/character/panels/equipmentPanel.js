@@ -9,6 +9,7 @@
 import { bindNumber } from "../../../ui/bindings.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { safeAsync } from "../../../ui/safeAsync.js";
+import { createStateActions } from "../../../domain/stateActions.js";
 import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
 let _state = null;
 
@@ -25,6 +26,8 @@ let _uiPrompt = null;
 let _uiAlert = null;
 let _uiConfirm = null;
 let _setStatus = null;
+let _updateCharacterField = null;
+let _mutateCharacter = null;
 
 let _wired = false;
 
@@ -96,6 +99,8 @@ function initInventoryUI(deps = {}) {
   _uiAlert = deps.uiAlert;
   _uiConfirm = deps.uiConfirm;
   _setStatus = deps.setStatus;
+  _updateCharacterField = deps.updateCharacterField || _updateCharacterField;
+  _mutateCharacter = deps.mutateCharacter || _mutateCharacter;
 
   const missingCritical =
     !_tabsEl || !_notesBox || !_searchEl || !_addBtn || !_renameBtn || !_deleteBtn;
@@ -159,34 +164,35 @@ function renderInventoryTabs() {
 }
 
 function ensureInventoryDefaults() {
-  const c = _state.character;
-
-  // Migrate legacy single textarea into first tab, once.
-  if (!Array.isArray(c.inventoryItems)) {
-    const legacy = typeof c.equipment === "string" ? c.equipment : "";
-    c.inventoryItems = [{ title: "Inventory", notes: legacy || "" }];
-  }
-  // If we already have inventoryItems (due to defaults/merge) but they're empty
-  // and legacy equipment has text, migrate it once.
-  else {
-    const legacy = typeof c.equipment === "string" ? c.equipment : "";
-    const hasAnyNotes = c.inventoryItems.some(it => (it && typeof it.notes === "string" && it.notes.trim()));
-    if (!hasAnyNotes && legacy && String(legacy).trim()) {
-      if (!c.inventoryItems[0]) c.inventoryItems[0] = { title: "Inventory", notes: "" };
-      if (!c.inventoryItems[0].notes || !String(c.inventoryItems[0].notes).trim()) {
-        c.inventoryItems[0].notes = legacy;
-      }
-      if (!c.inventoryItems[0].title) c.inventoryItems[0].title = "Inventory";
+  if (typeof _mutateCharacter !== "function") return;
+  _mutateCharacter((c) => {
+    // Migrate legacy single textarea into first tab, once.
+    if (!Array.isArray(c.inventoryItems)) {
+      const legacy = typeof c.equipment === "string" ? c.equipment : "";
+      c.inventoryItems = [{ title: "Inventory", notes: legacy || "" }];
     }
-  }
+    // If we already have inventoryItems (due to defaults/merge) but they're empty
+    // and legacy equipment has text, migrate it once.
+    else {
+      const legacy = typeof c.equipment === "string" ? c.equipment : "";
+      const hasAnyNotes = c.inventoryItems.some(it => (it && typeof it.notes === "string" && it.notes.trim()));
+      if (!hasAnyNotes && legacy && String(legacy).trim()) {
+        if (!c.inventoryItems[0]) c.inventoryItems[0] = { title: "Inventory", notes: "" };
+        if (!c.inventoryItems[0].notes || !String(c.inventoryItems[0].notes).trim()) {
+          c.inventoryItems[0].notes = legacy;
+        }
+        if (!c.inventoryItems[0].title) c.inventoryItems[0].title = "Inventory";
+      }
+    }
 
-  if (c.inventoryItems.length === 0) {
-    c.inventoryItems.push({ title: "Inventory", notes: "" });
-  }
-  if (typeof c.activeInventoryIndex !== "number") c.activeInventoryIndex = 0;
-  if (c.activeInventoryIndex < 0) c.activeInventoryIndex = 0;
-  if (c.activeInventoryIndex >= c.inventoryItems.length) c.activeInventoryIndex = c.inventoryItems.length - 1;
-  if (typeof c.inventorySearch !== "string") c.inventorySearch = "";
+    if (c.inventoryItems.length === 0) {
+      c.inventoryItems.push({ title: "Inventory", notes: "" });
+    }
+    if (typeof c.activeInventoryIndex !== "number") c.activeInventoryIndex = 0;
+    if (c.activeInventoryIndex < 0) c.activeInventoryIndex = 0;
+    if (c.activeInventoryIndex >= c.inventoryItems.length) c.activeInventoryIndex = c.inventoryItems.length - 1;
+    if (typeof c.inventorySearch !== "string") c.inventorySearch = "";
+  }, { queueSave: false });
 }
 
 function markDirty() {
@@ -198,7 +204,7 @@ function wireHandlers() {
   if (_searchEl) {
     _searchEl.value = _state.character.inventorySearch || "";
     _searchEl.addEventListener("input", () => {
-      _state.character.inventorySearch = _searchEl.value;
+      _updateCharacterField?.("inventorySearch", _searchEl.value, { queueSave: false });
       markDirty();
       renderInventoryTabs();
     });
@@ -206,9 +212,13 @@ function wireHandlers() {
 
   // Notes typing saves into active item
   _notesBox.addEventListener("input", () => {
-    const cur = _state.character.inventoryItems?.[_state.character.activeInventoryIndex];
-    if (!cur) return;
-    cur.notes = _notesBox.value;
+    const updated = _mutateCharacter?.((character) => {
+      const cur = character.inventoryItems?.[character.activeInventoryIndex];
+      if (!cur) return false;
+      cur.notes = _notesBox.value;
+      return true;
+    }, { queueSave: false });
+    if (!updated) return;
     markDirty();
   });
 
@@ -217,8 +227,12 @@ function wireHandlers() {
     "click",
     safeAsync(async () => {
     // Save current notes into active item before anything else
-    const cur = _state.character.inventoryItems?.[_state.character.activeInventoryIndex];
-    if (cur) cur.notes = _notesBox.value;
+    _mutateCharacter?.((character) => {
+      const cur = character.inventoryItems?.[character.activeInventoryIndex];
+      if (!cur) return false;
+      cur.notes = _notesBox.value;
+      return true;
+    }, { queueSave: false });
 
     const nextNum = (_state.character.inventoryItems?.length || 0) + 1;
     const defaultTitle = `Item ${nextNum}`;
@@ -238,13 +252,14 @@ function wireHandlers() {
     const finalTitle = name || defaultTitle;
 
     // Now create the item
-    _state.character.inventoryItems.push({
-      title: finalTitle,
-      notes: ""
-    });
-
-    _state.character.activeInventoryIndex =
-      _state.character.inventoryItems.length - 1;
+    _mutateCharacter?.((character) => {
+      character.inventoryItems.push({
+        title: finalTitle,
+        notes: ""
+      });
+      character.activeInventoryIndex = character.inventoryItems.length - 1;
+      return true;
+    }, { queueSave: false });
 
     markDirty();
     renderInventoryTabs();
@@ -269,7 +284,12 @@ function wireHandlers() {
     });
     if (proposed === null || proposed === undefined) return;
 
-    cur.title = String(proposed).trim() || cur.title || `Item ${_state.character.activeInventoryIndex + 1}`;
+    _mutateCharacter?.((character) => {
+      const current = character.inventoryItems?.[character.activeInventoryIndex];
+      if (!current) return false;
+      current.title = String(proposed).trim() || current.title || `Item ${character.activeInventoryIndex + 1}`;
+      return true;
+    }, { queueSave: false });
     markDirty();
       renderInventoryTabs();
     }, (err) => {
@@ -294,9 +314,12 @@ function wireHandlers() {
     });
     if (!ok) return;
 
-    const idx = _state.character.activeInventoryIndex;
-    _state.character.inventoryItems.splice(idx, 1);
-    _state.character.activeInventoryIndex = Math.max(0, idx - 1);
+    _mutateCharacter?.((character) => {
+      const idx = character.activeInventoryIndex;
+      character.inventoryItems.splice(idx, 1);
+      character.activeInventoryIndex = Math.max(0, idx - 1);
+      return true;
+    }, { queueSave: false });
 
     markDirty();
       renderInventoryTabs();
@@ -308,11 +331,13 @@ function wireHandlers() {
 }
 
 function switchInventoryItem(idx) {
-  const items = _state.character.inventoryItems || [];
-  const current = items[_state.character.activeInventoryIndex];
-  if (current) current.notes = _notesBox.value;
-
-  _state.character.activeInventoryIndex = idx;
+  _mutateCharacter?.((character) => {
+    const items = character.inventoryItems || [];
+    const current = items[character.activeInventoryIndex];
+    if (current) current.notes = _notesBox.value;
+    character.activeInventoryIndex = idx;
+    return true;
+  }, { queueSave: false });
 
   markDirty();
   renderInventoryTabs();
@@ -335,6 +360,9 @@ export function initEquipmentPanel(deps = {}) {
     console.warn("initEquipmentPanel: missing state");
     return;
   }
+  const { updateCharacterField, mutateCharacter } = createStateActions({ state: _state, SaveManager });
+  _updateCharacterField = updateCharacterField;
+  _mutateCharacter = mutateCharacter;
 
   const required = {
     panelEl: "#charEquipmentPanel",
@@ -375,12 +403,16 @@ export function initEquipmentPanel(deps = {}) {
     uiAlert,
     uiConfirm,
     setStatus,
+    updateCharacterField,
+    mutateCharacter,
   });
 
   // ---- Money tiles ----
   const ensureMoney = () => {
-    if (!_state?.character) return;
-    if (!_state.character.money) _state.character.money = { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
+    _mutateCharacter?.((character) => {
+      if (!character.money) character.money = { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
+      return true;
+    }, { queueSave: false });
   };
 
   ensureMoney();
@@ -391,7 +423,7 @@ export function initEquipmentPanel(deps = {}) {
       get: () => _state.character.money?.[key],
       set: (v) => {
         ensureMoney();
-        _state.character.money[key] = (v ?? 0);
+        updateCharacterField(`money.${key}`, (v ?? 0), { queueSave: false });
       },
       SaveManager,
       autoSizeInput,

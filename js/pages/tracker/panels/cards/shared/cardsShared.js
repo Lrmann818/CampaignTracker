@@ -1,4 +1,5 @@
 import { safeAsync } from "../../../../../ui/safeAsync.js";
+import { createStateActions } from "../../../../../domain/stateActions.js";
 
 export function makeSectionId(prefix) {
   return `${prefix}_` + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -132,6 +133,7 @@ export function wireSectionCrud({
   missingConfirmTitle = "Missing Dialog",
 }) {
   if (!setStatus) throw new Error("wireSectionCrud requires setStatus");
+  const { mutateTracker } = createStateActions({ state, SaveManager });
 
   addSectionBtn.addEventListener(
     "click",
@@ -150,10 +152,14 @@ export function wireSectionCrud({
 
       const name = proposed.trim() || `Section ${nextNum}`;
       const sec = { id: makeSectionId(idPrefix), name };
-      state.tracker[sectionsKey].push(sec);
-      state.tracker[activeKey] = sec.id;
+      const added = mutateTracker((tracker) => {
+        if (!Array.isArray(tracker[sectionsKey])) tracker[sectionsKey] = [];
+        tracker[sectionsKey].push(sec);
+        tracker[activeKey] = sec.id;
+        return true;
+      });
+      if (!added) return;
 
-      SaveManager.markDirty();
       renderTabs();
       renderCards();
     }, (err) => {
@@ -179,8 +185,14 @@ export function wireSectionCrud({
       });
       if (proposed === null) return;
 
-      sec.name = proposed.trim() || sec.name || "Section";
-      SaveManager.markDirty();
+      const renamed = mutateTracker((tracker) => {
+        const target = tracker[sectionsKey]?.find((s) => s.id === tracker[activeKey]);
+        if (!target) return false;
+        target.name = proposed.trim() || target.name || "Section";
+        return true;
+      });
+      if (!renamed) return;
+
       renderTabs();
     }, (err) => {
       console.error(err);
@@ -207,14 +219,23 @@ export function wireSectionCrud({
       const ok = await uiConfirm(deleteConfirmText(sec.name), { title: deleteTitle, okText: "Delete" });
       if (!ok) return;
 
-      const deleteId = sec.id;
-      state.tracker[sectionsKey] = state.tracker[sectionsKey].filter(s => s.id !== deleteId);
-      const fallbackId = state.tracker[sectionsKey][0].id;
+      const deleted = mutateTracker((tracker) => {
+        const list = tracker[sectionsKey] || [];
+        const activeId = tracker[activeKey];
+        const activeSection = list.find((s) => s.id === activeId);
+        if (!activeSection) return false;
 
-      onDeleteMoveItems(deleteId, fallbackId);
-      state.tracker[activeKey] = fallbackId;
+        const deleteId = activeSection.id;
+        tracker[sectionsKey] = list.filter((s) => s.id !== deleteId);
+        const fallbackId = tracker[sectionsKey]?.[0]?.id;
+        if (!fallbackId) return false;
 
-      SaveManager.markDirty();
+        onDeleteMoveItems?.(deleteId, fallbackId);
+        tracker[activeKey] = fallbackId;
+        return true;
+      });
+      if (!deleted) return;
+
       renderTabs();
       renderCards();
     }, (err) => {

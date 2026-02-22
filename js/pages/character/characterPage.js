@@ -11,7 +11,7 @@ import { initProficienciesPanel } from "../character/panels/proficienciesPanel.j
 import { initAbilitiesPanel } from "../character/panels/abilitiesPanel.js";
 import { initPersonalityPanel, setupCharacterCollapsibleTextareas } from "../character/panels/personalityPanel.js";
 import { numberOrNull } from "../../utils/number.js";
-import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
+import { requireMany, getNoopDestroyApi } from "../../utils/domGuards.js";
 import { DEV_MODE } from "../../utils/dev.js";
 
 let _activeCharacterPageController = null;
@@ -50,6 +50,19 @@ export function initCharacterPageUI(deps) {
   if (!state) throw new Error("initCharacterPageUI: state is required");
   if (!SaveManager) throw new Error("initCharacterPageUI: SaveManager is required");
   if (!setStatus) throw new Error("initCharacterPageUI requires setStatus");
+
+  const guard = requireMany(
+    { root: "#page-character" },
+    {
+      root: document,
+      setStatus,
+      context: "Character page",
+      stickyMs: 5000
+    }
+  );
+  if (!guard.ok) {
+    return guard.destroy;
+  }
 
   const destroyFns = [];
   const addDestroy = (destroyFn) => {
@@ -131,12 +144,6 @@ export function initCharacterPageUI(deps) {
 
   /************************ Character Sheet page ***********************/
   function initCharacterUI() {
-    const root = requireEl("#page-character", document, { prefix: "initCharacterPageUI", warn: false });
-    if (!root) {
-      setStatus("Character page unavailable (missing #page-character).", { stickyMs: 5000 });
-      return;
-    }
-
     // Ensure shape exists (older saves/backups)
     if (!state.character) state.character = {};
     if (!state.character.abilities) state.character.abilities = {};

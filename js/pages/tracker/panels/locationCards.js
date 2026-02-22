@@ -11,6 +11,7 @@ import { createMoveButton, createCollapseButton } from "./cards/shared/cardHeade
 import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
 import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
 import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
+import { createStateActions } from "../../../domain/stateActions.js";
 import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _cardsEl = null;
@@ -35,17 +36,29 @@ let _deleteLoc = null;
  * @param {HTMLInputElement} opts.searchEl
  * @param {HTMLSelectElement} opts.filterEl
  * @param {Function} opts.makeLocation
- * @param {Function} opts.markDirty
  * @param {Function} opts.render
  */
-function initLocationsToolbar({ addBtn, searchEl, filterEl, makeLocation, markDirty, render, renderTabs }) {
+function initLocationsToolbar({
+  addBtn,
+  searchEl,
+  filterEl,
+  makeLocation,
+  render,
+  renderTabs,
+  updateTrackerField,
+  addTrackerCard,
+  mutateTracker,
+}) {
   const s = _state;
   if (!s?.tracker) return;
 
   // Defaults for persisted toolbar state
-  if (typeof s.tracker.locSearch !== "string") s.tracker.locSearch = "";
-  if (typeof s.tracker.locFilter !== "string") s.tracker.locFilter = "all";
-  if (!Array.isArray(s.tracker.locationsList)) s.tracker.locationsList = [];
+  mutateTracker?.((tracker) => {
+    if (typeof tracker.locSearch !== "string") tracker.locSearch = "";
+    if (typeof tracker.locFilter !== "string") tracker.locFilter = "all";
+    if (!Array.isArray(tracker.locationsList)) tracker.locationsList = [];
+    return true;
+  }, { queueSave: false });
 
   // Initialize UI from state
   searchEl.value = s.tracker.locSearch;
@@ -53,15 +66,13 @@ function initLocationsToolbar({ addBtn, searchEl, filterEl, makeLocation, markDi
 
   // Wiring
   searchEl.addEventListener("input", () => {
-    s.tracker.locSearch = searchEl.value;
-    markDirty();
+    updateTrackerField?.("locSearch", searchEl.value);
     if (renderTabs) renderTabs();
     render();
   });
 
   filterEl.addEventListener("change", () => {
-    s.tracker.locFilter = filterEl.value;
-    markDirty();
+    updateTrackerField?.("locFilter", filterEl.value);
     if (renderTabs) renderTabs();
     render();
   });
@@ -72,8 +83,7 @@ function initLocationsToolbar({ addBtn, searchEl, filterEl, makeLocation, markDi
     if (typeof s.tracker.locActiveSectionId === "string" && s.tracker.locActiveSectionId) {
       loc.sectionId = s.tracker.locActiveSectionId;
     }
-    s.tracker.locationsList.unshift(loc);
-    markDirty();
+    addTrackerCard?.("locations", loc, { atStart: true });
     if (renderTabs) renderTabs();
     render();
   });
@@ -315,40 +325,51 @@ export function initLocationsPanel(deps = {}) {
   if (!_blobIdToObjectUrl) throw new Error("initLocationsPanel requires blobIdToObjectUrl");
   if (!SaveManager) throw new Error("initLocationsPanel: missing SaveManager");
   if (!makeLocation) throw new Error("initLocationsPanel: missing makeLocation");
+  const {
+    updateTrackerField,
+    updateTrackerCardField,
+    addTrackerCard,
+    removeTrackerCard,
+    swapTrackerCards,
+    mutateTracker,
+  } = createStateActions({ state: _state, SaveManager });
 
   // store Popovers for dynamic card dropdown enhancements
   _Popovers = Popovers || null;
 
-  // Migrate legacy textarea content into a location card (only once).
-  if (!Array.isArray(_state.tracker.locationsList)) _state.tracker.locationsList = [];
-  if (typeof _state.tracker.locSearch !== "string") _state.tracker.locSearch = "";
-  if (typeof _state.tracker.locFilter !== "string") _state.tracker.locFilter = "all";
+  mutateTracker((tracker) => {
+    // Migrate legacy textarea content into a location card (only once).
+    if (!Array.isArray(tracker.locationsList)) tracker.locationsList = [];
+    if (typeof tracker.locSearch !== "string") tracker.locSearch = "";
+    if (typeof tracker.locFilter !== "string") tracker.locFilter = "all";
 
-  // Location sections (like Party)
-  if (!Array.isArray(_state.tracker.locSections) || _state.tracker.locSections.length === 0) {
-    _state.tracker.locSections = [{
-      id: "locsec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
-      name: "Main"
-    }];
-  }
-  if (typeof _state.tracker.locActiveSectionId !== "string" || !_state.tracker.locActiveSectionId) {
-    _state.tracker.locActiveSectionId = _state.tracker.locSections[0].id;
-  }
-  if (!_state.tracker.locSections.some(s => s.id === _state.tracker.locActiveSectionId)) {
-    _state.tracker.locActiveSectionId = _state.tracker.locSections[0].id;
-  }
-  // Ensure all locations belong to a section
-  const defaultSectionId = _state.tracker.locSections[0].id;
-  _state.tracker.locationsList.forEach(l => {
-    if (!l.sectionId) l.sectionId = defaultSectionId;
-  });
-
-  if (typeof _state.tracker.locations === "string") {
-    const old = _state.tracker.locations.trim();
-    if (old && _state.tracker.locationsList.length === 0) {
-      _state.tracker.locationsList.push(makeLocation({ title: "Imported Locations", notes: old }));
+    // Location sections (like Party)
+    if (!Array.isArray(tracker.locSections) || tracker.locSections.length === 0) {
+      tracker.locSections = [{
+        id: "locsec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
+        name: "Main"
+      }];
     }
-  }
+    if (typeof tracker.locActiveSectionId !== "string" || !tracker.locActiveSectionId) {
+      tracker.locActiveSectionId = tracker.locSections[0].id;
+    }
+    if (!tracker.locSections.some(s => s.id === tracker.locActiveSectionId)) {
+      tracker.locActiveSectionId = tracker.locSections[0].id;
+    }
+    // Ensure all locations belong to a section
+    const defaultSectionId = tracker.locSections[0].id;
+    tracker.locationsList.forEach(l => {
+      if (!l.sectionId) l.sectionId = defaultSectionId;
+    });
+
+    if (typeof tracker.locations === "string") {
+      const old = tracker.locations.trim();
+      if (old && tracker.locationsList.length === 0) {
+        tracker.locationsList.push(makeLocation({ title: "Imported Locations", notes: old }));
+      }
+    }
+    return true;
+  }, { queueSave: false });
 
   const required = {
     cardsEl: "#locCards",
@@ -389,9 +410,17 @@ export function initLocationsPanel(deps = {}) {
   // (filterEl enhancement handled above)
 
   function updateLoc(id, patch, rerender = true) {
-    const idx = _state.tracker.locationsList.findIndex(l => l.id === id);
-    if (idx === -1) return;
-    _state.tracker.locationsList[idx] = { ..._state.tracker.locationsList[idx], ...patch };
+    const updates = Object.entries(patch || {});
+    if (!updates.length) return;
+
+    let changed = false;
+    updates.forEach(([field, value]) => {
+      if (updateTrackerCardField("locations", id, field, value, { queueSave: false })) {
+        changed = true;
+      }
+    });
+    if (!changed) return;
+
     SaveManager.markDirty();
     if (rerender) renderLocationCards();
   }
@@ -413,15 +442,7 @@ export function initLocationsPanel(deps = {}) {
     const aId = visible[pos].id;
     const bId = visible[newPos].id;
 
-    const aIdx = _state.tracker.locationsList.findIndex(l => l.id === aId);
-    const bIdx = _state.tracker.locationsList.findIndex(l => l.id === bId);
-    if (aIdx === -1 || bIdx === -1) return;
-
-    const tmp = _state.tracker.locationsList[aIdx];
-    _state.tracker.locationsList[aIdx] = _state.tracker.locationsList[bIdx];
-    _state.tracker.locationsList[bIdx] = tmp;
-
-    SaveManager.markDirty();
+    if (!swapTrackerCards("locations", aId, bId)) return;
     renderLocationCards();
   }
 
@@ -436,8 +457,7 @@ export function initLocationsPanel(deps = {}) {
       itemId: id,
       getItemById: (locId) => _state?.tracker?.locationsList?.find(l => l.id === locId) || null,
       getBlobId: (loc) => loc.imgBlobId,
-      setBlobId: (loc, blobId) => {
-        loc.imgBlobId = blobId;
+      setBlobId: (_loc, blobId) => {
         pickedBlobId = blobId;
       },
       deps: {
@@ -468,8 +488,8 @@ export function initLocationsPanel(deps = {}) {
       catch (err) { console.warn("Failed to delete location image blob:", err); }
     }
 
-    _state.tracker.locationsList = _state.tracker.locationsList.filter(l => l.id !== id);
-    SaveManager.markDirty();
+    if (!removeTrackerCard("locations", id)) return;
+    renderLocTabs();
     renderLocationCards();
   }
 
@@ -482,8 +502,7 @@ export function initLocationsPanel(deps = {}) {
   });
 
   function setActiveSection(sectionId) {
-    _state.tracker.locActiveSectionId = sectionId;
-    SaveManager.markDirty();
+    updateTrackerField("locActiveSectionId", sectionId);
     renderLocTabs();
     renderLocationCards();
   }
@@ -531,9 +550,12 @@ export function initLocationsPanel(deps = {}) {
     renderTabs: renderLocTabs,
     renderCards: renderLocationCards,
     onDeleteMoveItems: (deleteId, fallbackId) => {
-      _state.tracker.locationsList.forEach(l => {
-        if (l.sectionId === deleteId) l.sectionId = fallbackId;
-      });
+      mutateTracker((tracker) => {
+        tracker.locationsList.forEach(l => {
+          if (l.sectionId === deleteId) l.sectionId = fallbackId;
+        });
+        return true;
+      }, { queueSave: false });
     },
   });
 
@@ -543,9 +565,11 @@ export function initLocationsPanel(deps = {}) {
     searchEl,
     filterEl,
     makeLocation,
-    markDirty: () => SaveManager.markDirty(),
     renderTabs: () => renderLocTabs(),
-    render: () => renderLocationCards()
+    render: () => renderLocationCards(),
+    updateTrackerField,
+    addTrackerCard,
+    mutateTracker,
   });
 
   // Initial render

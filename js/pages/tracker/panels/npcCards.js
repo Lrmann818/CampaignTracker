@@ -11,6 +11,7 @@ import { createMoveButton, createCollapseButton } from "./cards/shared/cardHeade
 import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
 import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
 import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
+import { createStateActions } from "../../../domain/stateActions.js";
 import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _cardsEl = null;
@@ -341,63 +342,74 @@ export function initNpcsPanel(deps = {}) {
   if (!_autoSizeInput) throw new Error("initNpcsPanel requires autoSizeInput");
   if (!SaveManager) throw new Error("initNpcsPanel: missing SaveManager");
   if (!makeNpc) throw new Error("initNpcsPanel: missing makeNpc");
+  const {
+    updateTrackerField,
+    updateTrackerCardField,
+    addTrackerCard,
+    removeTrackerCard,
+    swapTrackerCards,
+    mutateTracker,
+  } = createStateActions({ state: _state, SaveManager });
 
   _Popovers = Popovers || null;
 
-  // Migrate legacy NPC textarea text into the first NPC note (if present).
-  // Only runs if npcs is not an array.
-  if (!Array.isArray(_state.tracker.npcs)) {
-    const old = String(_state.tracker.npcs || "").trim();
-    _state.tracker.npcs = [];
-    if (old) {
-      _state.tracker.npcs.push(makeNpc({ group: "undecided", name: "Imported NPC Notes", notes: old }));
+  mutateTracker((tracker) => {
+    // Migrate legacy NPC textarea text into the first NPC note (if present).
+    // Only runs if npcs is not an array.
+    if (!Array.isArray(tracker.npcs)) {
+      const old = String(tracker.npcs || "").trim();
+      tracker.npcs = [];
+      if (old) {
+        tracker.npcs.push(makeNpc({ group: "undecided", name: "Imported NPC Notes", notes: old }));
+      }
     }
-  }
 
-  if (typeof _state.tracker.npcSearch !== "string") _state.tracker.npcSearch = "";
+    if (typeof tracker.npcSearch !== "string") tracker.npcSearch = "";
 
-  // --- NPC Sections (migrate older group-based saves safely) ---
-  // Older versions used fixed groups: friendly/undecided/foe.
-  // Newer versions use dynamic sections with add/rename/delete.
-  if (!Array.isArray(_state.tracker.npcSections) || _state.tracker.npcSections.length === 0) {
-    const mk = (name) => ({
-      id: "npcsec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
-      name
-    });
-    const friendly = mk("Friendly");
-    const undecided = mk("Undecided");
-    const foe = mk("Foe");
-    _state.tracker.npcSections = [friendly, undecided, foe];
+    // --- NPC Sections (migrate older group-based saves safely) ---
+    // Older versions used fixed groups: friendly/undecided/foe.
+    // Newer versions use dynamic sections with add/rename/delete.
+    if (!Array.isArray(tracker.npcSections) || tracker.npcSections.length === 0) {
+      const mk = (name) => ({
+        id: "npcsec_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
+        name
+      });
+      const friendly = mk("Friendly");
+      const undecided = mk("Undecided");
+      const foe = mk("Foe");
+      tracker.npcSections = [friendly, undecided, foe];
 
-    const groupToSecId = {
-      friendly: friendly.id,
-      undecided: undecided.id,
-      foe: foe.id,
-    };
-    // Migrate existing NPCs into the matching section
-    (_state.tracker.npcs || []).forEach(n => {
-      if (!n.sectionId) n.sectionId = groupToSecId[n.group] || friendly.id;
-    });
+      const groupToSecId = {
+        friendly: friendly.id,
+        undecided: undecided.id,
+        foe: foe.id,
+      };
+      // Migrate existing NPCs into the matching section
+      (tracker.npcs || []).forEach(n => {
+        if (!n.sectionId) n.sectionId = groupToSecId[n.group] || friendly.id;
+      });
 
-    // If older saves had npcActiveGroup, map it over
-    if (typeof _state.tracker.npcActiveGroup === "string") {
-      _state.tracker.npcActiveSectionId = groupToSecId[_state.tracker.npcActiveGroup] || friendly.id;
+      // If older saves had npcActiveGroup, map it over
+      if (typeof tracker.npcActiveGroup === "string") {
+        tracker.npcActiveSectionId = groupToSecId[tracker.npcActiveGroup] || friendly.id;
+      }
     }
-  }
 
-  // Ensure active section exists
-  if (typeof _state.tracker.npcActiveSectionId !== "string" || !_state.tracker.npcActiveSectionId) {
-    _state.tracker.npcActiveSectionId = _state.tracker.npcSections[0].id;
-  }
-  if (!_state.tracker.npcSections.some(s => s.id === _state.tracker.npcActiveSectionId)) {
-    _state.tracker.npcActiveSectionId = _state.tracker.npcSections[0].id;
-  }
+    // Ensure active section exists
+    if (typeof tracker.npcActiveSectionId !== "string" || !tracker.npcActiveSectionId) {
+      tracker.npcActiveSectionId = tracker.npcSections[0].id;
+    }
+    if (!tracker.npcSections.some(s => s.id === tracker.npcActiveSectionId)) {
+      tracker.npcActiveSectionId = tracker.npcSections[0].id;
+    }
 
-  // If any NPC lacks a sectionId, put it in the first section
-  const defaultSectionId = _state.tracker.npcSections[0].id;
-  (_state.tracker.npcs || []).forEach(n => {
-    if (!n.sectionId) n.sectionId = defaultSectionId;
-  });
+    // If any NPC lacks a sectionId, put it in the first section
+    const defaultSectionId = tracker.npcSections[0].id;
+    (tracker.npcs || []).forEach(n => {
+      if (!n.sectionId) n.sectionId = defaultSectionId;
+    });
+    return true;
+  }, { queueSave: false });
 
   const required = {
     cardsEl: "#npcCards",
@@ -421,9 +433,17 @@ export function initNpcsPanel(deps = {}) {
   } = guard.els;
 
   function updateNpc(id, patch, rerender = true) {
-    const idx = _state.tracker.npcs.findIndex(n => n.id === id);
-    if (idx === -1) return;
-    _state.tracker.npcs[idx] = { ..._state.tracker.npcs[idx], ...patch };
+    const updates = Object.entries(patch || {});
+    if (!updates.length) return;
+
+    let changed = false;
+    updates.forEach(([field, value]) => {
+      if (updateTrackerCardField("npc", id, field, value, { queueSave: false })) {
+        changed = true;
+      }
+    });
+    if (!changed) return;
+
     SaveManager.markDirty();
     if (rerender) renderNpcCards();
   }
@@ -444,16 +464,7 @@ export function initNpcsPanel(deps = {}) {
     const aId = visible[pos].id;
     const bId = visible[newPos].id;
 
-    const aIdx = _state.tracker.npcs.findIndex(n => n.id === aId);
-    const bIdx = _state.tracker.npcs.findIndex(n => n.id === bId);
-    if (aIdx === -1 || bIdx === -1) return;
-
-    // Swap in the master array
-    const tmp = _state.tracker.npcs[aIdx];
-    _state.tracker.npcs[aIdx] = _state.tracker.npcs[bIdx];
-    _state.tracker.npcs[bIdx] = tmp;
-
-    SaveManager.markDirty();
+    if (!swapTrackerCards("npc", aId, bId)) return;
     renderNpcCards();
   }
 
@@ -463,8 +474,7 @@ export function initNpcsPanel(deps = {}) {
       itemId: npcId,
       getItemById: (id) => _state?.tracker?.npcs?.find(n => n.id === id) || null,
       getBlobId: (npc) => npc.imgBlobId,
-      setBlobId: (npc, blobId) => {
-        npc.imgBlobId = blobId;
+      setBlobId: (_npc, blobId) => {
         pickedBlobId = blobId;
       },
       deps: {
@@ -495,8 +505,8 @@ export function initNpcsPanel(deps = {}) {
       catch (err) { console.warn("Failed to delete npc image blob:", err); }
     }
 
-    _state.tracker.npcs = _state.tracker.npcs.filter(n => n.id !== id);
-    SaveManager.markDirty();
+    if (!removeTrackerCard("npc", id)) return;
+    renderNpcTabs();
     renderNpcCards();
   }
 
@@ -514,8 +524,7 @@ export function initNpcsPanel(deps = {}) {
   });
 
   function setActiveSection(sectionId) {
-    _state.tracker.npcActiveSectionId = sectionId;
-    SaveManager.markDirty();
+    updateTrackerField("npcActiveSectionId", sectionId);
     renderNpcTabs();
     renderNpcCards();
   }
@@ -540,8 +549,7 @@ export function initNpcsPanel(deps = {}) {
   // Bind search
   searchEl.value = _state.tracker.npcSearch;
   searchEl.addEventListener("input", () => {
-    _state.tracker.npcSearch = searchEl.value;
-    SaveManager.markDirty();
+    updateTrackerField("npcSearch", searchEl.value);
     renderNpcTabs();
     renderNpcCards();
   });
@@ -567,9 +575,12 @@ export function initNpcsPanel(deps = {}) {
     renderTabs: renderNpcTabs,
     renderCards: renderNpcCards,
     onDeleteMoveItems: (deleteId, fallbackId) => {
-      _state.tracker.npcs.forEach(n => {
-        if (n.sectionId === deleteId) n.sectionId = fallbackId;
-      });
+      mutateTracker((tracker) => {
+        (tracker.npcs || []).forEach(n => {
+          if (n.sectionId === deleteId) n.sectionId = fallbackId;
+        });
+        return true;
+      }, { queueSave: false });
     },
   });
 
@@ -580,8 +591,7 @@ export function initNpcsPanel(deps = {}) {
   // Add NPC
   addBtn.addEventListener("click", () => {
     const npc = makeNpc({ sectionId: _state.tracker.npcActiveSectionId });
-    _state.tracker.npcs.unshift(npc);
-    SaveManager.markDirty();
+    addTrackerCard("npc", npc, { atStart: true });
     renderNpcTabs();
     renderNpcCards();
   });

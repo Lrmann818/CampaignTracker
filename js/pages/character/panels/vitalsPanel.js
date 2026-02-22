@@ -3,6 +3,7 @@
 
 import { numberOrNull } from "../../../utils/number.js";
 import { safeAsync } from "../../../ui/safeAsync.js";
+import { createStateActions } from "../../../domain/stateActions.js";
 import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 function notifyStatus(setStatus, message) {
@@ -13,25 +14,29 @@ function notifyStatus(setStatus, message) {
   console.warn(message);
 }
 
-function setupVitalsTileReorder({ state, SaveManager, panelEl, gridEl }) {
+function setupVitalsTileReorder({ state, SaveManager, panelEl, gridEl, actions = null }) {
   const panel = panelEl || document.getElementById("charVitalsPanel");
   const grid = gridEl || document.getElementById("charVitalsTiles") || panel?.querySelector(".charTiles");
   if (!panel || !grid) return;
-
-  if (!state.character) state.character = {};
-  if (!state.character.ui) state.character.ui = {};
+  const localActions = actions || createStateActions({ state, SaveManager });
+  const { mutateCharacter } = localActions;
+  if (typeof mutateCharacter !== "function") return;
 
   const tiles = Array.from(grid.querySelectorAll(".charTile")).filter((t) => t.dataset.vitalKey);
   const defaultOrder = tiles.map((t) => t.dataset.vitalKey).filter(Boolean);
 
-  if (!Array.isArray(state.character.ui.vitalsOrder) || state.character.ui.vitalsOrder.length === 0) {
-    state.character.ui.vitalsOrder = defaultOrder.slice();
-  } else {
-    const set = new Set(defaultOrder);
-    const cleaned = state.character.ui.vitalsOrder.filter((k) => set.has(k));
-    for (const k of defaultOrder) if (!cleaned.includes(k)) cleaned.push(k);
-    state.character.ui.vitalsOrder = cleaned;
-  }
+  mutateCharacter((character) => {
+    if (!character.ui) character.ui = {};
+    if (!Array.isArray(character.ui.vitalsOrder) || character.ui.vitalsOrder.length === 0) {
+      character.ui.vitalsOrder = defaultOrder.slice();
+    } else {
+      const set = new Set(defaultOrder);
+      const cleaned = character.ui.vitalsOrder.filter((k) => set.has(k));
+      for (const k of defaultOrder) if (!cleaned.includes(k)) cleaned.push(k);
+      character.ui.vitalsOrder = cleaned;
+    }
+    return true;
+  }, { queueSave: false });
 
   function applyOrder() {
     const order = state.character.ui.vitalsOrder || defaultOrder;
@@ -43,12 +48,17 @@ function setupVitalsTileReorder({ state, SaveManager, panelEl, gridEl }) {
   }
 
   function moveVital(key, dir) {
-    const order = state.character.ui.vitalsOrder;
-    const i = order.indexOf(key);
-    if (i === -1) return;
-    const j = i + dir;
-    if (j < 0 || j >= order.length) return;
-    [order[i], order[j]] = [order[j], order[i]];
+    const moved = mutateCharacter((character) => {
+      const order = character.ui?.vitalsOrder;
+      if (!Array.isArray(order)) return false;
+      const i = order.indexOf(key);
+      if (i === -1) return false;
+      const j = i + dir;
+      if (j < 0 || j >= order.length) return false;
+      [order[i], order[j]] = [order[j], order[i]];
+      return true;
+    }, { queueSave: false });
+    if (!moved) return;
     SaveManager.markDirty();
     applyOrder();
   }
@@ -119,8 +129,8 @@ export function initVitalsPanel(deps = {}) {
   } = deps;
 
   if (!state || !SaveManager || !bindNumber) return;
-
-  if (!state.character) state.character = {};
+  const { updateCharacterField, mutateCharacter } = createStateActions({ state, SaveManager });
+  mutateCharacter(() => true, { queueSave: false });
 
   const required = {
     panelEl: "#charVitalsPanel",
@@ -142,16 +152,16 @@ export function initVitalsPanel(deps = {}) {
   const { panelEl, wrap, addBtn } = guard.els;
 
   function bindVitalsNumbers() {
-    bindNumber("charHpCur", () => state.character.hpCur, (v) => state.character.hpCur = v);
-    bindNumber("charHpMax", () => state.character.hpMax, (v) => state.character.hpMax = v);
-    bindNumber("hitDieAmt", () => state.character.hitDieAmount, (v) => state.character.hitDieAmount = v);
-    bindNumber("hitDieSize", () => state.character.hitDieSize, (v) => state.character.hitDieSize = v);
-    bindNumber("charAC", () => state.character.ac, (v) => state.character.ac = v);
-    bindNumber("charInit", () => state.character.initiative, (v) => state.character.initiative = v);
-    bindNumber("charSpeed", () => state.character.speed, (v) => state.character.speed = v);
-    bindNumber("charProf", () => state.character.proficiency, (v) => state.character.proficiency = v);
-    bindNumber("charSpellAtk", () => state.character.spellAttack, (v) => state.character.spellAttack = v);
-    bindNumber("charSpellDC", () => state.character.spellDC, (v) => state.character.spellDC = v);
+    bindNumber("charHpCur", () => state.character.hpCur, (v) => updateCharacterField("hpCur", v, { queueSave: false }));
+    bindNumber("charHpMax", () => state.character.hpMax, (v) => updateCharacterField("hpMax", v, { queueSave: false }));
+    bindNumber("hitDieAmt", () => state.character.hitDieAmount, (v) => updateCharacterField("hitDieAmount", v, { queueSave: false }));
+    bindNumber("hitDieSize", () => state.character.hitDieSize, (v) => updateCharacterField("hitDieSize", v, { queueSave: false }));
+    bindNumber("charAC", () => state.character.ac, (v) => updateCharacterField("ac", v, { queueSave: false }));
+    bindNumber("charInit", () => state.character.initiative, (v) => updateCharacterField("initiative", v, { queueSave: false }));
+    bindNumber("charSpeed", () => state.character.speed, (v) => updateCharacterField("speed", v, { queueSave: false }));
+    bindNumber("charProf", () => state.character.proficiency, (v) => updateCharacterField("proficiency", v, { queueSave: false }));
+    bindNumber("charSpellAtk", () => state.character.spellAttack, (v) => updateCharacterField("spellAttack", v, { queueSave: false }));
+    bindNumber("charSpellDC", () => state.character.spellDC, (v) => updateCharacterField("spellDC", v, { queueSave: false }));
   }
 
   function refreshVitalsNumbers() {
@@ -195,17 +205,23 @@ export function initVitalsPanel(deps = {}) {
     });
   }
 
-  function ensureResourceArray() {
-    if (!Array.isArray(state.character.resources)) state.character.resources = [];
+  function newResource() {
+    return {
+      id: `res_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`,
+      name: "",
+      cur: null,
+      max: null
+    };
+  }
 
-    if (state.character.resources.length === 0) {
-      state.character.resources.push({
-        id: `res_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`,
-        name: "",
-        cur: null,
-        max: null
-      });
-    }
+  function ensureResourceArray() {
+    mutateCharacter((character) => {
+      if (!Array.isArray(character.resources)) character.resources = [];
+      if (character.resources.length === 0) {
+        character.resources.push(newResource());
+      }
+      return true;
+    }, { queueSave: false });
   }
 
   function setAndSave() {
@@ -243,7 +259,13 @@ export function initVitalsPanel(deps = {}) {
       });
 
       title.addEventListener("input", () => {
-        r.name = title.textContent ?? "";
+        const updated = mutateCharacter((character) => {
+          const resource = character.resources?.find((item) => item?.id === r.id);
+          if (!resource) return false;
+          resource.name = title.textContent ?? "";
+          return true;
+        }, { queueSave: false });
+        if (!updated) return;
         setAndSave();
       });
 
@@ -267,7 +289,13 @@ export function initVitalsPanel(deps = {}) {
           const name = (r.name || "").trim();
           const label = name ? `"${name}"` : "this resource tracker";
           if (!(await uiConfirm(`Delete ${label}?`, { title: "Delete Resource", okText: "Delete" }))) return;
-          state.character.resources.splice(idx, 1);
+          const removed = mutateCharacter((character) => {
+            const removeIdx = character.resources?.findIndex((item) => item?.id === r.id) ?? -1;
+            if (removeIdx === -1) return false;
+            character.resources.splice(removeIdx, 1);
+            return true;
+          }, { queueSave: false });
+          if (!removed) return;
           setAndSave();
           renderResources();
         }, (err) => {
@@ -291,7 +319,13 @@ export function initVitalsPanel(deps = {}) {
       cur.value = (r.cur === null || r.cur === undefined) ? "" : String(r.cur);
       autoSizeInput(cur, { min: 30, max: 60 });
       cur.addEventListener("input", () => {
-        r.cur = numberOrNull(cur.value);
+        const updated = mutateCharacter((character) => {
+          const resource = character.resources?.find((item) => item?.id === r.id);
+          if (!resource) return false;
+          resource.cur = numberOrNull(cur.value);
+          return true;
+        }, { queueSave: false });
+        if (!updated) return;
         setAndSave();
       });
 
@@ -306,7 +340,13 @@ export function initVitalsPanel(deps = {}) {
       max.value = (r.max === null || r.max === undefined) ? "" : String(r.max);
       autoSizeInput(max, { min: 30, max: 60 });
       max.addEventListener("input", () => {
-        r.max = numberOrNull(max.value);
+        const updated = mutateCharacter((character) => {
+          const resource = character.resources?.find((item) => item?.id === r.id);
+          if (!resource) return false;
+          resource.max = numberOrNull(max.value);
+          return true;
+        }, { queueSave: false });
+        if (!updated) return;
         setAndSave();
       });
 
@@ -324,7 +364,13 @@ export function initVitalsPanel(deps = {}) {
     });
 
     enhanceNumberSteppers(wrap);
-    setupVitalsTileReorder({ state, SaveManager, panelEl, gridEl: wrap });
+    setupVitalsTileReorder({
+      state,
+      SaveManager,
+      panelEl,
+      gridEl: wrap,
+      actions: { updateCharacterField, mutateCharacter }
+    });
   }
 
   if (panelEl.dataset.vitalsInit === "1") {
@@ -340,16 +386,20 @@ export function initVitalsPanel(deps = {}) {
 
   addBtn.addEventListener("click", () => {
     ensureResourceArray();
-    state.character.resources.push({
-      id: `res_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`,
-      name: "",
-      cur: null,
-      max: null
-    });
+    mutateCharacter((character) => {
+      character.resources.push(newResource());
+      return true;
+    }, { queueSave: false });
     setAndSave();
     renderResources();
   });
 
-  setupVitalsTileReorder({ state, SaveManager, panelEl, gridEl: wrap });
+  setupVitalsTileReorder({
+    state,
+    SaveManager,
+    panelEl,
+    gridEl: wrap,
+    actions: { updateCharacterField, mutateCharacter }
+  });
   renderResources();
 }

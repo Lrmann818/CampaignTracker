@@ -11,7 +11,7 @@ import { initPartyPanel } from "./panels/partyCards.js";
 import { initLocationsPanel } from "./panels/locationCards.js";
 import { initCharacterPageUI } from "../character/characterPage.js";
 import { initPanelHeaderCollapse } from "../../ui/panelHeaderCollapse.js";
-import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
+import { requireMany, getNoopDestroyApi } from "../../utils/domGuards.js";
 import { DEV_MODE } from "../../utils/dev.js";
 
 let _activeTrackerPageController = null;
@@ -68,10 +68,17 @@ export function initTrackerPage(deps) {
   if (!SaveManager) throw new Error("initTrackerPage: SaveManager is required");
   if (!setStatus) throw new Error("initTrackerPage requires setStatus");
 
-  const trackerRoot = requireEl("#page-tracker", document, { prefix: "initTrackerPage", warn: false });
-  if (!trackerRoot) {
-    setStatus("Tracker page unavailable (missing #page-tracker).", { stickyMs: 5000 });
-    return getNoopDestroyApi();
+  const guard = requireMany(
+    { root: "#page-tracker" },
+    {
+      root: document,
+      setStatus,
+      context: "Tracker page",
+      stickyMs: 5000
+    }
+  );
+  if (!guard.ok) {
+    return guard.destroy;
   }
 
   const destroyFns = [];
