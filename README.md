@@ -27,7 +27,7 @@ Build a release zip and verify it does not contain dev-only content (`.git/`, `n
 
 Output format:
 - `refactor-export-YYYYMMDD-HHMM.zip`
-- Script output includes: `Release zip is clean ✅`
+- Script output includes: `Release zip is clean`
 
 Optional output folder:
 

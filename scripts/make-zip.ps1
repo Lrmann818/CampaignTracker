@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 
 $scriptDir = Split-Path -Parent $PSCommandPath
 $projectRoot = (Resolve-Path (Join-Path $scriptDir '..')).Path
-$verifyScript = Join-Path $scriptDir 'verify-release.ps1'
+$verifyScript = Join-Path $scriptDir 'verify-zip.ps1'
 
 if (-not (Test-Path -LiteralPath $OutputDir)) {
     New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
@@ -63,8 +63,6 @@ try {
     }
 
     & $verifyScript -ZipPath $zipPath
-
-    Write-Output "Created $zipPath"
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {

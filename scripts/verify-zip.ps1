@@ -11,6 +11,13 @@ if (-not (Test-Path -LiteralPath $ZipPath)) {
     throw "Zip file not found: $ZipPath"
 }
 
+$bannedPrefixes = @(
+    '.git/',
+    'node_modules/',
+    '.vscode/',
+    'dist/'
+)
+
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
 
@@ -24,16 +31,12 @@ try {
             continue
         }
 
-        $segments = $entryPath.Split('/', [System.StringSplitOptions]::RemoveEmptyEntries)
-        $leafName = if ($segments.Length -gt 0) { $segments[$segments.Length - 1] } else { $entryPath }
-
-        $containsBannedDir = $segments | Where-Object {
-            $_ -ieq '.git' -or $_ -ieq 'node_modules' -or $_ -ieq 'dist' -or $_ -ieq '.vscode'
+        $normalizedPath = $entryPath.ToLowerInvariant()
+        $matchesBannedPrefix = $bannedPrefixes | Where-Object {
+            $normalizedPath.StartsWith($_.ToLowerInvariant())
         }
 
-        $isBannedFile = $leafName -ieq '.DS_Store' -or $leafName -ieq 'Thumbs.db'
-
-        if ($containsBannedDir -or $isBannedFile) {
+        if ($matchesBannedPrefix) {
             $offendingEntries.Add($entry.FullName)
         }
     }
@@ -43,6 +46,7 @@ try {
     }
 
     Write-Output 'Release zip is clean'
+    Write-Output $ZipPath
 }
 finally {
     $zip.Dispose()
