@@ -183,8 +183,8 @@ export function createMapController({
 
   const syncHistoryToMapState = () => {
     const historyState = mapHistory.exportState();
-    mapState.undo = historyState.undo;
-    mapState.redo = historyState.redo;
+    updateMapField("undo", historyState.undo, { queueSave: false });
+    updateMapField("redo", historyState.redo, { queueSave: false });
   };
 
   syncHistoryToMapState();

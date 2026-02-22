@@ -17,6 +17,23 @@ This project uses ES modules (`<script type="module" src="app.js"></script>`), s
 
 Then open the served URL (not a `file://` path).
 
+## Export zip (without repo/build artifacts)
+
+Use the PowerShell helper to build a shareable zip that excludes `.git/`, `node_modules/`, `dist/`, and any existing `*.zip` files:
+
+```powershell
+.\scripts\make-zip.ps1
+```
+
+Output format:
+- `refactor-export-YYYYMMDD-HHMM.zip`
+
+Optional output folder:
+
+```powershell
+.\scripts\make-zip.ps1 -OutputDir .\exports
+```
+
 ## Project structure (high level)
 
 - `index.html` - app shell/markup + CSP + root page sections
