@@ -7,6 +7,7 @@
 // - Accessibility (ARIA + keyboard)
 // - Deep linking (#tracker/#character/#map) + state persistence
 import { requireMany, getNoopDestroyApi } from "../utils/domGuards.js";
+import { createStateActions } from "../domain/stateActions.js";
 
 /** @type {(() => void) | null} */
 let activeTopTabsNavigationDestroy = null;
@@ -72,6 +73,13 @@ export function initTopTabsNavigation({
     return getNoopDestroyApi();
   }
 
+  const actions = state
+    ? createStateActions({
+      state,
+      SaveManager: (typeof markDirty === "function") ? { markDirty } : undefined
+    })
+    : null;
+
   function normalizeTabName(tabName) {
     const t = (tabName || "").toString().replace(/^#/, "").trim();
     if (t && pages[t]) return t;
@@ -117,9 +125,8 @@ export function initTopTabsNavigation({
       el.toggleAttribute("hidden", name !== active);
     });
 
-    if (state) {
-      state.ui = state.ui || {};
-      state.ui.activeTab = active;
+    if (actions) {
+      actions.setPath(["ui", "activeTab"], active, { queueSave: false });
     }
 
     // Persist UI preference without marking campaign data as "dirty"

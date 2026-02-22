@@ -1,4 +1,5 @@
 // Autosize helpers for number inputs and persisted textarea sizing.
+import { createStateActions } from "../domain/stateActions.js";
 
 // NOTE: many inputs are created *before* being inserted into the DOM.
 // getComputedStyle() returns incomplete values for disconnected elements, so we defer measuring
@@ -137,14 +138,22 @@ export function setupTextareaSizing({
     throw new Error("setupTextareaSizing requires { markDirty } or legacy { saveAll, setStatus }");
   }
 
+  const actions = createStateActions({
+    state,
+    SaveManager: hasMarkDirty ? { markDirty } : undefined
+  });
+
   // One place to store all textarea heights (root UI so it survives imports cleanly)
-  if (!state.ui || typeof state.ui !== "object") state.ui = {};
-  if (!state.ui.textareaHeights || typeof state.ui.textareaHeights !== "object") state.ui.textareaHeights = {};
+  if (!state.ui?.textareaHeights || typeof state.ui.textareaHeights !== "object") {
+    actions.setPath(["ui", "textareaHeights"], {}, { queueSave: false });
+  }
   const store = state.ui.textareaHeights;
 
   // Back-compat: if older saves stored it under tracker.ui, pull it forward once
   if (state.tracker?.ui?.textareaHeights && Object.keys(store).length === 0) {
-    Object.assign(store, state.tracker.ui.textareaHeights);
+    actions.mutateState((s) => {
+      Object.assign(s.ui.textareaHeights, s.tracker.ui.textareaHeights);
+    }, { queueSave: false });
   }
 
   const seen = new WeakSet();
@@ -218,7 +227,7 @@ export function setupTextareaSizing({
       const h = Math.min(Math.round(el.getBoundingClientRect().height), maxHeight);
       if (h <= 0) return;
 
-      store[el.id] = h;
+      actions.setPath(["ui", "textareaHeights", el.id], h, { queueSave: false });
       scheduleSave();
     });
 
@@ -230,7 +239,7 @@ export function setupTextareaSizing({
         const h = Math.min(Math.round(el.getBoundingClientRect().height), maxHeight);
         if (h <= 0) return;
 
-        store[el.id] = h;
+        actions.setPath(["ui", "textareaHeights", el.id], h, { queueSave: false });
         scheduleSave();
       });
       ro.observe(el);

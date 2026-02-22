@@ -3,6 +3,7 @@
 
 import { createTopbarPopover } from "./topbarPopover.js";
 import { requireEl, requireMany, getNoopDestroyApi } from "../../utils/domGuards.js";
+import { createStateActions } from "../../domain/stateActions.js";
 
 let _activeTopbarDiceRoller = null;
 
@@ -63,11 +64,15 @@ export function initTopbarDiceRoller(deps) {
         target.addEventListener(type, handler, { ...listenerOptions, signal: listenerSignal });
     };
 
+    const actions = createStateActions({ state, SaveManager });
+
     // Runtime state bucket.
-    if (!state.ui) state.ui = {};
-    if (!state.ui.dice) state.ui.dice = { history: [], last: { count: 1, sides: 20, mod: 0, mode: "normal" } };
-    if (!Array.isArray(state.ui.dice.history)) state.ui.dice.history = [];
-    if (!state.ui.dice.last) state.ui.dice.last = { count: 1, sides: 20, mod: 0, mode: "normal" };
+    actions.mutateState((s) => {
+        if (!s.ui) s.ui = {};
+        if (!s.ui.dice) s.ui.dice = { history: [], last: { count: 1, sides: 20, mod: 0, mode: "normal" } };
+        if (!Array.isArray(s.ui.dice.history)) s.ui.dice.history = [];
+        if (!s.ui.dice.last) s.ui.dice.last = { count: 1, sides: 20, mod: 0, mode: "normal" };
+    }, { queueSave: false });
     const HISTORY_MAX = 20;
 
     const syncModPlus = () => {
@@ -117,7 +122,7 @@ export function initTopbarDiceRoller(deps) {
         modEl.value = String(clampInt(v.mod, -999, 999, 0));
         const sides = clampInt(v.sides ?? 20, 2, 1000, 20);
         const mode = (v.mode === "adv" || v.mode === "dis") ? v.mode : "normal";
-        state.ui.dice.last = { ...state.ui.dice.last, sides, mode };
+        actions.setPath(["ui", "dice", "last"], { ...state.ui.dice.last, sides, mode }, { queueSave: false });
     };
 
     const rollOnce = (sides) => 1 + Math.floor(Math.random() * sides);
@@ -171,7 +176,7 @@ export function initTopbarDiceRoller(deps) {
 
     const doRoll = () => {
         const v = readUi();
-        state.ui.dice.last = { ...state.ui.dice.last, ...v };
+        actions.setPath(["ui", "dice", "last"], { ...state.ui.dice.last, ...v }, { queueSave: false });
 
         const isD20 = v.sides === 20;
         const mode = isD20 ? v.mode : "normal";
@@ -240,21 +245,21 @@ export function initTopbarDiceRoller(deps) {
     addListener(rollBtn, "click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        state.ui.dice.last.mode = "normal";
+        actions.setPath(["ui", "dice", "last", "mode"], "normal", { queueSave: false });
         doRoll();
     });
 
     addListener(advBtn, "click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        state.ui.dice.last.mode = "adv";
+        actions.setPath(["ui", "dice", "last", "mode"], "adv", { queueSave: false });
         doRoll();
     });
 
     addListener(disBtn, "click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        state.ui.dice.last.mode = "dis";
+        actions.setPath(["ui", "dice", "last", "mode"], "dis", { queueSave: false });
         doRoll();
     });
 
