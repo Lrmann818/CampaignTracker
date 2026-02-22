@@ -12,7 +12,7 @@ import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
 import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
 import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
 import { createStateActions } from "../../../domain/stateActions.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -33,25 +33,6 @@ let _numberOrNull = null;
 let _renderPartyTabs = null;
 
 const matchesSearch = makeFieldSearchMatcher(["name", "className", "status", "notes"]);
-
-function requireCriticalEl(selector, prefix) {
-  const el = requireEl(selector, document, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, document, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
 
 function initPartyCards(deps = {}) {
   _state = deps.state || _state;
@@ -378,19 +359,26 @@ export function initPartyPanel(deps = {}) {
     if (!m.sectionId) m.sectionId = defaultSectionId;
   });
 
-  const prefix = "initPartyPanel";
-  const cardsEl = requireCriticalEl("#partyCards", prefix);
-  const addBtn = requireCriticalEl("#addPartyBtn", prefix);
-  const searchEl = requireCriticalEl("#partySearch", prefix);
-  const tabsEl = requireCriticalEl("#partyTabs", prefix);
-  const addSectionBtn = requireCriticalEl("#addPartySectionBtn", prefix);
-  const renameSectionBtn = requireCriticalEl("#renamePartySectionBtn", prefix);
-  const deleteSectionBtn = requireCriticalEl("#deletePartySectionBtn", prefix);
-
-  if (!cardsEl || !addBtn || !searchEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) {
-    notifyMissingCritical(setStatus, "Party panel unavailable (missing expected UI elements).");
-    return getNoopDestroyApi();
-  }
+  const required = {
+    cardsEl: "#partyCards",
+    addBtn: "#addPartyBtn",
+    searchEl: "#partySearch",
+    tabsEl: "#partyTabs",
+    addSectionBtn: "#addPartySectionBtn",
+    renameSectionBtn: "#renamePartySectionBtn",
+    deleteSectionBtn: "#deletePartySectionBtn"
+  };
+  const guard = requireMany(required, { root: document, setStatus, context: "Party panel" });
+  if (!guard.ok) return guard.destroy;
+  const {
+    cardsEl,
+    addBtn,
+    searchEl,
+    tabsEl,
+    addSectionBtn,
+    renameSectionBtn,
+    deleteSectionBtn
+  } = guard.els;
 
   async function pickPartyImage(memberId) {
     let pickedBlobId = null;

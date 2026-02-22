@@ -3,26 +3,7 @@
 
 import { safeAsync } from "../../../ui/safeAsync.js";
 import { createStateActions } from "../../../domain/stateActions.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
-
-function requireCriticalEl(selector, prefix) {
-  const el = requireEl(selector, document, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, document, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
+import { requireMany } from "../../../utils/domGuards.js";
 
 function formatPossessive(name) {
   const n = (name || "").trim();
@@ -38,15 +19,17 @@ function updateTabTitle(state) {
   document.title = poss ? `${poss} ${base}` : base;
 }
 
-function setupAutosizeInputs(autoSizeInput) {
+function setupAutosizeInputs(autoSizeInput, fields = {}) {
   if (!autoSizeInput) return;
 
-  const nameInput = document.getElementById("charName");
-  const classInput = document.getElementById("charClassLevel");
-  const raceInput = document.getElementById("charRace");
-  const bgInput = document.getElementById("charBackground");
-  const alignInput = document.getElementById("charAlignment");
-  const xpInput = document.getElementById("charExperience");
+  const {
+    nameInput,
+    classInput,
+    raceInput,
+    bgInput,
+    alignInput,
+    xpInput
+  } = fields;
 
   if (nameInput) {
     nameInput.classList.add("autosize");
@@ -74,9 +57,7 @@ function setupAutosizeInputs(autoSizeInput) {
   }
 }
 
-function setupTitleSync(state) {
-  const nameInput = document.getElementById("charName");
-
+function setupTitleSync(state, nameInput) {
   // Set initial title based on saved character name (if any)
   updateTabTitle(state);
 
@@ -87,7 +68,7 @@ function setupTitleSync(state) {
   nameInput.addEventListener("input", () => updateTabTitle(state));
 }
 
-function setupCharacterPortrait(deps) {
+function setupCharacterPortrait(deps, refs = {}) {
   const {
     state,
     SaveManager,
@@ -103,7 +84,7 @@ function setupCharacterPortrait(deps) {
   const { updateCharacterField } = createStateActions({ state, SaveManager });
 
   const cardEl = document.getElementById("charPortraitCard");
-  const boxEl = document.getElementById("charPortraitTop");
+  const boxEl = refs.portraitTopEl || document.getElementById("charPortraitTop");
   if (!boxEl) return;
   const portraitBindEl = cardEl || boxEl;
 
@@ -185,23 +166,28 @@ export function initBasicsPanel(deps = {}) {
   } = deps;
 
   if (!state || !SaveManager || !bindText || !bindNumber) return;
-  const prefix = "initBasicsPanel";
-  const criticalSelectors = [
-    "#charBasicsPanel",
-    "#charName",
-    "#charClassLevel",
-    "#charRace",
-    "#charBackground",
-    "#charAlignment",
-    "#charExperience",
-    "#charFeatures",
-    "#charPortraitTop"
-  ];
-  const missingCritical = criticalSelectors.some((selector) => !requireCriticalEl(selector, prefix));
-  if (missingCritical) {
-    notifyMissingCritical(setStatus, "Character basics panel unavailable (missing expected UI elements).");
-    return getNoopDestroyApi();
-  }
+  const required = {
+    panel: "#charBasicsPanel",
+    nameInput: "#charName",
+    classInput: "#charClassLevel",
+    raceInput: "#charRace",
+    bgInput: "#charBackground",
+    alignInput: "#charAlignment",
+    xpInput: "#charExperience",
+    featuresInput: "#charFeatures",
+    portraitTopEl: "#charPortraitTop"
+  };
+  const guard = requireMany(required, { root: document, setStatus, context: "Character basics panel" });
+  if (!guard.ok) return guard.destroy;
+  const {
+    nameInput,
+    classInput,
+    raceInput,
+    bgInput,
+    alignInput,
+    xpInput,
+    portraitTopEl
+  } = guard.els;
 
   if (!state.character) state.character = {};
   const { updateCharacterField } = createStateActions({ state, SaveManager });
@@ -215,7 +201,14 @@ export function initBasicsPanel(deps = {}) {
   bindNumber("charExperience", () => state.character.experience, (v) => updateCharacterField("experience", v, { queueSave: false }));
   bindText("charFeatures", () => state.character.features, (v) => updateCharacterField("features", v, { queueSave: false }));
 
-  setupTitleSync(state);
-  setupAutosizeInputs(autoSizeInput);
-  setupCharacterPortrait(deps);
+  setupTitleSync(state, nameInput);
+  setupAutosizeInputs(autoSizeInput, {
+    nameInput,
+    classInput,
+    raceInput,
+    bgInput,
+    alignInput,
+    xpInput
+  });
+  setupCharacterPortrait(deps, { portraitTopEl });
 }

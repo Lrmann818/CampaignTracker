@@ -11,7 +11,7 @@ import { createMoveButton, createCollapseButton } from "./cards/shared/cardHeade
 import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
 import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
 import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -25,25 +25,6 @@ let _pickLocImage = null;
 let _updateLoc = null;
 let _moveLocCard = null;
 let _deleteLoc = null;
-
-function requireCriticalEl(selector, prefix) {
-  const el = requireEl(selector, document, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, document, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
 
 /**
  * Locations toolbar wiring (search / filter / add)
@@ -369,20 +350,28 @@ export function initLocationsPanel(deps = {}) {
     }
   }
 
-  const prefix = "initLocationsPanel";
-  const cardsEl = requireCriticalEl("#locCards", prefix);
-  const addBtn = requireCriticalEl("#addLocBtn", prefix);
-  const searchEl = requireCriticalEl("#locSearch", prefix);
-  const filterEl = requireCriticalEl("#locFilter", prefix);
-  const tabsEl = requireCriticalEl("#locTabs", prefix);
-  const addSectionBtn = requireCriticalEl("#addLocSectionBtn", prefix);
-  const renameSectionBtn = requireCriticalEl("#renameLocSectionBtn", prefix);
-  const deleteSectionBtn = requireCriticalEl("#deleteLocSectionBtn", prefix);
-
-  if (!cardsEl || !addBtn || !searchEl || !filterEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) {
-    notifyMissingCritical(setStatus, "Locations panel unavailable (missing expected UI elements).");
-    return getNoopDestroyApi();
-  }
+  const required = {
+    cardsEl: "#locCards",
+    addBtn: "#addLocBtn",
+    searchEl: "#locSearch",
+    filterEl: "#locFilter",
+    tabsEl: "#locTabs",
+    addSectionBtn: "#addLocSectionBtn",
+    renameSectionBtn: "#renameLocSectionBtn",
+    deleteSectionBtn: "#deleteLocSectionBtn"
+  };
+  const guard = requireMany(required, { root: document, setStatus, context: "Locations panel" });
+  if (!guard.ok) return guard.destroy;
+  const {
+    cardsEl,
+    addBtn,
+    searchEl,
+    filterEl,
+    tabsEl,
+    addSectionBtn,
+    renameSectionBtn,
+    deleteSectionBtn
+  } = guard.els;
 
   // Enhance the type filter so its OPEN menu matches the Map Tools dropdown.
   // Closed control keeps the same size as the panel header select.

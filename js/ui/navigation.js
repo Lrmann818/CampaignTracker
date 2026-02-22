@@ -6,26 +6,7 @@
 // - Zero hard-coded page list in app.js (add a new page by adding a tab button + a matching #page-<name> section)
 // - Accessibility (ARIA + keyboard)
 // - Deep linking (#tracker/#character/#map) + state persistence
-import { requireEl, assertEl, getNoopDestroyApi } from "../utils/domGuards.js";
-
-function requireCriticalEl(selector, root, prefix) {
-  const el = requireEl(selector, root, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, root, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
+import { requireMany, getNoopDestroyApi } from "../utils/domGuards.js";
 
 /** @type {(() => void) | null} */
 let activeTopTabsNavigationDestroy = null;
@@ -59,11 +40,12 @@ export function initTopTabsNavigation({
     activeTopTabsNavigationDestroy();
   }
 
-  const tabsRoot = requireCriticalEl(tabsRootSelector, document, "initTopTabsNavigation");
-  if (!tabsRoot) {
-    notifyMissingCritical(setStatus, "Top navigation unavailable (missing tabs container).");
-    return getNoopDestroyApi();
-  }
+  const guard = requireMany(
+    { tabsRoot: tabsRootSelector },
+    { root: document, setStatus, context: "Top navigation" }
+  );
+  if (!guard.ok) return guard.destroy;
+  const { tabsRoot } = guard.els;
 
   const tabButtons = Array.from(tabsRoot.querySelectorAll(tabSelector));
   if (!tabButtons.length) {
@@ -84,7 +66,9 @@ export function initTopTabsNavigation({
     if (el) pages[name] = el;
   });
   if (!Object.keys(pages).length) {
-    notifyMissingCritical(setStatus, "Top navigation unavailable (no matching page sections found).");
+    const message = "Top navigation unavailable (no matching page sections found).";
+    if (typeof setStatus === "function") setStatus(message, { stickyMs: 5000 });
+    else console.warn(message);
     return getNoopDestroyApi();
   }
 

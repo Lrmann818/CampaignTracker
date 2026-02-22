@@ -1,28 +1,9 @@
 // Topbar calculator popover.
 
 import { createTopbarPopover } from "./topbarPopover.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../utils/domGuards.js";
+import { requireMany, getNoopDestroyApi } from "../../utils/domGuards.js";
 
 let _activeTopbarCalculator = null;
-
-function requireCriticalEl(selector, prefix) {
-    const el = requireEl(selector, document, { prefix });
-    if (el) return el;
-    try {
-        assertEl(selector, document, { prefix, warn: false });
-    } catch (err) {
-        console.error(err);
-    }
-    return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-    if (typeof setStatus === "function") {
-        setStatus(message, { stickyMs: 5000 });
-        return;
-    }
-    console.warn(message);
-}
 
 export function initTopbarCalculator(deps) {
     _activeTopbarCalculator?.destroy?.();
@@ -36,19 +17,20 @@ export function initTopbarCalculator(deps) {
         setStatus
     } = deps || {};
 
-    const prefix = "initTopbarCalculator";
-    const dd = requireCriticalEl("#calcDropdown", prefix);
-    const btn = requireCriticalEl("#calcBtn", prefix);
-    const menu = requireCriticalEl("#calcMenu", prefix);
-    const closeBtn = requireCriticalEl("#calcCloseBtn", prefix);
-    const display = requireCriticalEl("#calcDisplay", prefix);
-    const keys = menu?.querySelector(".calcKeys");
-    const histEl = requireCriticalEl("#calcHistory", prefix);
-
-    if (!dd || !btn || !menu || !closeBtn || !display || !keys || !histEl) {
-        notifyMissingCritical(setStatus, "Topbar calculator unavailable (missing expected UI elements).");
-        return getNoopDestroyApi();
-    }
+    const guard = requireMany(
+        {
+            dd: "#calcDropdown",
+            btn: "#calcBtn",
+            menu: "#calcMenu",
+            closeBtn: "#calcCloseBtn",
+            display: "#calcDisplay",
+            keys: "#calcMenu .calcKeys",
+            histEl: "#calcHistory"
+        },
+        { root: document, setStatus, context: "Topbar calculator" }
+    );
+    if (!guard.ok) return guard.destroy || getNoopDestroyApi();
+    const { dd, btn, menu, closeBtn, display, keys, histEl } = guard.els;
 
     const listenerController = new AbortController();
     const listenerSignal = listenerController.signal;

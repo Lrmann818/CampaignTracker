@@ -9,7 +9,7 @@
 import { bindNumber } from "../../../ui/bindings.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { safeAsync } from "../../../ui/safeAsync.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
 let _state = null;
 
 let _tabsEl = null;
@@ -27,25 +27,6 @@ let _uiConfirm = null;
 let _setStatus = null;
 
 let _wired = false;
-
-function requireCriticalEl(selector, root, prefix) {
-  const el = requireEl(selector, root, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, root, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
 
 function notifyStatus(setStatus, message) {
   if (typeof setStatus === "function") {
@@ -119,7 +100,9 @@ function initInventoryUI(deps = {}) {
   const missingCritical =
     !_tabsEl || !_notesBox || !_searchEl || !_addBtn || !_renameBtn || !_deleteBtn;
   if (missingCritical) {
-    notifyMissingCritical(_setStatus, "Equipment inventory unavailable (missing expected UI elements).");
+    const message = "Equipment inventory unavailable (missing expected UI elements).";
+    if (typeof _setStatus === "function") _setStatus(message, { stickyMs: 5000 });
+    else console.warn(message);
     return getNoopDestroyApi();
   }
 
@@ -353,37 +336,31 @@ export function initEquipmentPanel(deps = {}) {
     return;
   }
 
-  const prefix = "initEquipmentPanel";
-  const panelEl = requireCriticalEl("#charEquipmentPanel", document, prefix);
-  const tabsEl = requireCriticalEl("#inventoryTabs", document, prefix);
-  const notesBoxEl = requireCriticalEl("#inventoryNotesBox", document, prefix);
-  const searchEl = requireCriticalEl("#inventorySearch", document, prefix);
-  const addBtn = requireCriticalEl("#addInventoryBtn", document, prefix);
-  const renameBtn = requireCriticalEl("#renameInventoryBtn", document, prefix);
-  const deleteBtn = requireCriticalEl("#deleteInventoryBtn", document, prefix);
-  const moneyPP = requireCriticalEl("#moneyPP", document, prefix);
-  const moneyGP = requireCriticalEl("#moneyGP", document, prefix);
-  const moneyEP = requireCriticalEl("#moneyEP", document, prefix);
-  const moneySP = requireCriticalEl("#moneySP", document, prefix);
-  const moneyCP = requireCriticalEl("#moneyCP", document, prefix);
-
-  if (
-    !panelEl
-    || !tabsEl
-    || !notesBoxEl
-    || !searchEl
-    || !addBtn
-    || !renameBtn
-    || !deleteBtn
-    || !moneyPP
-    || !moneyGP
-    || !moneyEP
-    || !moneySP
-    || !moneyCP
-  ) {
-    notifyMissingCritical(setStatus, "Equipment panel unavailable (missing expected UI elements).");
-    return getNoopDestroyApi();
-  }
+  const required = {
+    panelEl: "#charEquipmentPanel",
+    tabsEl: "#inventoryTabs",
+    notesBoxEl: "#inventoryNotesBox",
+    searchEl: "#inventorySearch",
+    addBtn: "#addInventoryBtn",
+    renameBtn: "#renameInventoryBtn",
+    deleteBtn: "#deleteInventoryBtn",
+    moneyPP: "#moneyPP",
+    moneyGP: "#moneyGP",
+    moneyEP: "#moneyEP",
+    moneySP: "#moneySP",
+    moneyCP: "#moneyCP"
+  };
+  const guard = requireMany(required, { root: document, setStatus, context: "Equipment panel" });
+  if (!guard.ok) return guard.destroy;
+  const {
+    panelEl,
+    tabsEl,
+    notesBoxEl,
+    searchEl,
+    addBtn,
+    renameBtn,
+    deleteBtn
+  } = guard.els;
 
   // ---- Inventory tabs UI ----
   initInventoryUI({

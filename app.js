@@ -66,6 +66,7 @@ import { numberOrNull } from "./js/utils/number.js";
 import { makeNpc, makePartyMember, makeLocation } from "./js/domain/factories.js";
 import { positionMenuOnScreen } from "./js/ui/positioning.js";
 import { createStatus } from "./js/ui/status.js";
+import { getNoopDestroyApi } from "./js/utils/domGuards.js";
 
 import { initDialogs, uiAlert, uiConfirm, uiPrompt } from "./js/ui/dialogs.js";
 import { initTopTabsNavigation } from "./js/ui/navigation.js";
@@ -149,6 +150,19 @@ function disableAutocompleteGlobally(root = document) {
   StatusApi.installGlobalErrorHandlers = Status.installGlobalErrorHandlers;
   StatusApi.installGlobalErrorHandlers();
 
+  const runModuleInit = (moduleName, initFn) => {
+    try {
+      return initFn();
+    } catch (err) {
+      console.error(`[app] ${moduleName} init failed:`, err);
+      const message = DEV_MODE
+        ? `${moduleName} failed in DEV mode. Check console for details.`
+        : `${moduleName} failed to initialize. Check console for details.`;
+      StatusApi.setStatus(message, { stickyMs: 5000 });
+      return getNoopDestroyApi();
+    }
+  };
+
   await withAllowedStateMutationAsync(async () => {
     await loadAllPersist({
       storageKey: STORAGE_KEY,
@@ -161,15 +175,15 @@ function disableAutocompleteGlobally(root = document) {
       markDirty: SaveManager.markDirty
     });
     // Wire CSP-safe modal dialogs (replaces window.confirm/prompt)
-    initDialogs();
-    Theme.initFromState();
-    initTopTabsNavigation({
+    runModuleInit("Dialogs", () => initDialogs());
+    runModuleInit("Theme", () => Theme.initFromState());
+    runModuleInit("Top navigation", () => initTopTabsNavigation({
       state: appState,
       markDirty: () => SaveManager.markDirty(),
       setStatus: StatusApi.setStatus,
       activeTabStorageKey: ACTIVE_TAB_KEY
-    });
-    setupSettingsPanel({
+    }));
+    runModuleInit("Settings panel", () => setupSettingsPanel({
       state: appState,
       storageKeys: { STORAGE_KEY, ACTIVE_TAB_KEY },
       applyTheme: Theme.applyTheme,
@@ -216,9 +230,12 @@ function disableAutocompleteGlobally(root = document) {
       clearAllBlobs,
       clearAllTexts,
       setStatus: StatusApi.setStatus
-    });
-    initTopbarUI({ state: appState, SaveManager, Popovers, positionMenuOnScreen, setStatus: StatusApi.setStatus });
-    initTrackerPage({
+    }));
+    runModuleInit(
+      "Topbar",
+      () => initTopbarUI({ state: appState, SaveManager, Popovers, positionMenuOnScreen, setStatus: StatusApi.setStatus })
+    );
+    runModuleInit("Tracker page", () => initTrackerPage({
       state: appState,
       SaveManager,
       Popovers,
@@ -243,10 +260,31 @@ function disableAutocompleteGlobally(root = document) {
       getText,
       deleteText,
       autoSizeInput,
-    });
-    autosizeAllNumbers();
-    setupTextareaSizing({ state: appState, markDirty: SaveManager.markDirty, saveAll, setStatus: StatusApi.setStatus });
-    setupMapPage({ state: appState, SaveManager, setStatus: StatusApi.setStatus, positionMenuOnScreen, Popovers, ensureMapManager, getActiveMap, newMapEntry, blobIdToObjectUrl, putBlob, deleteBlob, uiPrompt, uiAlert, uiConfirm });
+    }));
+    runModuleInit("Autosize numbers", () => autosizeAllNumbers());
+    runModuleInit(
+      "Textarea sizing",
+      () => setupTextareaSizing({ state: appState, markDirty: SaveManager.markDirty, saveAll, setStatus: StatusApi.setStatus })
+    );
+    runModuleInit(
+      "Map page",
+      () => setupMapPage({
+        state: appState,
+        SaveManager,
+        setStatus: StatusApi.setStatus,
+        positionMenuOnScreen,
+        Popovers,
+        ensureMapManager,
+        getActiveMap,
+        newMapEntry,
+        blobIdToObjectUrl,
+        putBlob,
+        deleteBlob,
+        uiPrompt,
+        uiAlert,
+        uiConfirm
+      })
+    );
     // If migrations or initial setup changed state, persist once, then show clean status.
     await SaveManager.flush();
   });

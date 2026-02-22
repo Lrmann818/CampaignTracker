@@ -5,26 +5,7 @@
 // button and data panel init into a focused module.
 
 import { initDataPanel } from "./dataPanel.js";
-import { requireEl, assertEl } from "../utils/domGuards.js";
-
-function requireCriticalEl(selector, prefix) {
-  const el = requireEl(selector, document, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, document, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
+import { requireMany } from "../utils/domGuards.js";
 
 export function setupSettingsPanel(deps) {
   const {
@@ -64,11 +45,12 @@ export function setupSettingsPanel(deps) {
   });
 
   // Settings button opens the modal directly
-  const settingsBtn = requireCriticalEl("#settingsBtn", "setupSettingsPanel");
-  if (!settingsBtn) {
-    notifyMissingCritical(setStatus, "Settings button unavailable (missing #settingsBtn).");
-    return;
-  }
+  const guard = requireMany(
+    { settingsBtn: "#settingsBtn" },
+    { root: document, setStatus, context: "Settings button" }
+  );
+  if (!guard.ok) return guard.destroy;
+  const { settingsBtn } = guard.els;
 
   settingsBtn.addEventListener("click", () => {
     if (typeof window.openDataPanel === "function") window.openDataPanel();

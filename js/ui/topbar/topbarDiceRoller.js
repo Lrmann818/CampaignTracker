@@ -2,28 +2,9 @@
 // (not a full dialog with system selection, etc).
 
 import { createTopbarPopover } from "./topbarPopover.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../utils/domGuards.js";
+import { requireEl, requireMany, getNoopDestroyApi } from "../../utils/domGuards.js";
 
 let _activeTopbarDiceRoller = null;
-
-function requireCriticalEl(selector, prefix) {
-    const el = requireEl(selector, document, { prefix });
-    if (el) return el;
-    try {
-        assertEl(selector, document, { prefix, warn: false });
-    } catch (err) {
-        console.error(err);
-    }
-    return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-    if (typeof setStatus === "function") {
-        setStatus(message, { stickyMs: 5000 });
-        return;
-    }
-    console.warn(message);
-}
 
 export function initTopbarDiceRoller(deps) {
     _activeTopbarDiceRoller?.destroy?.();
@@ -37,28 +18,39 @@ export function initTopbarDiceRoller(deps) {
         setStatus
     } = deps || {};
 
-    const prefix = "initTopbarDiceRoller";
-    const dd = requireCriticalEl("#diceDropdown", prefix);
-    const btn = requireCriticalEl("#diceBtn", prefix);
-    const menu = requireCriticalEl("#diceMenu", prefix);
-    const closeBtn = requireCriticalEl("#diceCloseBtn", prefix);
-
-    const countEl = requireCriticalEl("#diceCount", prefix);
-    const modEl = requireCriticalEl("#diceMod", prefix);
-    const rollBtn = requireCriticalEl("#diceRollBtn", prefix);
-    const clearBtn = requireCriticalEl("#diceClearBtn", prefix);
-    const histEl = requireCriticalEl("#diceHistory", prefix);
-
-    const advBtn = requireCriticalEl("#diceAdvBtn", prefix);
-    const disBtn = requireCriticalEl("#diceDisBtn", prefix);
-    const activeIcon = requireEl("#diceActiveIcon", document, { prefix, warn: false });
+    const guard = requireMany(
+        {
+            dd: "#diceDropdown",
+            btn: "#diceBtn",
+            menu: "#diceMenu",
+            closeBtn: "#diceCloseBtn",
+            countEl: "#diceCount",
+            modEl: "#diceMod",
+            rollBtn: "#diceRollBtn",
+            clearBtn: "#diceClearBtn",
+            histEl: "#diceHistory",
+            advBtn: "#diceAdvBtn",
+            disBtn: "#diceDisBtn"
+        },
+        { root: document, setStatus, context: "Topbar dice roller" }
+    );
+    if (!guard.ok) return guard.destroy || getNoopDestroyApi();
+    const {
+        dd,
+        btn,
+        menu,
+        closeBtn,
+        countEl,
+        modEl,
+        rollBtn,
+        clearBtn,
+        histEl,
+        advBtn,
+        disBtn
+    } = guard.els;
+    const activeIcon = requireEl("#diceActiveIcon", document, { warn: false });
     const presetBtns = menu?.querySelectorAll(".dicePreset");
-    const modPlusEl = requireEl("#diceModPlus", document, { prefix, warn: false });
-
-    if (!dd || !btn || !menu || !closeBtn || !countEl || !modEl || !rollBtn || !clearBtn || !histEl || !advBtn || !disBtn) {
-        notifyMissingCritical(setStatus, "Topbar dice roller unavailable (missing expected UI elements).");
-        return getNoopDestroyApi();
-    }
+    const modPlusEl = requireEl("#diceModPlus", document, { warn: false });
 
     const listenerController = new AbortController();
     const listenerSignal = listenerController.signal;

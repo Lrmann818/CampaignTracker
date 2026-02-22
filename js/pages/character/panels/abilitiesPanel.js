@@ -2,41 +2,18 @@
 // Character page Abilities panel (abilities + skills + save options)
 
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
-
-function requireCriticalEl(selector, root, prefix) {
-  const el = requireEl(selector, root, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, root, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
+import { requireMany } from "../../../utils/domGuards.js";
 
 export function initAbilitiesPanel(deps = {}) {
   const { state, SaveManager, Popovers, bindNumber, bindText, setStatus } = deps;
   if (!state || !SaveManager || !Popovers) return;
-  const prefix = "initAbilitiesPanel";
-  const panel = requireCriticalEl("#charAbilitiesPanel", document, prefix);
-  if (!panel) {
-    notifyMissingCritical(setStatus, "Abilities panel unavailable (missing expected UI elements).");
-    return getNoopDestroyApi();
-  }
-  const abilityGrid = requireCriticalEl(".abilityGrid", panel, prefix);
-  if (!abilityGrid) {
-    notifyMissingCritical(setStatus, "Abilities panel unavailable (missing .abilityGrid).");
-    return getNoopDestroyApi();
-  }
+  const required = {
+    panel: "#charAbilitiesPanel",
+    abilityGrid: "#charAbilitiesPanel .abilityGrid"
+  };
+  const guard = requireMany(required, { root: document, setStatus, context: "Abilities panel" });
+  if (!guard.ok) return guard.destroy;
+  const { abilityGrid } = guard.els;
 
   if (!state.character) state.character = {};
   if (!state.character.abilities) state.character.abilities = {};

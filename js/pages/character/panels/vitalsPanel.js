@@ -3,26 +3,7 @@
 
 import { numberOrNull } from "../../../utils/number.js";
 import { safeAsync } from "../../../ui/safeAsync.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
-
-function requireCriticalEl(selector, root, prefix) {
-  const el = requireEl(selector, root, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, root, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
+import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 function notifyStatus(setStatus, message) {
   if (typeof setStatus === "function") {
@@ -141,31 +122,24 @@ export function initVitalsPanel(deps = {}) {
 
   if (!state.character) state.character = {};
 
-  const prefix = "initVitalsPanel";
-  const criticalSelectors = [
-    "#charVitalsPanel",
-    "#charVitalsTiles",
-    "#addResourceBtn",
-    "#charHpCur",
-    "#charHpMax",
-    "#hitDieAmt",
-    "#hitDieSize",
-    "#charAC",
-    "#charInit",
-    "#charSpeed",
-    "#charProf",
-    "#charSpellAtk",
-    "#charSpellDC"
-  ];
-  const missingCritical = criticalSelectors.some((selector) => !requireCriticalEl(selector, document, prefix));
-  const panelEl = requireCriticalEl("#charVitalsPanel", document, prefix);
-  const wrap = requireCriticalEl("#charVitalsTiles", document, prefix)
-    || panelEl?.querySelector(".charTiles");
-  const addBtn = requireCriticalEl("#addResourceBtn", document, prefix);
-  if (missingCritical || !panelEl || !wrap || !addBtn) {
-    notifyMissingCritical(setStatus, "Vitals panel unavailable (missing expected UI elements).");
-    return getNoopDestroyApi();
-  }
+  const required = {
+    panelEl: "#charVitalsPanel",
+    wrap: "#charVitalsTiles",
+    addBtn: "#addResourceBtn",
+    charHpCur: "#charHpCur",
+    charHpMax: "#charHpMax",
+    hitDieAmt: "#hitDieAmt",
+    hitDieSize: "#hitDieSize",
+    charAC: "#charAC",
+    charInit: "#charInit",
+    charSpeed: "#charSpeed",
+    charProf: "#charProf",
+    charSpellAtk: "#charSpellAtk",
+    charSpellDC: "#charSpellDC"
+  };
+  const guard = requireMany(required, { root: document, setStatus, context: "Vitals panel" });
+  if (!guard.ok) return guard.destroy;
+  const { panelEl, wrap, addBtn } = guard.els;
 
   function bindVitalsNumbers() {
     bindNumber("charHpCur", () => state.character.hpCur, (v) => state.character.hpCur = v);
@@ -195,7 +169,7 @@ export function initVitalsPanel(deps = {}) {
     ];
 
     fields.forEach(([id, value]) => {
-      const el = document.getElementById(id);
+      const el = guard.els[id];
       if (!el) return;
       el.value = (value === null || value === undefined) ? "" : String(value);
     });
@@ -214,7 +188,7 @@ export function initVitalsPanel(deps = {}) {
       "charSpellAtk",
       "charSpellDC",
     ].forEach((id) => {
-      const el = document.getElementById(id);
+      const el = guard.els[id];
       if (!el) return;
       el.classList.add("autosize");
       autoSizeInput(el, { min: 30, max: 60 });

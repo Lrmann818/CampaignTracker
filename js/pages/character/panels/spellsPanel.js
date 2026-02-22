@@ -1,26 +1,7 @@
 import { safeAsync } from "../../../ui/safeAsync.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireMany } from "../../../utils/domGuards.js";
 
 let _state = null;
-
-function requireCriticalEl(selector, prefix) {
-    const el = requireEl(selector, document, { prefix });
-    if (el) return el;
-    try {
-        assertEl(selector, document, { prefix, warn: false });
-    } catch (err) {
-        console.error(err);
-    }
-    return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-    if (typeof setStatus === "function") {
-        setStatus(message, { stickyMs: 5000 });
-        return;
-    }
-    console.warn(message);
-}
 
 function notifyStatus(setStatus, message) {
     if (typeof setStatus === "function") {
@@ -54,14 +35,14 @@ export function initSpellsPanel(deps = {}) {
 
     if (!_state) throw new Error("initSpellsPanel requires state");
     if (!SaveManager) throw new Error("initSpellsPanel requires SaveManager");
-    const prefix = "initSpellsPanel";
-    const panelEl = requireCriticalEl("#charSpellsPanel", prefix);
-    const containerEl = requireCriticalEl("#spellLevels", prefix);
-    const addLevelBtnEl = requireCriticalEl("#addSpellLevelBtn", prefix);
-    if (!panelEl || !containerEl || !addLevelBtnEl) {
-        notifyMissingCritical(setStatus, "Spells panel unavailable (missing expected UI elements).");
-        return getNoopDestroyApi();
-    }
+    const required = {
+        panelEl: "#charSpellsPanel",
+        containerEl: "#spellLevels",
+        addLevelBtnEl: "#addSpellLevelBtn"
+    };
+    const guard = requireMany(required, { root: document, setStatus, context: "Spells panel" });
+    if (!guard.ok) return guard.destroy;
+    const { containerEl, addLevelBtnEl } = guard.els;
 
     // ---------- Spells v2 UI (dynamic levels + spells) ----------
     const _spellNotesCache = new Map(); // spellId -> text

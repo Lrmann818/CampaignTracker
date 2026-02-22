@@ -12,6 +12,7 @@ import { initLocationsPanel } from "./panels/locationCards.js";
 import { initCharacterPageUI } from "../character/characterPage.js";
 import { initPanelHeaderCollapse } from "../../ui/panelHeaderCollapse.js";
 import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
+import { DEV_MODE } from "../../utils/dev.js";
 
 let _activeTrackerPageController = null;
 const _singletonTrackerPanelInits = {
@@ -102,7 +103,12 @@ export function initTrackerPage(deps) {
       return panelApi || getNoopDestroyApi();
     } catch (err) {
       console.error(`${panelName} init failed:`, err);
-      setStatus(`${panelName} failed to initialize. Check console for details.`, { stickyMs: 5000 });
+      if (typeof setStatus === "function") {
+        const message = DEV_MODE
+          ? `${panelName} failed in DEV mode. Check console for details.`
+          : `${panelName} failed to initialize. Check console for details.`;
+        setStatus(message, { stickyMs: 5000 });
+      }
       return getNoopDestroyApi();
     }
   };

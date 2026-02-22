@@ -6,28 +6,9 @@
 // - It should not call other Character-page wiring helpers (reorder, abilities, etc).
 // - It must be safe if init is called more than once (guard + no double event listeners).
 import { safeAsync } from "../../../ui/safeAsync.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireMany } from "../../../utils/domGuards.js";
 
 let _state = null;
-
-function requireCriticalEl(selector, prefix) {
-  const el = requireEl(selector, document, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, document, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
 
 
 export function initAttacksPanel(deps = {}) {
@@ -45,21 +26,20 @@ export function initAttacksPanel(deps = {}) {
   if (!_state.character) _state.character = {};
   if (!Array.isArray(_state.character.attacks)) _state.character.attacks = [];
 
-  const prefix = "initAttacksPanel";
-  const panelEl = requireCriticalEl("#charAttacksPanel", prefix);
-  const listEl = requireCriticalEl("#attackList", prefix);
-  const addBtn = requireCriticalEl("#addAttackBtn", prefix);
-
-  if (!panelEl || !listEl || !addBtn) {
-    notifyMissingCritical(setStatus, "Weapons panel unavailable (missing expected UI elements).");
-    return getNoopDestroyApi();
-  }
+  const required = {
+    panelEl: "#charAttacksPanel",
+    listEl: "#attackList",
+    addBtn: "#addAttackBtn"
+  };
+  const guard = requireMany(required, { root: document, setStatus, context: "Weapons panel" });
+  if (!guard.ok) return guard.destroy;
+  const { panelEl, listEl, addBtn } = guard.els;
 
   // Guard: avoid wiring twice if character page init runs again.
   if (panelEl.dataset.attacksInit === "1") {
     // Still re-render in case state changed.
     renderAttacks();
-    return getNoopDestroyApi();
+    return guard.destroy;
   }
   panelEl.dataset.attacksInit = "1";
 

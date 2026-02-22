@@ -49,3 +49,100 @@ export function assertEl(selector, root, options = {}) {
 export function getNoopDestroyApi() {
   return NOOP_DESTROY_API;
 }
+
+function normalizeSpec(spec) {
+  if (!spec) return [];
+
+  if (Array.isArray(spec)) {
+    return spec
+      .filter((entry) => Array.isArray(entry) && entry.length >= 2)
+      .map(([key, selector]) => ({
+        key: String(key),
+        selector: String(selector)
+      }));
+  }
+
+  if (typeof spec === "object") {
+    return Object.entries(spec).map(([key, selector]) => ({
+      key: String(key),
+      selector: String(selector)
+    }));
+  }
+
+  return [];
+}
+
+export function buildMissingMessage(context, missingList) {
+  const missing = Array.isArray(missingList) ? missingList : [];
+  const base = context ? `${context} unavailable` : "Module unavailable";
+  if (!missing.length) return `${base}.`;
+
+  const detail = missing
+    .map(({ key, selector }) => `${key} (${selector})`)
+    .join(", ");
+
+  return `${base} (missing required elements: ${detail}).`;
+}
+
+export function requireMany(spec, opts = {}) {
+  const entries = normalizeSpec(spec);
+  const root = resolveRoot(opts.root);
+  const els = {};
+  const missing = [];
+  const stickyMs = Number.isFinite(opts.stickyMs) ? Number(opts.stickyMs) : 5000;
+  const devAssert = opts.devAssert !== undefined ? !!opts.devAssert : DEV_MODE;
+  const context = opts.context ? String(opts.context) : "";
+
+  if (!entries.length) {
+    return {
+      ok: true,
+      els,
+      destroy: null,
+      missing: [],
+      message: ""
+    };
+  }
+
+  if (!root) {
+    entries.forEach(({ key, selector }) => missing.push({ key, selector }));
+  } else {
+    entries.forEach(({ key, selector }) => {
+      const el = requireEl(selector, root, { warn: false });
+      if (el) {
+        els[key] = el;
+        return;
+      }
+      missing.push({ key, selector });
+    });
+  }
+
+  if (!missing.length) {
+    return {
+      ok: true,
+      els,
+      destroy: null,
+      missing: [],
+      message: ""
+    };
+  }
+
+  const message = buildMissingMessage(context, missing);
+
+  if (devAssert) {
+    throw new Error(message);
+  }
+
+  if (typeof opts.setStatus === "function") {
+    opts.setStatus(message, { stickyMs });
+  } else if (opts.warn !== false) {
+    console.warn(message);
+  }
+
+  return {
+    ok: false,
+    els: {},
+    destroy: getNoopDestroyApi(),
+    missing,
+    message
+  };
+}

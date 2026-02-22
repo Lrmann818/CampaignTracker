@@ -5,28 +5,9 @@
 import { uiConfirm, uiAlert } from "./dialogs.js";
 import { enhanceSelectDropdown } from "./selectDropdown.js";
 import { safeAsync } from "./safeAsync.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../utils/domGuards.js";
+import { requireMany, getNoopDestroyApi } from "../utils/domGuards.js";
 
 let _activeDataPanel = null;
-
-function requireCriticalEl(selector, root, prefix) {
-  const el = requireEl(selector, root, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, root, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
 
 function notifyStatus(setStatus, message) {
   if (typeof setStatus === "function") {
@@ -71,21 +52,18 @@ export function initDataPanel(deps) {
     Popovers
   } = deps;
 
-  const prefix = "initDataPanel";
-  const overlay = /** @type {HTMLElement|null} */ (
-    requireCriticalEl("#dataPanelOverlay", document, prefix)
+  const guard = requireMany(
+    {
+      overlay: "#dataPanelOverlay",
+      panel: "#dataPanelPanel",
+      closeBtn: "#dataPanelClose"
+    },
+    { root: document, setStatus, context: "Data panel" }
   );
-  const panel = /** @type {HTMLElement|null} */ (
-    requireCriticalEl("#dataPanelPanel", document, prefix)
-  );
-  const closeBtn = /** @type {HTMLButtonElement|null} */ (
-    requireCriticalEl("#dataPanelClose", document, prefix)
-  );
-
-  if (!overlay || !panel || !closeBtn) {
-    notifyMissingCritical(setStatus, "Data panel unavailable (missing expected UI elements).");
-    return getNoopDestroyApi();
-  }
+  if (!guard.ok) return guard.destroy;
+  const overlay = /** @type {HTMLElement} */ (guard.els.overlay);
+  const panel = /** @type {HTMLElement} */ (guard.els.panel);
+  const closeBtn = /** @type {HTMLButtonElement} */ (guard.els.closeBtn);
 
   const listenerController = new AbortController();
   const listenerSignal = listenerController.signal;

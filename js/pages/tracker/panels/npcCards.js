@@ -11,7 +11,7 @@ import { createMoveButton, createCollapseButton } from "./cards/shared/cardHeade
 import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
 import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
 import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _cardsEl = null;
 let _Popovers = null;
@@ -30,25 +30,6 @@ let _deleteNpc = null;
 let _numberOrNull = null;
 
 const matchesSearch = makeFieldSearchMatcher(["name", "className", "status", "notes"]);
-
-function requireCriticalEl(selector, prefix) {
-  const el = requireEl(selector, document, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, document, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
 
 function initNpcCards(deps = {}) {
   _state = deps.state || _state;
@@ -418,19 +399,26 @@ export function initNpcsPanel(deps = {}) {
     if (!n.sectionId) n.sectionId = defaultSectionId;
   });
 
-  const prefix = "initNpcsPanel";
-  const cardsEl = requireCriticalEl("#npcCards", prefix);
-  const addBtn = requireCriticalEl("#addNpcBtn", prefix);
-  const searchEl = requireCriticalEl("#npcSearch", prefix);
-  const tabsEl = requireCriticalEl("#npcTabs", prefix);
-  const addSectionBtn = requireCriticalEl("#addNpcSectionBtn", prefix);
-  const renameSectionBtn = requireCriticalEl("#renameNpcSectionBtn", prefix);
-  const deleteSectionBtn = requireCriticalEl("#deleteNpcSectionBtn", prefix);
-
-  if (!cardsEl || !addBtn || !searchEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) {
-    notifyMissingCritical(setStatus, "NPC panel unavailable (missing expected UI elements).");
-    return getNoopDestroyApi();
-  }
+  const required = {
+    cardsEl: "#npcCards",
+    addBtn: "#addNpcBtn",
+    searchEl: "#npcSearch",
+    tabsEl: "#npcTabs",
+    addSectionBtn: "#addNpcSectionBtn",
+    renameSectionBtn: "#renameNpcSectionBtn",
+    deleteSectionBtn: "#deleteNpcSectionBtn"
+  };
+  const guard = requireMany(required, { root: document, setStatus, context: "NPC panel" });
+  if (!guard.ok) return guard.destroy;
+  const {
+    cardsEl,
+    addBtn,
+    searchEl,
+    tabsEl,
+    addSectionBtn,
+    renameSectionBtn,
+    deleteSectionBtn
+  } = guard.els;
 
   function updateNpc(id, patch, rerender = true) {
     const idx = _state.tracker.npcs.findIndex(n => n.id === id);

@@ -3,7 +3,7 @@
 
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { safeAsync } from "../../../ui/safeAsync.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _tabsEl = null;
 let _notesBox = null;
@@ -22,25 +22,6 @@ let _state = null;
 let _setStatus = null;
 
 let _wired = false;
-
-function requireCriticalEl(selector, prefix) {
-  const el = requireEl(selector, document, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, document, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
 
 function _escapeRegExp(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -93,19 +74,36 @@ function _appendHighlightedText(parentEl, text, query) {
  */
 export function initSessionsPanel(deps = {}) {
   _state = deps.state;
-  const prefix = "initSessionsPanel";
-  _tabsEl = deps.tabsEl || requireCriticalEl("#sessionTabs", prefix);
-  _notesBox = deps.notesBox || requireCriticalEl("#sessionNotesBox", prefix);
-  _searchEl = deps.searchEl || requireCriticalEl("#sessionSearch", prefix);
-  _addBtn = deps.addBtn || requireCriticalEl("#addSessionBtn", prefix);
-  _renameBtn = deps.renameBtn || requireCriticalEl("#renameSessionBtn", prefix);
-  _deleteBtn = deps.deleteBtn || requireCriticalEl("#deleteSessionBtn", prefix);
+  _tabsEl = deps.tabsEl || null;
+  _notesBox = deps.notesBox || null;
+  _searchEl = deps.searchEl || null;
+  _addBtn = deps.addBtn || null;
+  _renameBtn = deps.renameBtn || null;
+  _deleteBtn = deps.deleteBtn || null;
 
   _SaveManager = deps.SaveManager;
   _uiPrompt = deps.uiPrompt;
   _uiAlert = deps.uiAlert;
   _uiConfirm = deps.uiConfirm;
   _setStatus = deps.setStatus;
+
+  const required = {};
+  if (!_tabsEl) required.tabsEl = "#sessionTabs";
+  if (!_notesBox) required.notesBox = "#sessionNotesBox";
+  if (!_searchEl) required.searchEl = "#sessionSearch";
+  if (!_addBtn) required.addBtn = "#addSessionBtn";
+  if (!_renameBtn) required.renameBtn = "#renameSessionBtn";
+  if (!_deleteBtn) required.deleteBtn = "#deleteSessionBtn";
+  if (Object.keys(required).length) {
+    const guard = requireMany(required, { root: document, setStatus: _setStatus, context: "Sessions panel" });
+    if (!guard.ok) return guard.destroy;
+    _tabsEl = _tabsEl || guard.els.tabsEl;
+    _notesBox = _notesBox || guard.els.notesBox;
+    _searchEl = _searchEl || guard.els.searchEl;
+    _addBtn = _addBtn || guard.els.addBtn;
+    _renameBtn = _renameBtn || guard.els.renameBtn;
+    _deleteBtn = _deleteBtn || guard.els.deleteBtn;
+  }
 
   if (!_state) {
     console.warn("Sessions UI: missing required dependency (state).");
@@ -115,7 +113,9 @@ export function initSessionsPanel(deps = {}) {
   const missingCritical =
     !_tabsEl || !_notesBox || !_searchEl || !_addBtn || !_renameBtn || !_deleteBtn;
   if (missingCritical) {
-    notifyMissingCritical(_setStatus, "Sessions panel unavailable (missing expected UI elements).");
+    const message = "Sessions panel unavailable (missing expected UI elements).";
+    if (typeof _setStatus === "function") _setStatus(message, { stickyMs: 5000 });
+    else console.warn(message);
     return getNoopDestroyApi();
   }
 

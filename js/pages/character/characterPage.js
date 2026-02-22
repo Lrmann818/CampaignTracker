@@ -12,6 +12,7 @@ import { initAbilitiesPanel } from "../character/panels/abilitiesPanel.js";
 import { initPersonalityPanel, setupCharacterCollapsibleTextareas } from "../character/panels/personalityPanel.js";
 import { numberOrNull } from "../../utils/number.js";
 import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
+import { DEV_MODE } from "../../utils/dev.js";
 
 let _activeCharacterPageController = null;
 const _singletonCharacterPanelInits = {
@@ -118,7 +119,12 @@ export function initCharacterPageUI(deps) {
       return panelApi || getNoopDestroyApi();
     } catch (err) {
       console.error(`${panelName} init failed:`, err);
-      setStatus(`${panelName} failed to initialize. Check console for details.`, { stickyMs: 5000 });
+      if (typeof setStatus === "function") {
+        const message = DEV_MODE
+          ? `${panelName} failed in DEV mode. Check console for details.`
+          : `${panelName} failed to initialize. Check console for details.`;
+        setStatus(message, { stickyMs: 5000 });
+      }
       return getNoopDestroyApi();
     }
   };

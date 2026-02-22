@@ -7,22 +7,11 @@
 //   uiConfirm(msg, {title, okText, cancelText}) -> Promise<boolean>
 //   uiPrompt(msg, {title, okText, cancelText, placeholder, value}) -> Promise<string|null>
 
-import { requireEl, assertEl } from "../utils/domGuards.js";
+import { requireMany } from "../utils/domGuards.js";
 
 let _initialized = false;
 
 let _lastFocus = null;
-
-function requireCriticalEl(selector, root, prefix) {
-  const el = requireEl(selector, root, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, root, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
 
 function getFocusable(container) {
   if (!container) return [];
@@ -123,19 +112,28 @@ overlay = document.createElement("div");
 
 function openShell({ title, message, mode, opts }) {
   const overlay = ensureShell();
-  const prefix = "dialogs.openShell";
-  const panel = requireCriticalEl(".uiDialogPanel", overlay, prefix);
-  const titleEl = requireCriticalEl("#uiDialogTitle", overlay, prefix);
-  const msgEl = requireCriticalEl("#uiDialogMessage", overlay, prefix);
-  const inputEl = requireCriticalEl("#uiDialogInput", overlay, prefix);
-  const btnOk = requireCriticalEl("#uiDialogOk", overlay, prefix);
-  const btnCancel = requireCriticalEl("#uiDialogCancel", overlay, prefix);
-  const btnClose = requireCriticalEl("#uiDialogClose", overlay, prefix);
-
-  if (!panel || !titleEl || !msgEl || !inputEl || !btnOk || !btnCancel || !btnClose) {
-    console.warn("Dialogs unavailable (missing required dialog shell elements).");
-    return null;
-  }
+  const guard = requireMany(
+    {
+      panel: ".uiDialogPanel",
+      titleEl: "#uiDialogTitle",
+      msgEl: "#uiDialogMessage",
+      inputEl: "#uiDialogInput",
+      btnOk: "#uiDialogOk",
+      btnCancel: "#uiDialogCancel",
+      btnClose: "#uiDialogClose"
+    },
+    { root: overlay, context: "Dialogs shell" }
+  );
+  if (!guard.ok) return null;
+  const {
+    panel,
+    titleEl,
+    msgEl,
+    inputEl,
+    btnOk,
+    btnCancel,
+    btnClose
+  } = guard.els;
 
   titleEl.textContent = title || "Notice";
   msgEl.textContent = message ?? "";

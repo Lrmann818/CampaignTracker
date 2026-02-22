@@ -6,29 +6,11 @@
 //
 // This is intentionally “headless”: page modules provide selectors + header wiring.
 
-import { requireEl, assertEl, getNoopDestroyApi } from "../utils/domGuards.js";
+import { DEV_MODE } from "../utils/dev.js";
+import { requireEl, requireMany, getNoopDestroyApi } from "../utils/domGuards.js";
 
 /** @type {Map<string, () => void>} */
 const activePagePanelReorderDestroyByPage = new Map();
-
-function requireCriticalEl(selector, root, prefix) {
-  const el = requireEl(selector, root, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, root, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
 
 export function setupPagePanelReorder({
   state,
@@ -65,36 +47,32 @@ export function setupPagePanelReorder({
   }
 
   const prefix = `setupPagePanelReorder(${pageId || "unknown"})`;
-  const pageEl = requireCriticalEl(`#${pageId}`, document, prefix);
-  if (!pageEl) {
-    notifyMissingCritical(setStatus, `Panel reorder unavailable (missing page root #${pageId}).`);
-    return getNoopDestroyApi();
-  }
+  const pageGuard = requireMany(
+    { pageEl: `#${pageId}` },
+    { root: document, setStatus, context: `Panel reorder (${pageId || "unknown"})` }
+  );
+  if (!pageGuard.ok) return pageGuard.destroy;
+  const { pageEl } = pageGuard.els;
 
   let columnsWrap = null;
   for (const sel of (columnsWrapSelectors || [])) {
-    columnsWrap = requireEl(sel, pageEl, { prefix });
+    columnsWrap = requireEl(sel, pageEl, { prefix, warn: false });
     if (columnsWrap) break;
   }
   if (!columnsWrap) {
-    const firstSelector = Array.isArray(columnsWrapSelectors) ? columnsWrapSelectors[0] : "";
-    if (firstSelector) {
-      try {
-        assertEl(firstSelector, pageEl, { prefix, warn: false });
-      } catch (err) {
-        console.error(err);
-      }
-    }
-    notifyMissingCritical(setStatus, "Panel reorder unavailable (missing columns wrapper).");
+    const message = `Panel reorder unavailable (missing columns wrapper; tried selectors: ${(columnsWrapSelectors || []).join(", ")}).`;
+    if (DEV_MODE) throw new Error(message);
+    if (typeof setStatus === "function") setStatus(message, { stickyMs: 5000 });
+    else console.warn(message);
     return getNoopDestroyApi();
   }
 
-  const col0 = requireCriticalEl(col0Selector, columnsWrap, prefix);
-  const col1 = requireCriticalEl(col1Selector, columnsWrap, prefix);
-  if (!col0 || !col1) {
-    notifyMissingCritical(setStatus, "Panel reorder unavailable (missing panel columns).");
-    return getNoopDestroyApi();
-  }
+  const columnsGuard = requireMany(
+    { col0: col0Selector, col1: col1Selector },
+    { root: columnsWrap, setStatus, context: `Panel reorder (${pageId || "unknown"})` }
+  );
+  if (!columnsGuard.ok) return columnsGuard.destroy;
+  const { col0, col1 } = columnsGuard.els;
 
   const ui = getUiState?.(state);
   if (!ui) return getNoopDestroyApi();

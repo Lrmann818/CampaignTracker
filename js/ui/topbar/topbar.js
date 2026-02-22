@@ -5,6 +5,7 @@ import { initTopbarClock } from "./topbarClock.js";
 import { initTopbarDiceRoller } from "./topbarDiceRoller.js";
 import { initTopbarCalculator } from "./topbarCalculator.js";
 import { getNoopDestroyApi } from "../../utils/domGuards.js";
+import { DEV_MODE } from "../../utils/dev.js";
 
 let _activeTopbarUI = null;
 
@@ -32,7 +33,10 @@ export function initTopbarUI(deps) {
       return initFn();
     } catch (err) {
       console.error(`[topbar] ${widgetName} init failed:`, err);
-      setStatus(`${widgetName} failed to initialize. Check console for details.`, { stickyMs: 5000 });
+      const message = DEV_MODE
+        ? `${widgetName} failed in DEV mode. Check console for details.`
+        : `${widgetName} failed to initialize. Check console for details.`;
+      setStatus(message, { stickyMs: 5000 });
       return getNoopDestroyApi();
     }
   };

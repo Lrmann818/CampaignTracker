@@ -2,26 +2,7 @@
 // Character page Personality panel (traits/ideals/bonds/flaws/notes + collapsible textareas)
 
 import { initCollapsibleTextareas } from "../../../ui/collapsibleTextareas.js";
-import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
-
-function requireCriticalEl(selector, prefix) {
-  const el = requireEl(selector, document, { prefix });
-  if (el) return el;
-  try {
-    assertEl(selector, document, { prefix, warn: false });
-  } catch (err) {
-    console.error(err);
-  }
-  return null;
-}
-
-function notifyMissingCritical(setStatus, message) {
-  if (typeof setStatus === "function") {
-    setStatus(message, { stickyMs: 5000 });
-    return;
-  }
-  console.warn(message);
-}
+import { requireMany } from "../../../utils/domGuards.js";
 
 function ensureStringField(obj, key) {
   if (typeof obj[key] !== "string") obj[key] = "";
@@ -31,20 +12,16 @@ export function initPersonalityPanel(deps = {}) {
   const { state, bindText, setStatus } = deps;
   if (!state || !bindText) return;
 
-  const prefix = "initPersonalityPanel";
-  const criticalSelectors = [
-    "#charPersonalityPanel",
-    "#charTraits",
-    "#charIdeals",
-    "#charBonds",
-    "#charFlaws",
-    "#charCharNotes"
-  ];
-  const missingCritical = criticalSelectors.some((selector) => !requireCriticalEl(selector, prefix));
-  if (missingCritical) {
-    notifyMissingCritical(setStatus, "Personality panel unavailable (missing expected UI elements).");
-    return getNoopDestroyApi();
-  }
+  const required = {
+    panel: "#charPersonalityPanel",
+    traits: "#charTraits",
+    ideals: "#charIdeals",
+    bonds: "#charBonds",
+    flaws: "#charFlaws",
+    notes: "#charCharNotes"
+  };
+  const guard = requireMany(required, { root: document, setStatus, context: "Personality panel" });
+  if (!guard.ok) return guard.destroy;
 
   if (!state.character) state.character = {};
   if (!state.character.personality || typeof state.character.personality !== "object") {
