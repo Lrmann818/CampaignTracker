@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-check
 // js/ui/navigation.js — top-level page tabs/navigation
 //
 // Long-term goals:
@@ -9,8 +9,34 @@
 import { requireMany, getNoopDestroyApi } from "../utils/domGuards.js";
 import { createStateActions } from "../domain/stateActions.js";
 
+/** @typedef {import("../state.js").State} State */
+/**
+ * @typedef {{
+ *   state?: State,
+ *   markDirty?: () => void,
+ *   setStatus?: (message: string, opts?: { stickyMs?: number }) => void,
+ *   activeTabStorageKey?: string,
+ *   tabsRootSelector?: string,
+ *   tabSelector?: string,
+ *   pageIdPrefix?: string,
+ *   defaultTab?: string,
+ *   updateHash?: boolean
+ * }} TopTabsNavigationDeps
+ */
+/**
+ * @typedef {{ markDirty?: boolean }} ApplyActiveTabOptions
+ */
+/**
+ * @typedef {{
+ *   applyActiveTab: (tabName: string | null | undefined, opts?: ApplyActiveTabOptions) => void,
+ *   getActiveTab: () => string,
+ *   destroy: () => void
+ * }} TopTabsNavigationApi
+ */
+
 /** @type {(() => void) | null} */
 let activeTopTabsNavigationDestroy = null;
+const NOOP_TOP_TABS_API = /** @type {TopTabsNavigationApi} */ (getNoopDestroyApi());
 
 /**
  * Initialize the top page tabs.
@@ -25,18 +51,22 @@ let activeTopTabsNavigationDestroy = null;
  *   <section id="page-character">...</section>
  *
  * By default, tabs map to pages via: #page-${tabName}
+ * @param {TopTabsNavigationDeps} [deps]
+ * @returns {TopTabsNavigationApi}
  */
-export function initTopTabsNavigation({
-  state,
-  markDirty,
-  setStatus,
-  activeTabStorageKey = "localCampaignTracker_activeTab",
-  tabsRootSelector = ".tabs",
-  tabSelector = ".tab[data-tab]",
-  pageIdPrefix = "page-",
-  defaultTab = "tracker",
-  updateHash = true
-} = {}) {
+export function initTopTabsNavigation(deps = {}) {
+  const {
+    state,
+    markDirty,
+    setStatus,
+    activeTabStorageKey = "localCampaignTracker_activeTab",
+    tabsRootSelector = ".tabs",
+    tabSelector = ".tab[data-tab]",
+    pageIdPrefix = "page-",
+    defaultTab = "tracker",
+    updateHash = true
+  } = deps;
+
   if (typeof activeTopTabsNavigationDestroy === "function") {
     activeTopTabsNavigationDestroy();
   }
@@ -45,13 +75,14 @@ export function initTopTabsNavigation({
     { tabsRoot: tabsRootSelector },
     { root: document, setStatus, context: "Top navigation" }
   );
-  if (!guard.ok) return guard.destroy;
-  const { tabsRoot } = guard.els;
+  if (!guard.ok) return /** @type {TopTabsNavigationApi} */ (guard.destroy || getNoopDestroyApi());
+  const tabsRoot = /** @type {HTMLElement} */ (guard.els.tabsRoot);
 
-  const tabButtons = Array.from(tabsRoot.querySelectorAll(tabSelector));
+  /** @type {HTMLButtonElement[]} */
+  const tabButtons = /** @type {HTMLButtonElement[]} */ (Array.from(tabsRoot.querySelectorAll(tabSelector)));
   if (!tabButtons.length) {
     setStatus?.("Top navigation unavailable (no tab buttons found).", { stickyMs: 5000 });
-    return getNoopDestroyApi();
+    return NOOP_TOP_TABS_API;
   }
 
   const ac = new AbortController();
@@ -59,9 +90,10 @@ export function initTopTabsNavigation({
   let destroyed = false;
 
   // Build the page registry from the DOM so adding pages is declarative.
+  /** @type {Record<string, HTMLElement>} */
   const pages = Object.create(null);
   tabButtons.forEach((btn) => {
-    const name = btn.getAttribute("data-tab")?.trim();
+    const name = (btn.getAttribute("data-tab") || "").trim();
     if (!name) return;
     const el = document.getElementById(`${pageIdPrefix}${name}`);
     if (el) pages[name] = el;
@@ -70,7 +102,7 @@ export function initTopTabsNavigation({
     const message = "Top navigation unavailable (no matching page sections found).";
     if (typeof setStatus === "function") setStatus(message, { stickyMs: 5000 });
     else console.warn(message);
-    return getNoopDestroyApi();
+    return NOOP_TOP_TABS_API;
   }
 
   const actions = state
@@ -80,6 +112,9 @@ export function initTopTabsNavigation({
     })
     : null;
 
+  /**
+   * @param {string | null | undefined} tabName
+   */
   function normalizeTabName(tabName) {
     const t = (tabName || "").toString().replace(/^#/, "").trim();
     if (t && pages[t]) return t;
@@ -89,6 +124,9 @@ export function initTopTabsNavigation({
     return first || defaultTab;
   }
 
+  /**
+   * @param {string} tabName
+   */
   function setHash(tabName) {
     if (!updateHash) return;
     try {
@@ -99,6 +137,9 @@ export function initTopTabsNavigation({
     }
   }
 
+  /**
+   * @param {string} tabName
+   */
   function persistActiveTab(tabName) {
     try {
       if (!activeTabStorageKey) return;
@@ -108,6 +149,10 @@ export function initTopTabsNavigation({
     }
   }
 
+  /**
+   * @param {string | null | undefined} tabName
+   * @param {ApplyActiveTabOptions} [opts]
+   */
   function applyActiveTab(tabName, { markDirty: doMarkDirty = false } = {}) {
     const active = normalizeTabName(tabName);
 
@@ -138,7 +183,9 @@ export function initTopTabsNavigation({
 
   // Click to switch
   tabButtons.forEach((btn) => {
-    btn.addEventListener("click", () => applyActiveTab(btn.getAttribute("data-tab")), { signal });
+    btn.addEventListener("click", () => {
+      applyActiveTab(btn.dataset.tab || btn.getAttribute("data-tab"));
+    }, { signal });
   });
 
   // Keyboard: left/right arrows to move between tabs
@@ -156,8 +203,10 @@ export function initTopTabsNavigation({
       if (e.key === "ArrowRight") next = (idx + 1) % tabButtons.length;
       if (e.key === "Home") next = 0;
       if (e.key === "End") next = tabButtons.length - 1;
-      tabButtons[next].focus();
-      applyActiveTab(tabButtons[next].getAttribute("data-tab"));
+      const nextTab = tabButtons[next];
+      if (!nextTab) return;
+      nextTab.focus();
+      applyActiveTab(nextTab.dataset.tab || nextTab.getAttribute("data-tab"));
     },
     { signal }
   );
@@ -173,10 +222,11 @@ export function initTopTabsNavigation({
     stored = "";
   }
 
+  const stateActiveTab = (typeof state?.ui?.activeTab === "string") ? state.ui.activeTab : "";
   const initial =
     (hash && pages[hash] ? hash : "") ||
     (stored && pages[stored] ? stored : "") ||
-    (state?.ui?.activeTab && pages[state.ui.activeTab] ? state.ui.activeTab : "") ||
+    (stateActiveTab && pages[stateActiveTab] ? stateActiveTab : "") ||
     defaultTab;
 
   applyActiveTab(initial, { markDirty: false });
@@ -206,7 +256,10 @@ export function initTopTabsNavigation({
   // Public API
   return {
     applyActiveTab,
-    getActiveTab: () => normalizeTabName(state?.ui?.activeTab || location.hash),
+    getActiveTab: () => {
+      const fromState = (typeof state?.ui?.activeTab === "string") ? state.ui.activeTab : "";
+      return normalizeTabName(fromState || location.hash);
+    },
     destroy
   };
 }

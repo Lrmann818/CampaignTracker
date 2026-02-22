@@ -31,7 +31,57 @@ let activePopoverManagerDestroy = null;
  */
 
 /**
+ * @typedef {{
+ *  button: HTMLElement,
+ *  menu: HTMLElement,
+ *  preferRight?: boolean,
+ *  closeOnOutside?: boolean,
+ *  closeOnEsc?: boolean,
+ *  stopInsideClick?: boolean,
+ *  onOpen?: () => void,
+ *  onClose?: () => void,
+ *  wireButton?: boolean
+ * }} PopoverRegisterArgs
+ */
+/**
+ * @typedef {{
+ *  button?: HTMLElement | null,
+ *  menu?: HTMLElement | null,
+ *  preferRight?: boolean,
+ *  closeOnOutside?: boolean,
+ *  closeOnEsc?: boolean,
+ *  stopInsideClick?: boolean,
+ *  onOpen?: (() => void) | null,
+ *  onClose?: (() => void) | null
+ * }} PopoverTrackDynamicArgs
+ */
+/**
+ * @typedef {{
+ *   reg: PopoverRegistration,
+ *   open: () => void,
+ *   close: () => void,
+ *   toggle: () => void,
+ *   reposition: () => void
+ * }} PopoverHandle
+ */
+/**
+ * @typedef {{
+ *   register: (args: PopoverRegisterArgs) => PopoverHandle | null,
+ *   trackDynamic: (args?: PopoverTrackDynamicArgs) => PopoverRegistration | null,
+ *   open: (reg: PopoverRegistration, opts?: { exclusive?: boolean }) => void,
+ *   close: (reg: PopoverRegistration, opts?: { focusButton?: boolean }) => void,
+ *   toggle: (reg: PopoverRegistration, opts?: { exclusive?: boolean }) => void,
+ *   reposition: (reg: PopoverRegistration) => void,
+ *   closeAll: () => void,
+ *   closeAllExcept: (keep: PopoverRegistration) => void,
+ *   isOpen: (reg: PopoverRegistration) => boolean,
+ *   destroy: () => void
+ * }} PopoversApi
+ */
+
+/**
  * @param {{ positionFn?: PositionMenuFn }} [cfg]
+ * @returns {PopoversApi}
  */
 export function createPopoverManager(cfg) {
   if (typeof activePopoverManagerDestroy === "function") {
@@ -236,17 +286,8 @@ export function createPopoverManager(cfg) {
 
   /**
    * Register a popover.
-   * @param {{
-   *  button: HTMLElement,
-   *  menu: HTMLElement,
-   *  preferRight?: boolean,
-   *  closeOnOutside?: boolean,
-   *  closeOnEsc?: boolean,
-   *  stopInsideClick?: boolean,
-   *  onOpen?: () => void,
-   *  onClose?: () => void,
-   *  wireButton?: boolean
-   * }} args
+   * @param {PopoverRegisterArgs} args
+   * @returns {PopoverHandle | null}
    */
   const register = (args) => {
     if (destroyed) return null;
@@ -297,16 +338,8 @@ export function createPopoverManager(cfg) {
   /**
    * For dynamically-created menus where you don't want to auto-wire the button.
    * This returns a stable registration (stored in a WeakMap) per menu element.
-   * @param {{
-   *  button?: HTMLElement | null,
-   *  menu?: HTMLElement | null,
-   *  preferRight?: boolean,
-   *  closeOnOutside?: boolean,
-   *  closeOnEsc?: boolean,
-   *  stopInsideClick?: boolean,
-   *  onOpen?: (() => void) | null,
-   *  onClose?: (() => void) | null
-   * }} [args]
+   * @param {PopoverTrackDynamicArgs} [args]
+   * @returns {PopoverRegistration | null}
    */
   const trackDynamic = (args = {}) => {
     if (destroyed) return null;

@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-check
 // js/pages/tracker/trackerPage.js — page-level wiring for the main Tracker view
 //
 // This keeps app.js as a composition root and groups Tracker-specific DOM wiring
@@ -14,14 +14,78 @@ import { initPanelHeaderCollapse } from "../../ui/panelHeaderCollapse.js";
 import { requireMany, getNoopDestroyApi } from "../../utils/domGuards.js";
 import { DEV_MODE } from "../../utils/dev.js";
 
+/** @typedef {import("../../state.js").State} State */
+/**
+ * SaveManager.markDirty() is this app's queue-save mechanism.
+ * `queueSave` is an optional compatibility alias in some callers/docs.
+ * @typedef {{
+ *   markDirty: () => void,
+ *   queueSave?: () => void,
+ *   flush?: () => Promise<boolean>,
+ *   init?: () => void,
+ *   getStatus?: () => { stateNow: string, dirty: boolean, saving: boolean }
+ * }} SaveManagerLike
+ */
+/**
+ * @typedef {{
+ *   register?: (...args: unknown[]) => unknown,
+ *   trackDynamic?: (...args: unknown[]) => unknown,
+ *   open?: (...args: unknown[]) => void,
+ *   close?: (...args: unknown[]) => void,
+ *   toggle?: (...args: unknown[]) => void,
+ *   reposition?: (...args: unknown[]) => void,
+ *   closeAll?: () => void,
+ *   closeAllExcept?: (...args: unknown[]) => void,
+ *   isOpen?: (...args: unknown[]) => boolean,
+ *   destroy?: () => void
+ * }} PopoversApi
+ */
+/**
+ * @typedef {{
+ *   state?: State,
+ *   SaveManager?: SaveManagerLike,
+ *   Popovers?: PopoversApi,
+ *   uiPrompt?: unknown,
+ *   uiAlert?: unknown,
+ *   uiConfirm?: unknown,
+ *   setStatus?: (message: string, opts?: { stickyMs?: number }) => void,
+ *   makeNpc?: unknown,
+ *   makePartyMember?: unknown,
+ *   makeLocation?: unknown,
+ *   enhanceNumberSteppers?: unknown,
+ *   numberOrNull?: unknown,
+ *   pickCropStorePortrait?: unknown,
+ *   ImagePicker?: unknown,
+ *   deleteBlob?: unknown,
+ *   putBlob?: unknown,
+ *   cropImageModal?: unknown,
+ *   getPortraitAspect?: unknown,
+ *   blobIdToObjectUrl?: unknown,
+ *   textKey_spellNotes?: unknown,
+ *   putText?: unknown,
+ *   getText?: unknown,
+ *   deleteText?: unknown,
+ *   autoSizeInput?: unknown,
+ *   [key: string]: unknown
+ * }} TrackerPageDeps
+ */
+/** @typedef {{ destroy: () => void }} TrackerPageApi */
+/** @typedef {"npcs" | "party" | "locations"} TrackerSingletonKey */
+
+/** @type {TrackerPageApi | null} */
 let _activeTrackerPageController = null;
+/** @type {Record<TrackerSingletonKey, boolean>} */
 const _singletonTrackerPanelInits = {
   npcs: false,
   party: false,
   locations: false
 };
 
-export function initTrackerPage(deps) {
+/**
+ * @param {TrackerPageDeps} [deps]
+ * @returns {TrackerPageApi}
+ */
+export function initTrackerPage(deps = {}) {
   _activeTrackerPageController?.destroy?.();
   _activeTrackerPageController = null;
 
@@ -62,7 +126,7 @@ export function initTrackerPage(deps) {
 
     // character sheet autosize
     autoSizeInput,
-  } = deps || {};
+  } = deps;
 
   if (!state) throw new Error("initTrackerPage: state is required");
   if (!SaveManager) throw new Error("initTrackerPage: SaveManager is required");
@@ -78,9 +142,10 @@ export function initTrackerPage(deps) {
     }
   );
   if (!guard.ok) {
-    return guard.destroy;
+    return /** @type {TrackerPageApi} */ (guard.destroy || getNoopDestroyApi());
   }
 
+  /** @type {Array<() => void>} */
   const destroyFns = [];
   const addDestroy = (destroyFn) => {
     if (typeof destroyFn === "function") destroyFns.push(destroyFn);
@@ -89,6 +154,12 @@ export function initTrackerPage(deps) {
   const listenerSignal = listenerController.signal;
   addDestroy(() => listenerController.abort());
 
+  /**
+   * @param {{ addEventListener?: unknown } | null | undefined} target
+   * @param {string} type
+   * @param {(event: Event) => void} handler
+   * @param {AddEventListenerOptions | boolean} [options]
+   */
   const addListener = (target, type, handler, options) => {
     if (!target || typeof target.addEventListener !== "function") return;
     const listenerOptions =
@@ -98,9 +169,14 @@ export function initTrackerPage(deps) {
     target.addEventListener(type, handler, { ...listenerOptions, signal: listenerSignal });
   };
 
+  /**
+   * @param {string} panelName
+   * @param {() => ({ destroy?: () => void } | void)} initFn
+   * @param {{ singletonKey?: TrackerSingletonKey }} [opts]
+   */
   const runPanelInit = (panelName, initFn, { singletonKey } = {}) => {
     if (singletonKey && _singletonTrackerPanelInits[singletonKey]) {
-      return getNoopDestroyApi();
+      return /** @type {{ destroy: () => void }} */ (getNoopDestroyApi());
     }
 
     try {
@@ -116,7 +192,7 @@ export function initTrackerPage(deps) {
           : `${panelName} failed to initialize. Check console for details.`;
         setStatus(message, { stickyMs: 5000 });
       }
-      return getNoopDestroyApi();
+      return /** @type {{ destroy: () => void }} */ (getNoopDestroyApi());
     }
   };
 
@@ -134,7 +210,7 @@ export function initTrackerPage(deps) {
 
   // ----- Simple textareas -----
   ["misc"].forEach((id) => {
-    const el = document.getElementById(id);
+    const el = /** @type {HTMLTextAreaElement | HTMLInputElement | null} */ (document.getElementById(id));
     if (!el) return;
     el.value = state.tracker[id] ?? "";
     addListener(el, "input", () => {
@@ -251,7 +327,12 @@ export function initTrackerPage(deps) {
   // Runs after the Tracker + Character DOM is present.
   runPanelInit("Panel collapse wiring", () => initPanelHeaderCollapse({ state, SaveManager, setStatus }));
 
-  runPanelInit("Number steppers", () => enhanceNumberSteppers(document));
+  runPanelInit("Number steppers", () => {
+    const initEnhanceNumberSteppers = /** @type {(root: Document) => ({ destroy?: () => void } | void)} */ (
+      enhanceNumberSteppers
+    );
+    return initEnhanceNumberSteppers(document);
+  });
 
   const api = {
     destroy() {
