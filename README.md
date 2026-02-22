@@ -17,9 +17,9 @@ This project uses ES modules (`<script type="module" src="app.js"></script>`), s
 
 Then open the served URL (not a `file://` path).
 
-## Export zip (without repo/build artifacts)
+## Release
 
-Use the PowerShell helper to build a shareable zip that excludes `.git/`, `node_modules/`, `dist/`, and any existing `*.zip` files:
+Build a release zip and verify it does not contain dev-only content (`.git/`, `node_modules/`, `dist/`, `.vscode/`, `.DS_Store`, `Thumbs.db`):
 
 ```powershell
 .\scripts\make-zip.ps1
@@ -27,6 +27,7 @@ Use the PowerShell helper to build a shareable zip that excludes `.git/`, `node_
 
 Output format:
 - `refactor-export-YYYYMMDD-HHMM.zip`
+- Script output includes: `Release zip is clean ✅`
 
 Optional output folder:
 

@@ -7,6 +7,7 @@ $ErrorActionPreference = 'Stop'
 
 $scriptDir = Split-Path -Parent $PSCommandPath
 $projectRoot = (Resolve-Path (Join-Path $scriptDir '..')).Path
+$verifyScript = Join-Path $scriptDir 'verify-release.ps1'
 
 if (-not (Test-Path -LiteralPath $OutputDir)) {
     New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
@@ -19,9 +20,9 @@ $zipPath = Join-Path $OutputDir $zipName
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("refactor-export-" + [System.Guid]::NewGuid().ToString('N'))
 $stagingDir = Join-Path $tempRoot 'payload'
 
-$excludeDirs = @('.git', 'node_modules', 'dist')
+$excludeDirs = @('.git', 'node_modules', 'dist', '.vscode')
 $excludeDirPaths = $excludeDirs | ForEach-Object { Join-Path $projectRoot $_ }
-$excludeFiles = @('*.zip')
+$excludeFiles = @('*.zip', '.DS_Store', 'Thumbs.db')
 
 try {
     New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
@@ -56,6 +57,13 @@ try {
     }
 
     Compress-Archive -Path (Join-Path $stagingDir '*') -DestinationPath $zipPath -CompressionLevel Optimal -Force
+
+    if (-not (Test-Path -LiteralPath $verifyScript)) {
+        throw "Verification script not found: $verifyScript"
+    }
+
+    & $verifyScript -ZipPath $zipPath
+
     Write-Output "Created $zipPath"
 }
 finally {
