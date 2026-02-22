@@ -1,14 +1,33 @@
 // js/pages/character/panels/proficienciesPanel.js
 // Character page Proficiencies panel (armor/weapon/tool/language textareas)
-import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+
+function requireCriticalEl(selector, prefix) {
+  const el = requireEl(selector, document, { prefix });
+  if (el) return el;
+  try {
+    assertEl(selector, document, { prefix, warn: false });
+  } catch (err) {
+    console.error(err);
+  }
+  return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message, { stickyMs: 5000 });
+    return;
+  }
+  console.warn(message);
+}
 
 export function initProficienciesPanel(deps = {}) {
   const { state, SaveManager, bindText, setStatus } = deps;
 
   if (!state || !SaveManager || !bindText) return;
-  if (!setStatus) throw new Error("initProficienciesPanel requires setStatus");
   if (!state.character) return;
 
+  const prefix = "initProficienciesPanel";
   const criticalSelectors = [
     "#charProfPanel",
     "#charArmorProf",
@@ -16,11 +35,9 @@ export function initProficienciesPanel(deps = {}) {
     "#charToolProf",
     "#charLanguages"
   ];
-  const missingCritical = criticalSelectors.some(
-    (selector) => !requireEl(selector, document, { prefix: "initProficienciesPanel", warn: false })
-  );
+  const missingCritical = criticalSelectors.some((selector) => !requireCriticalEl(selector, prefix));
   if (missingCritical) {
-    setStatus("Proficiencies panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
+    notifyMissingCritical(setStatus, "Proficiencies panel unavailable (missing expected UI elements).");
     return getNoopDestroyApi();
   }
 

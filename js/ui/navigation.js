@@ -6,7 +6,26 @@
 // - Zero hard-coded page list in app.js (add a new page by adding a tab button + a matching #page-<name> section)
 // - Accessibility (ARIA + keyboard)
 // - Deep linking (#tracker/#character/#map) + state persistence
-import { requireEl, getNoopDestroyApi } from "../utils/domGuards.js";
+import { requireEl, assertEl, getNoopDestroyApi } from "../utils/domGuards.js";
+
+function requireCriticalEl(selector, root, prefix) {
+  const el = requireEl(selector, root, { prefix });
+  if (el) return el;
+  try {
+    assertEl(selector, root, { prefix, warn: false });
+  } catch (err) {
+    console.error(err);
+  }
+  return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message, { stickyMs: 5000 });
+    return;
+  }
+  console.warn(message);
+}
 
 /** @type {(() => void) | null} */
 let activeTopTabsNavigationDestroy = null;
@@ -40,9 +59,9 @@ export function initTopTabsNavigation({
     activeTopTabsNavigationDestroy();
   }
 
-  const tabsRoot = requireEl(tabsRootSelector, document, { prefix: "initTopTabsNavigation", warn: false });
+  const tabsRoot = requireCriticalEl(tabsRootSelector, document, "initTopTabsNavigation");
   if (!tabsRoot) {
-    setStatus?.("Top navigation unavailable (missing tabs container).", { stickyMs: 5000 });
+    notifyMissingCritical(setStatus, "Top navigation unavailable (missing tabs container).");
     return getNoopDestroyApi();
   }
 
@@ -64,6 +83,10 @@ export function initTopTabsNavigation({
     const el = document.getElementById(`${pageIdPrefix}${name}`);
     if (el) pages[name] = el;
   });
+  if (!Object.keys(pages).length) {
+    notifyMissingCritical(setStatus, "Top navigation unavailable (no matching page sections found).");
+    return getNoopDestroyApi();
+  }
 
   function normalizeTabName(tabName) {
     const t = (tabName || "").toString().replace(/^#/, "").trim();

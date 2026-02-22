@@ -5,7 +5,26 @@
 // button and data panel init into a focused module.
 
 import { initDataPanel } from "./dataPanel.js";
-import { requireEl } from "../utils/domGuards.js";
+import { requireEl, assertEl } from "../utils/domGuards.js";
+
+function requireCriticalEl(selector, prefix) {
+  const el = requireEl(selector, document, { prefix });
+  if (el) return el;
+  try {
+    assertEl(selector, document, { prefix, warn: false });
+  } catch (err) {
+    console.error(err);
+  }
+  return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message, { stickyMs: 5000 });
+    return;
+  }
+  console.warn(message);
+}
 
 export function setupSettingsPanel(deps) {
   const {
@@ -28,7 +47,6 @@ export function setupSettingsPanel(deps) {
   if (typeof applyTheme !== "function") throw new Error("setupSettingsPanel: applyTheme() is required");
   if (typeof markDirty !== "function") throw new Error("setupSettingsPanel: markDirty() is required");
   if (typeof flush !== "function") throw new Error("setupSettingsPanel: flush() is required");
-  if (!setStatus) throw new Error("setupSettingsPanel requires setStatus");
 
   initDataPanel({
     state,
@@ -46,9 +64,9 @@ export function setupSettingsPanel(deps) {
   });
 
   // Settings button opens the modal directly
-  const settingsBtn = requireEl("#settingsBtn", document, { prefix: "setupSettingsPanel", warn: false });
+  const settingsBtn = requireCriticalEl("#settingsBtn", "setupSettingsPanel");
   if (!settingsBtn) {
-    setStatus("Settings button unavailable (missing #settingsBtn).", { stickyMs: 5000 });
+    notifyMissingCritical(setStatus, "Settings button unavailable (missing #settingsBtn).");
     return;
   }
 

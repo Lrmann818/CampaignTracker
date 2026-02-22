@@ -1,7 +1,34 @@
 import { safeAsync } from "../../../ui/safeAsync.js";
-import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _state = null;
+
+function requireCriticalEl(selector, prefix) {
+    const el = requireEl(selector, document, { prefix });
+    if (el) return el;
+    try {
+        assertEl(selector, document, { prefix, warn: false });
+    } catch (err) {
+        console.error(err);
+    }
+    return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+    if (typeof setStatus === "function") {
+        setStatus(message, { stickyMs: 5000 });
+        return;
+    }
+    console.warn(message);
+}
+
+function notifyStatus(setStatus, message) {
+    if (typeof setStatus === "function") {
+        setStatus(message);
+        return;
+    }
+    console.warn(message);
+}
 
 
 export function initSpellsPanel(deps = {}) {
@@ -27,13 +54,12 @@ export function initSpellsPanel(deps = {}) {
 
     if (!_state) throw new Error("initSpellsPanel requires state");
     if (!SaveManager) throw new Error("initSpellsPanel requires SaveManager");
-    if (!setStatus) throw new Error("initSpellsPanel requires setStatus");
-
-    const panelEl = requireEl("#charSpellsPanel", document, { prefix: "initSpellsPanel", warn: false });
-    const containerEl = requireEl("#spellLevels", document, { prefix: "initSpellsPanel", warn: false });
-    const addLevelBtnEl = requireEl("#addSpellLevelBtn", document, { prefix: "initSpellsPanel", warn: false });
+    const prefix = "initSpellsPanel";
+    const panelEl = requireCriticalEl("#charSpellsPanel", prefix);
+    const containerEl = requireCriticalEl("#spellLevels", prefix);
+    const addLevelBtnEl = requireCriticalEl("#addSpellLevelBtn", prefix);
     if (!panelEl || !containerEl || !addLevelBtnEl) {
-        setStatus("Spells panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
+        notifyMissingCritical(setStatus, "Spells panel unavailable (missing expected UI elements).");
         return getNoopDestroyApi();
     }
 
@@ -124,7 +150,7 @@ export function initSpellsPanel(deps = {}) {
                 render();
             }, (err) => {
                 console.error(err);
-                setStatus("Add spell level failed.");
+                notifyStatus(setStatus, "Add spell level failed.");
             })
         );
 
@@ -265,7 +291,7 @@ export function initSpellsPanel(deps = {}) {
                     render();
                 }, (err) => {
                     console.error(err);
-                    setStatus("Delete spell level failed.");
+                    notifyStatus(setStatus, "Delete spell level failed.");
                 })
             );
 
@@ -328,7 +354,7 @@ export function initSpellsPanel(deps = {}) {
                     render();
                 }, (err) => {
                     console.error(err);
-                    setStatus("Toggle spell notes failed.");
+                    notifyStatus(setStatus, "Toggle spell notes failed.");
                 })
             );
 
@@ -416,7 +442,7 @@ export function initSpellsPanel(deps = {}) {
                     render();
                 }, (err) => {
                     console.error(err);
-                    setStatus("Delete spell failed.");
+                    notifyStatus(setStatus, "Delete spell failed.");
                 })
             );
 

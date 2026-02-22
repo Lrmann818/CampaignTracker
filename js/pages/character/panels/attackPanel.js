@@ -6,9 +6,28 @@
 // - It should not call other Character-page wiring helpers (reorder, abilities, etc).
 // - It must be safe if init is called more than once (guard + no double event listeners).
 import { safeAsync } from "../../../ui/safeAsync.js";
-import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _state = null;
+
+function requireCriticalEl(selector, prefix) {
+  const el = requireEl(selector, document, { prefix });
+  if (el) return el;
+  try {
+    assertEl(selector, document, { prefix, warn: false });
+  } catch (err) {
+    console.error(err);
+  }
+  return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message, { stickyMs: 5000 });
+    return;
+  }
+  console.warn(message);
+}
 
 
 export function initAttacksPanel(deps = {}) {
@@ -22,17 +41,17 @@ export function initAttacksPanel(deps = {}) {
 
   if (!_state) throw new Error("initAttacksPanel requires state");
   if (!SaveManager) throw new Error("initAttacksPanel requires SaveManager");
-  if (!setStatus) throw new Error("initAttacksPanel requires setStatus");
 
   if (!_state.character) _state.character = {};
   if (!Array.isArray(_state.character.attacks)) _state.character.attacks = [];
 
-  const panelEl = requireEl("#charAttacksPanel", document, { prefix: "initAttacksPanel", warn: false });
-  const listEl = requireEl("#attackList", document, { prefix: "initAttacksPanel", warn: false });
-  const addBtn = requireEl("#addAttackBtn", document, { prefix: "initAttacksPanel", warn: false });
+  const prefix = "initAttacksPanel";
+  const panelEl = requireCriticalEl("#charAttacksPanel", prefix);
+  const listEl = requireCriticalEl("#attackList", prefix);
+  const addBtn = requireCriticalEl("#addAttackBtn", prefix);
 
   if (!panelEl || !listEl || !addBtn) {
-    setStatus("Weapons panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
+    notifyMissingCritical(setStatus, "Weapons panel unavailable (missing expected UI elements).");
     return getNoopDestroyApi();
   }
 
@@ -133,7 +152,8 @@ export function initAttacksPanel(deps = {}) {
         await deleteAttack(a.id);
       }, (err) => {
         console.error(err);
-        setStatus("Delete weapon failed.");
+        if (typeof setStatus === "function") setStatus("Delete weapon failed.");
+        else console.warn("Delete weapon failed.");
       })
     );
 

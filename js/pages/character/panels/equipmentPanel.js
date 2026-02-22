@@ -9,7 +9,7 @@
 import { bindNumber } from "../../../ui/bindings.js";
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { safeAsync } from "../../../ui/safeAsync.js";
-import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 let _state = null;
 
 let _tabsEl = null;
@@ -27,6 +27,33 @@ let _uiConfirm = null;
 let _setStatus = null;
 
 let _wired = false;
+
+function requireCriticalEl(selector, root, prefix) {
+  const el = requireEl(selector, root, { prefix });
+  if (el) return el;
+  try {
+    assertEl(selector, root, { prefix, warn: false });
+  } catch (err) {
+    console.error(err);
+  }
+  return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message, { stickyMs: 5000 });
+    return;
+  }
+  console.warn(message);
+}
+
+function notifyStatus(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message);
+    return;
+  }
+  console.warn(message);
+}
 
 function _escapeRegExp(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -88,12 +115,11 @@ function initInventoryUI(deps = {}) {
   _uiAlert = deps.uiAlert;
   _uiConfirm = deps.uiConfirm;
   _setStatus = deps.setStatus;
-  if (!_setStatus) throw new Error("initInventoryUI requires setStatus");
 
   const missingCritical =
     !_tabsEl || !_notesBox || !_searchEl || !_addBtn || !_renameBtn || !_deleteBtn;
   if (missingCritical) {
-    _setStatus("Equipment inventory unavailable (missing expected UI elements).", { stickyMs: 5000 });
+    notifyMissingCritical(_setStatus, "Equipment inventory unavailable (missing expected UI elements).");
     return getNoopDestroyApi();
   }
 
@@ -242,7 +268,7 @@ function wireHandlers() {
       _notesBox.focus();
     }, (err) => {
       console.error(err);
-      _setStatus("Add inventory item failed.");
+      notifyStatus(_setStatus, "Add inventory item failed.");
     })
   );
 
@@ -265,7 +291,7 @@ function wireHandlers() {
       renderInventoryTabs();
     }, (err) => {
       console.error(err);
-      _setStatus("Rename inventory item failed.");
+      notifyStatus(_setStatus, "Rename inventory item failed.");
     })
   );
 
@@ -293,7 +319,7 @@ function wireHandlers() {
       renderInventoryTabs();
     }, (err) => {
       console.error(err);
-      _setStatus("Delete inventory item failed.");
+      notifyStatus(_setStatus, "Delete inventory item failed.");
     })
   );
 }
@@ -326,38 +352,47 @@ export function initEquipmentPanel(deps = {}) {
     console.warn("initEquipmentPanel: missing state");
     return;
   }
-  if (!setStatus) throw new Error("initEquipmentPanel requires setStatus");
 
-  const panelEl = requireEl("#charEquipmentPanel", document, { prefix: "initEquipmentPanel", warn: false });
-  const criticalSelectors = [
-    "#inventoryTabs",
-    "#inventoryNotesBox",
-    "#inventorySearch",
-    "#addInventoryBtn",
-    "#renameInventoryBtn",
-    "#deleteInventoryBtn",
-    "#moneyPP",
-    "#moneyGP",
-    "#moneyEP",
-    "#moneySP",
-    "#moneyCP"
-  ];
-  const missingCriticalField = criticalSelectors.some(
-    (selector) => !requireEl(selector, document, { prefix: "initEquipmentPanel", warn: false })
-  );
-  if (!panelEl || missingCriticalField) {
-    setStatus("Equipment panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
+  const prefix = "initEquipmentPanel";
+  const panelEl = requireCriticalEl("#charEquipmentPanel", document, prefix);
+  const tabsEl = requireCriticalEl("#inventoryTabs", document, prefix);
+  const notesBoxEl = requireCriticalEl("#inventoryNotesBox", document, prefix);
+  const searchEl = requireCriticalEl("#inventorySearch", document, prefix);
+  const addBtn = requireCriticalEl("#addInventoryBtn", document, prefix);
+  const renameBtn = requireCriticalEl("#renameInventoryBtn", document, prefix);
+  const deleteBtn = requireCriticalEl("#deleteInventoryBtn", document, prefix);
+  const moneyPP = requireCriticalEl("#moneyPP", document, prefix);
+  const moneyGP = requireCriticalEl("#moneyGP", document, prefix);
+  const moneyEP = requireCriticalEl("#moneyEP", document, prefix);
+  const moneySP = requireCriticalEl("#moneySP", document, prefix);
+  const moneyCP = requireCriticalEl("#moneyCP", document, prefix);
+
+  if (
+    !panelEl
+    || !tabsEl
+    || !notesBoxEl
+    || !searchEl
+    || !addBtn
+    || !renameBtn
+    || !deleteBtn
+    || !moneyPP
+    || !moneyGP
+    || !moneyEP
+    || !moneySP
+    || !moneyCP
+  ) {
+    notifyMissingCritical(setStatus, "Equipment panel unavailable (missing expected UI elements).");
     return getNoopDestroyApi();
   }
 
   // ---- Inventory tabs UI ----
   initInventoryUI({
-    tabsEl: document.getElementById("inventoryTabs"),
-    notesBox: document.getElementById("inventoryNotesBox"),
-    searchEl: document.getElementById("inventorySearch"),
-    addBtn: document.getElementById("addInventoryBtn"),
-    renameBtn: document.getElementById("renameInventoryBtn"),
-    deleteBtn: document.getElementById("deleteInventoryBtn"),
+    tabsEl,
+    notesBox: notesBoxEl,
+    searchEl,
+    addBtn,
+    renameBtn,
+    deleteBtn,
     SaveManager,
     uiPrompt,
     uiAlert,

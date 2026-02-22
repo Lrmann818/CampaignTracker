@@ -5,9 +5,36 @@
 import { uiConfirm, uiAlert } from "./dialogs.js";
 import { enhanceSelectDropdown } from "./selectDropdown.js";
 import { safeAsync } from "./safeAsync.js";
-import { requireEl, getNoopDestroyApi } from "../utils/domGuards.js";
+import { requireEl, assertEl, getNoopDestroyApi } from "../utils/domGuards.js";
 
 let _activeDataPanel = null;
+
+function requireCriticalEl(selector, root, prefix) {
+  const el = requireEl(selector, root, { prefix });
+  if (el) return el;
+  try {
+    assertEl(selector, root, { prefix, warn: false });
+  } catch (err) {
+    console.error(err);
+  }
+  return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message, { stickyMs: 5000 });
+    return;
+  }
+  console.warn(message);
+}
+
+function notifyStatus(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message);
+    return;
+  }
+  console.warn(message);
+}
 
 /**
  * @param {{
@@ -43,20 +70,20 @@ export function initDataPanel(deps) {
     setStatus,
     Popovers
   } = deps;
-  if (!setStatus) throw new Error("initDataPanel requires setStatus");
 
+  const prefix = "initDataPanel";
   const overlay = /** @type {HTMLElement|null} */ (
-    requireEl("#dataPanelOverlay", document, { prefix: "initDataPanel", warn: false })
+    requireCriticalEl("#dataPanelOverlay", document, prefix)
   );
   const panel = /** @type {HTMLElement|null} */ (
-    requireEl("#dataPanelPanel", document, { prefix: "initDataPanel", warn: false })
+    requireCriticalEl("#dataPanelPanel", document, prefix)
   );
   const closeBtn = /** @type {HTMLButtonElement|null} */ (
-    requireEl("#dataPanelClose", document, { prefix: "initDataPanel", warn: false })
+    requireCriticalEl("#dataPanelClose", document, prefix)
   );
 
-  if (!overlay || !panel) {
-    setStatus("Data panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
+  if (!overlay || !panel || !closeBtn) {
+    notifyMissingCritical(setStatus, "Data panel unavailable (missing expected UI elements).");
     return getNoopDestroyApi();
   }
 
@@ -162,7 +189,7 @@ export function initDataPanel(deps) {
       await resetAll();
     }, (err) => {
       console.error(err);
-      setStatus("Reset all failed.");
+      notifyStatus(setStatus, "Reset all failed.");
     })
   );
 
@@ -172,7 +199,7 @@ export function initDataPanel(deps) {
     if (!ok) return;
 
     try {
-      setStatus("Resetting UI…");
+      notifyStatus(setStatus, "Resetting UI…");
       await flush?.();
 
       // Clear UI-only localStorage keys
@@ -187,16 +214,16 @@ export function initDataPanel(deps) {
       markDirty();
       await flush?.();
 
-      setStatus("UI reset. Reloading…");
+      notifyStatus(setStatus, "UI reset. Reloading…");
       location.reload();
     } catch (err) {
       console.error(err);
       await uiAlert("Could not reset UI settings. See console for details.");
-      setStatus("Reset UI failed");
+      notifyStatus(setStatus, "Reset UI failed");
     }
     }, (err) => {
       console.error(err);
-      setStatus("Reset UI failed.");
+      notifyStatus(setStatus, "Reset UI failed.");
     })
   );
 
@@ -206,7 +233,7 @@ export function initDataPanel(deps) {
     if (!ok) return;
 
     try {
-      setStatus("Clearing images…");
+      notifyStatus(setStatus, "Clearing images…");
       await flush?.();
 
       // Remove blob references from state to avoid dangling ids
@@ -218,16 +245,16 @@ export function initDataPanel(deps) {
       // Clear IndexedDB blobs
       await clearAllBlobs?.();
 
-      setStatus("Images cleared. Reloading…");
+      notifyStatus(setStatus, "Images cleared. Reloading…");
       location.reload();
     } catch (err) {
       console.error(err);
       await uiAlert("Could not clear images. See console for details.");
-      setStatus("Clear images failed");
+      notifyStatus(setStatus, "Clear images failed");
     }
     }, (err) => {
       console.error(err);
-      setStatus("Clear images failed.");
+      notifyStatus(setStatus, "Clear images failed.");
     })
   );
 
@@ -237,19 +264,19 @@ export function initDataPanel(deps) {
     if (!ok) return;
 
     try {
-      setStatus("Clearing texts…");
+      notifyStatus(setStatus, "Clearing texts…");
       await flush?.();
       await clearAllTexts?.();
-      setStatus("Texts cleared. Reloading…");
+      notifyStatus(setStatus, "Texts cleared. Reloading…");
       location.reload();
     } catch (err) {
       console.error(err);
       await uiAlert("Could not clear texts. See console for details.");
-      setStatus("Clear texts failed");
+      notifyStatus(setStatus, "Clear texts failed");
     }
     }, (err) => {
       console.error(err);
-      setStatus("Clear texts failed.");
+      notifyStatus(setStatus, "Clear texts failed.");
     })
   );
 
@@ -278,7 +305,7 @@ export function initDataPanel(deps) {
       await uiAlert(lines.join("\n"), { title: "About" });
     }, (err) => {
       console.error(err);
-      setStatus("Open about failed.");
+      notifyStatus(setStatus, "Open about failed.");
     })
   );
 

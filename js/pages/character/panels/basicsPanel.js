@@ -3,7 +3,26 @@
 
 import { safeAsync } from "../../../ui/safeAsync.js";
 import { createStateActions } from "../../../domain/stateActions.js";
-import { requireEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
+
+function requireCriticalEl(selector, prefix) {
+  const el = requireEl(selector, document, { prefix });
+  if (el) return el;
+  try {
+    assertEl(selector, document, { prefix, warn: false });
+  } catch (err) {
+    console.error(err);
+  }
+  return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message, { stickyMs: 5000 });
+    return;
+  }
+  console.warn(message);
+}
 
 function formatPossessive(name) {
   const n = (name || "").trim();
@@ -81,7 +100,6 @@ function setupCharacterPortrait(deps) {
     blobIdToObjectUrl,
     setStatus,
   } = deps;
-  if (!setStatus) throw new Error("setupCharacterPortrait requires setStatus");
   const { updateCharacterField } = createStateActions({ state, SaveManager });
 
   const cardEl = document.getElementById("charPortraitCard");
@@ -147,7 +165,8 @@ function setupCharacterPortrait(deps) {
         }
       }, (err) => {
         console.error(err);
-        setStatus("Update portrait failed.");
+        if (typeof setStatus === "function") setStatus("Update portrait failed.");
+        else console.warn("Update portrait failed.");
       })
     );
   }
@@ -166,8 +185,7 @@ export function initBasicsPanel(deps = {}) {
   } = deps;
 
   if (!state || !SaveManager || !bindText || !bindNumber) return;
-  if (!setStatus) throw new Error("initBasicsPanel requires setStatus");
-
+  const prefix = "initBasicsPanel";
   const criticalSelectors = [
     "#charBasicsPanel",
     "#charName",
@@ -179,11 +197,9 @@ export function initBasicsPanel(deps = {}) {
     "#charFeatures",
     "#charPortraitTop"
   ];
-  const missingCritical = criticalSelectors.some(
-    (selector) => !requireEl(selector, document, { prefix: "initBasicsPanel", warn: false })
-  );
+  const missingCritical = criticalSelectors.some((selector) => !requireCriticalEl(selector, prefix));
   if (missingCritical) {
-    setStatus("Character basics panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
+    notifyMissingCritical(setStatus, "Character basics panel unavailable (missing expected UI elements).");
     return getNoopDestroyApi();
   }
 

@@ -11,7 +11,7 @@ import { createMoveButton, createCollapseButton } from "./cards/shared/cardHeade
 import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
 import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
 import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
-import { getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _cardsEl = null;
 let _state = null;
@@ -25,6 +25,25 @@ let _pickLocImage = null;
 let _updateLoc = null;
 let _moveLocCard = null;
 let _deleteLoc = null;
+
+function requireCriticalEl(selector, prefix) {
+  const el = requireEl(selector, document, { prefix });
+  if (el) return el;
+  try {
+    assertEl(selector, document, { prefix, warn: false });
+  } catch (err) {
+    console.error(err);
+  }
+  return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message, { stickyMs: 5000 });
+    return;
+  }
+  console.warn(message);
+}
 
 /**
  * Locations toolbar wiring (search / filter / add)
@@ -313,7 +332,6 @@ export function initLocationsPanel(deps = {}) {
   _blobIdToObjectUrl = blobIdToObjectUrl || _blobIdToObjectUrl;
   if (!_state) throw new Error("initLocationsPanel requires state");
   if (!_blobIdToObjectUrl) throw new Error("initLocationsPanel requires blobIdToObjectUrl");
-  if (!setStatus) throw new Error("initLocationsPanel requires setStatus");
   if (!SaveManager) throw new Error("initLocationsPanel: missing SaveManager");
   if (!makeLocation) throw new Error("initLocationsPanel: missing makeLocation");
 
@@ -351,18 +369,18 @@ export function initLocationsPanel(deps = {}) {
     }
   }
 
-  const cardsEl = document.getElementById("locCards");
-  const addBtn = document.getElementById("addLocBtn");
-  const searchEl = document.getElementById("locSearch");
-  const filterEl = document.getElementById("locFilter");
-
-  const tabsEl = document.getElementById("locTabs");
-  const addSectionBtn = document.getElementById("addLocSectionBtn");
-  const renameSectionBtn = document.getElementById("renameLocSectionBtn");
-  const deleteSectionBtn = document.getElementById("deleteLocSectionBtn");
+  const prefix = "initLocationsPanel";
+  const cardsEl = requireCriticalEl("#locCards", prefix);
+  const addBtn = requireCriticalEl("#addLocBtn", prefix);
+  const searchEl = requireCriticalEl("#locSearch", prefix);
+  const filterEl = requireCriticalEl("#locFilter", prefix);
+  const tabsEl = requireCriticalEl("#locTabs", prefix);
+  const addSectionBtn = requireCriticalEl("#addLocSectionBtn", prefix);
+  const renameSectionBtn = requireCriticalEl("#renameLocSectionBtn", prefix);
+  const deleteSectionBtn = requireCriticalEl("#deleteLocSectionBtn", prefix);
 
   if (!cardsEl || !addBtn || !searchEl || !filterEl || !tabsEl || !addSectionBtn || !renameSectionBtn || !deleteSectionBtn) {
-    setStatus("Locations panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
+    notifyMissingCritical(setStatus, "Locations panel unavailable (missing expected UI elements).");
     return getNoopDestroyApi();
   }
 

@@ -7,9 +7,22 @@
 //   uiConfirm(msg, {title, okText, cancelText}) -> Promise<boolean>
 //   uiPrompt(msg, {title, okText, cancelText, placeholder, value}) -> Promise<string|null>
 
+import { requireEl, assertEl } from "../utils/domGuards.js";
+
 let _initialized = false;
 
 let _lastFocus = null;
+
+function requireCriticalEl(selector, root, prefix) {
+  const el = requireEl(selector, root, { prefix });
+  if (el) return el;
+  try {
+    assertEl(selector, root, { prefix, warn: false });
+  } catch (err) {
+    console.error(err);
+  }
+  return null;
+}
 
 function getFocusable(container) {
   if (!container) return [];
@@ -110,13 +123,19 @@ overlay = document.createElement("div");
 
 function openShell({ title, message, mode, opts }) {
   const overlay = ensureShell();
-  const panel = overlay.querySelector(".uiDialogPanel");
-  const titleEl = overlay.querySelector("#uiDialogTitle");
-  const msgEl = overlay.querySelector("#uiDialogMessage");
-  const inputEl = overlay.querySelector("#uiDialogInput");
-  const btnOk = overlay.querySelector("#uiDialogOk");
-  const btnCancel = overlay.querySelector("#uiDialogCancel");
-  const btnClose = overlay.querySelector("#uiDialogClose");
+  const prefix = "dialogs.openShell";
+  const panel = requireCriticalEl(".uiDialogPanel", overlay, prefix);
+  const titleEl = requireCriticalEl("#uiDialogTitle", overlay, prefix);
+  const msgEl = requireCriticalEl("#uiDialogMessage", overlay, prefix);
+  const inputEl = requireCriticalEl("#uiDialogInput", overlay, prefix);
+  const btnOk = requireCriticalEl("#uiDialogOk", overlay, prefix);
+  const btnCancel = requireCriticalEl("#uiDialogCancel", overlay, prefix);
+  const btnClose = requireCriticalEl("#uiDialogClose", overlay, prefix);
+
+  if (!panel || !titleEl || !msgEl || !inputEl || !btnOk || !btnCancel || !btnClose) {
+    console.warn("Dialogs unavailable (missing required dialog shell elements).");
+    return null;
+  }
 
   titleEl.textContent = title || "Notice";
   msgEl.textContent = message ?? "";
@@ -246,6 +265,10 @@ export function initDialogs() {
 export function uiAlert(message, opts = {}) {
   return new Promise((resolve) => {
     const shell = openShell({ title: opts.title || "Notice", message, mode: "alert", opts });
+    if (!shell) {
+      resolve(undefined);
+      return;
+    }
     wireCloseHandlers(shell, resolve, "alert");
   });
 }
@@ -253,6 +276,10 @@ export function uiAlert(message, opts = {}) {
 export function uiConfirm(message, opts = {}) {
   return new Promise((resolve) => {
     const shell = openShell({ title: opts.title || "Confirm", message, mode: "confirm", opts });
+    if (!shell) {
+      resolve(false);
+      return;
+    }
     wireCloseHandlers(shell, resolve, "confirm");
   });
 }
@@ -260,6 +287,10 @@ export function uiConfirm(message, opts = {}) {
 export function uiPrompt(message, opts = {}) {
   return new Promise((resolve) => {
     const shell = openShell({ title: opts.title || "Input", message, mode: "prompt", opts });
+    if (!shell) {
+      resolve(null);
+      return;
+    }
     wireCloseHandlers(shell, resolve, "prompt");
   });
 }

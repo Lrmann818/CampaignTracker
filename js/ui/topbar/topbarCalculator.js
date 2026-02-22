@@ -1,9 +1,28 @@
 // Topbar calculator popover.
 
 import { createTopbarPopover } from "./topbarPopover.js";
-import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
+import { requireEl, assertEl, getNoopDestroyApi } from "../../utils/domGuards.js";
 
 let _activeTopbarCalculator = null;
+
+function requireCriticalEl(selector, prefix) {
+    const el = requireEl(selector, document, { prefix });
+    if (el) return el;
+    try {
+        assertEl(selector, document, { prefix, warn: false });
+    } catch (err) {
+        console.error(err);
+    }
+    return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+    if (typeof setStatus === "function") {
+        setStatus(message, { stickyMs: 5000 });
+        return;
+    }
+    console.warn(message);
+}
 
 export function initTopbarCalculator(deps) {
     _activeTopbarCalculator?.destroy?.();
@@ -17,16 +36,17 @@ export function initTopbarCalculator(deps) {
         setStatus
     } = deps || {};
 
-    const dd = requireEl("#calcDropdown", document, { prefix: "initTopbarCalculator", warn: false });
-    const btn = requireEl("#calcBtn", document, { prefix: "initTopbarCalculator", warn: false });
-    const menu = requireEl("#calcMenu", document, { prefix: "initTopbarCalculator", warn: false });
-    const closeBtn = requireEl("#calcCloseBtn", document, { prefix: "initTopbarCalculator", warn: false });
-    const display = requireEl("#calcDisplay", document, { prefix: "initTopbarCalculator", warn: false });
+    const prefix = "initTopbarCalculator";
+    const dd = requireCriticalEl("#calcDropdown", prefix);
+    const btn = requireCriticalEl("#calcBtn", prefix);
+    const menu = requireCriticalEl("#calcMenu", prefix);
+    const closeBtn = requireCriticalEl("#calcCloseBtn", prefix);
+    const display = requireCriticalEl("#calcDisplay", prefix);
     const keys = menu?.querySelector(".calcKeys");
-    const histEl = requireEl("#calcHistory", document, { prefix: "initTopbarCalculator", warn: false });
+    const histEl = requireCriticalEl("#calcHistory", prefix);
 
     if (!dd || !btn || !menu || !closeBtn || !display || !keys || !histEl) {
-        setStatus?.("Topbar calculator unavailable (missing expected UI elements).", { stickyMs: 5000 });
+        notifyMissingCritical(setStatus, "Topbar calculator unavailable (missing expected UI elements).");
         return getNoopDestroyApi();
     }
 

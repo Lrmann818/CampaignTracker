@@ -1,16 +1,35 @@
 // js/ui/topbar/topbarClock.js
 
-import { requireEl, getNoopDestroyApi } from "../../utils/domGuards.js";
+import { requireEl, assertEl, getNoopDestroyApi } from "../../utils/domGuards.js";
 
 let _activeTopbarClock = null;
+
+function requireCriticalEl(selector, prefix) {
+    const el = requireEl(selector, document, { prefix });
+    if (el) return el;
+    try {
+        assertEl(selector, document, { prefix, warn: false });
+    } catch (err) {
+        console.error(err);
+    }
+    return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+    if (typeof setStatus === "function") {
+        setStatus(message, { stickyMs: 5000 });
+        return;
+    }
+    console.warn(message);
+}
 
 export function initTopbarClock({ setStatus } = {}) {
     _activeTopbarClock?.destroy?.();
     _activeTopbarClock = null;
 
-    const el = requireEl("#topbarClock", document, { prefix: "initTopbarClock", warn: false });
+    const el = requireCriticalEl("#topbarClock", "initTopbarClock");
     if (!el) {
-        setStatus?.("Topbar clock unavailable (missing #topbarClock).", { stickyMs: 5000 });
+        notifyMissingCritical(setStatus, "Topbar clock unavailable (missing #topbarClock).");
         return getNoopDestroyApi();
     }
 

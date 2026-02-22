@@ -6,8 +6,29 @@
 //
 // This is intentionally “headless”: page modules provide selectors + header wiring.
 
+import { requireEl, assertEl, getNoopDestroyApi } from "../utils/domGuards.js";
+
 /** @type {Map<string, () => void>} */
 const activePagePanelReorderDestroyByPage = new Map();
+
+function requireCriticalEl(selector, root, prefix) {
+  const el = requireEl(selector, root, { prefix });
+  if (el) return el;
+  try {
+    assertEl(selector, root, { prefix, warn: false });
+  } catch (err) {
+    console.error(err);
+  }
+  return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message, { stickyMs: 5000 });
+    return;
+  }
+  console.warn(message);
+}
 
 export function setupPagePanelReorder({
   state,
@@ -35,6 +56,7 @@ export function setupPagePanelReorder({
   // Behavior
   breakpointQuery = "(max-width: 600px)",
   storeApplyFnKey = null, // e.g. "_applySectionOrder" if you want to expose applyOrder
+  setStatus = null,
 }) {
   const destroyKey = pageId ? String(pageId) : "";
   if (destroyKey) {
@@ -42,22 +64,40 @@ export function setupPagePanelReorder({
     if (typeof prevDestroy === "function") prevDestroy();
   }
 
-  const pageEl = document.getElementById(pageId);
-  if (!pageEl) return;
+  const prefix = `setupPagePanelReorder(${pageId || "unknown"})`;
+  const pageEl = requireCriticalEl(`#${pageId}`, document, prefix);
+  if (!pageEl) {
+    notifyMissingCritical(setStatus, `Panel reorder unavailable (missing page root #${pageId}).`);
+    return getNoopDestroyApi();
+  }
 
   let columnsWrap = null;
   for (const sel of (columnsWrapSelectors || [])) {
-    columnsWrap = pageEl.querySelector(sel);
+    columnsWrap = requireEl(sel, pageEl, { prefix });
     if (columnsWrap) break;
   }
-  if (!columnsWrap) return;
+  if (!columnsWrap) {
+    const firstSelector = Array.isArray(columnsWrapSelectors) ? columnsWrapSelectors[0] : "";
+    if (firstSelector) {
+      try {
+        assertEl(firstSelector, pageEl, { prefix, warn: false });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    notifyMissingCritical(setStatus, "Panel reorder unavailable (missing columns wrapper).");
+    return getNoopDestroyApi();
+  }
 
-  const col0 = columnsWrap.querySelector(col0Selector);
-  const col1 = columnsWrap.querySelector(col1Selector);
-  if (!col0 || !col1) return;
+  const col0 = requireCriticalEl(col0Selector, columnsWrap, prefix);
+  const col1 = requireCriticalEl(col1Selector, columnsWrap, prefix);
+  if (!col0 || !col1) {
+    notifyMissingCritical(setStatus, "Panel reorder unavailable (missing panel columns).");
+    return getNoopDestroyApi();
+  }
 
   const ui = getUiState?.(state);
-  if (!ui) return;
+  if (!ui) return getNoopDestroyApi();
 
   const ac = new AbortController();
   const { signal } = ac;

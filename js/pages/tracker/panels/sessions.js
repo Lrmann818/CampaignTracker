@@ -3,7 +3,7 @@
 
 import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
 import { safeAsync } from "../../../ui/safeAsync.js";
-import { getNoopDestroyApi } from "../../../utils/domGuards.js";
+import { requireEl, assertEl, getNoopDestroyApi } from "../../../utils/domGuards.js";
 
 let _tabsEl = null;
 let _notesBox = null;
@@ -22,6 +22,25 @@ let _state = null;
 let _setStatus = null;
 
 let _wired = false;
+
+function requireCriticalEl(selector, prefix) {
+  const el = requireEl(selector, document, { prefix });
+  if (el) return el;
+  try {
+    assertEl(selector, document, { prefix, warn: false });
+  } catch (err) {
+    console.error(err);
+  }
+  return null;
+}
+
+function notifyMissingCritical(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message, { stickyMs: 5000 });
+    return;
+  }
+  console.warn(message);
+}
 
 function _escapeRegExp(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -74,12 +93,13 @@ function _appendHighlightedText(parentEl, text, query) {
  */
 export function initSessionsPanel(deps = {}) {
   _state = deps.state;
-  _tabsEl = deps.tabsEl;
-  _notesBox = deps.notesBox;
-  _searchEl = deps.searchEl;
-  _addBtn = deps.addBtn;
-  _renameBtn = deps.renameBtn;
-  _deleteBtn = deps.deleteBtn;
+  const prefix = "initSessionsPanel";
+  _tabsEl = deps.tabsEl || requireCriticalEl("#sessionTabs", prefix);
+  _notesBox = deps.notesBox || requireCriticalEl("#sessionNotesBox", prefix);
+  _searchEl = deps.searchEl || requireCriticalEl("#sessionSearch", prefix);
+  _addBtn = deps.addBtn || requireCriticalEl("#addSessionBtn", prefix);
+  _renameBtn = deps.renameBtn || requireCriticalEl("#renameSessionBtn", prefix);
+  _deleteBtn = deps.deleteBtn || requireCriticalEl("#deleteSessionBtn", prefix);
 
   _SaveManager = deps.SaveManager;
   _uiPrompt = deps.uiPrompt;
@@ -91,12 +111,11 @@ export function initSessionsPanel(deps = {}) {
     console.warn("Sessions UI: missing required dependency (state).");
     return getNoopDestroyApi();
   }
-  if (!_setStatus) throw new Error("initSessionsPanel requires setStatus");
 
   const missingCritical =
     !_tabsEl || !_notesBox || !_searchEl || !_addBtn || !_renameBtn || !_deleteBtn;
   if (missingCritical) {
-    _setStatus("Sessions panel unavailable (missing expected UI elements).", { stickyMs: 5000 });
+    notifyMissingCritical(_setStatus, "Sessions panel unavailable (missing expected UI elements).");
     return getNoopDestroyApi();
   }
 
@@ -228,7 +247,8 @@ function wireHandlers() {
       renderSessionTabs();
     }, (err) => {
       console.error(err);
-      _setStatus("Rename session failed.");
+      if (typeof _setStatus === "function") _setStatus("Rename session failed.");
+      else console.warn("Rename session failed.");
     })
   );
 
@@ -257,7 +277,8 @@ function wireHandlers() {
       renderSessionTabs();
     }, (err) => {
       console.error(err);
-      _setStatus("Delete session failed.");
+      if (typeof _setStatus === "function") _setStatus("Delete session failed.");
+      else console.warn("Delete session failed.");
     })
   );
 }
