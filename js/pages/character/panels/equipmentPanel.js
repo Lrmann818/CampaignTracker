@@ -1,0 +1,438 @@
+// Character Equipment panel (Inventory + Money).
+// Inventory uses tabbed notes + toolbar actions (add/rename/delete/search).
+//
+// State shape (stored in state.character):
+//   inventoryItems: [{ title, notes }]
+//   activeInventoryIndex: number
+//   inventorySearch: string
+
+import { bindNumber } from "../../../ui/bindings.js";
+import { attachSearchHighlightOverlay } from "../../../ui/searchHighlightOverlay.js";
+import { safeAsync } from "../../../ui/safeAsync.js";
+import { createStateActions } from "../../../domain/stateActions.js";
+import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
+let _state = null;
+
+let _tabsEl = null;
+let _notesBox = null;
+let _searchEl = null;
+let _addBtn = null;
+let _renameBtn = null;
+let _deleteBtn = null;
+let _notesHl = null;
+
+let _SaveManager = null;
+let _uiPrompt = null;
+let _uiAlert = null;
+let _uiConfirm = null;
+let _setStatus = null;
+let _updateCharacterField = null;
+let _mutateCharacter = null;
+
+let _wired = false;
+
+function notifyStatus(setStatus, message) {
+  if (typeof setStatus === "function") {
+    setStatus(message);
+    return;
+  }
+  console.warn(message);
+}
+
+function _escapeRegExp(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function _appendHighlightedText(parentEl, text, query) {
+  const source = String(text ?? "");
+  const q = String(query ?? "").trim();
+  if (!q) {
+    parentEl.replaceChildren(document.createTextNode(source));
+    return;
+  }
+
+  const re = new RegExp(_escapeRegExp(q), "gi");
+  const fragment = document.createDocumentFragment();
+  let lastIndex = 0;
+  let match = re.exec(source);
+
+  while (match) {
+    const start = match.index;
+    const end = start + match[0].length;
+
+    if (start > lastIndex) {
+      fragment.appendChild(document.createTextNode(source.slice(lastIndex, start)));
+    }
+
+    const mark = document.createElement("mark");
+    mark.className = "searchMark";
+    mark.textContent = source.slice(start, end);
+    fragment.appendChild(mark);
+
+    lastIndex = end;
+    match = re.exec(source);
+  }
+
+  if (lastIndex < source.length) {
+    fragment.appendChild(document.createTextNode(source.slice(lastIndex)));
+  }
+
+  parentEl.replaceChildren(fragment);
+}
+
+function initInventoryUI(deps = {}) {
+  _state = deps.state ?? _state;
+
+  if (!_state) {
+    console.warn("Inventory UI: missing required dependency (state).");
+    return;
+  }
+
+  _tabsEl = deps.tabsEl;
+  _notesBox = deps.notesBox;
+  _searchEl = deps.searchEl;
+  _addBtn = deps.addBtn;
+  _renameBtn = deps.renameBtn;
+  _deleteBtn = deps.deleteBtn;
+
+  _SaveManager = deps.SaveManager;
+  _uiPrompt = deps.uiPrompt;
+  _uiAlert = deps.uiAlert;
+  _uiConfirm = deps.uiConfirm;
+  _setStatus = deps.setStatus;
+  _updateCharacterField = deps.updateCharacterField || _updateCharacterField;
+  _mutateCharacter = deps.mutateCharacter || _mutateCharacter;
+
+  const missingCritical =
+    !_tabsEl || !_notesBox || !_searchEl || !_addBtn || !_renameBtn || !_deleteBtn;
+  if (missingCritical) {
+    const message = "Equipment inventory unavailable (missing expected UI elements).";
+    if (typeof _setStatus === "function") _setStatus(message, { stickyMs: 5000 });
+    else console.warn(message);
+    return getNoopDestroyApi();
+  }
+
+  ensureInventoryDefaults();
+
+  // True in-field highlight inside the notes box
+  _notesHl = attachSearchHighlightOverlay(_notesBox, () => (_state.character.inventorySearch || ""));
+
+  if (!_wired) {
+    wireHandlers();
+    _wired = true;
+  }
+
+  renderInventoryTabs();
+}
+
+function renderInventoryTabs() {
+  if (!_tabsEl || !_notesBox) return;
+
+  _tabsEl.replaceChildren();
+
+  const query = (_state.character.inventorySearch || "").trim().toLowerCase();
+
+  const items = Array.isArray(_state.character.inventoryItems) ? _state.character.inventoryItems : [];
+  const itemsToShow = items
+    .map((it, idx) => ({ it, idx }))
+    .filter(({ it }) => {
+      if (!query) return true;
+      const title = (it.title || "").toLowerCase();
+      const notes = (it.notes || "").toLowerCase();
+      return title.includes(query) || notes.includes(query);
+    });
+
+  itemsToShow.forEach(({ it, idx }) => {
+    const btn = document.createElement("button");
+    btn.className = "sessionTab" + (idx === _state.character.activeInventoryIndex ? " active" : "");
+    btn.type = "button";
+    _appendHighlightedText(btn, (it.title || `Item ${idx + 1}`), _state.character.inventorySearch || "");
+    btn.addEventListener("click", () => switchInventoryItem(idx));
+    _tabsEl.appendChild(btn);
+  });
+
+  const current = items[_state.character.activeInventoryIndex];
+  _notesBox.value = current?.notes || "";
+  if (_notesHl) _notesHl.update();
+
+  if (itemsToShow.length === 0) {
+    const hint = document.createElement("div");
+    hint.className = "mutedSmall";
+    hint.style.marginLeft = "6px";
+    hint.textContent = "No matching items.";
+    _tabsEl.appendChild(hint);
+  }
+}
+
+function ensureInventoryDefaults() {
+  if (typeof _mutateCharacter !== "function") return;
+  _mutateCharacter((c) => {
+    // Migrate legacy single textarea into first tab, once.
+    if (!Array.isArray(c.inventoryItems)) {
+      const legacy = typeof c.equipment === "string" ? c.equipment : "";
+      c.inventoryItems = [{ title: "Inventory", notes: legacy || "" }];
+    }
+    // If we already have inventoryItems (due to defaults/merge) but they're empty
+    // and legacy equipment has text, migrate it once.
+    else {
+      const legacy = typeof c.equipment === "string" ? c.equipment : "";
+      const hasAnyNotes = c.inventoryItems.some(it => (it && typeof it.notes === "string" && it.notes.trim()));
+      if (!hasAnyNotes && legacy && String(legacy).trim()) {
+        if (!c.inventoryItems[0]) c.inventoryItems[0] = { title: "Inventory", notes: "" };
+        if (!c.inventoryItems[0].notes || !String(c.inventoryItems[0].notes).trim()) {
+          c.inventoryItems[0].notes = legacy;
+        }
+        if (!c.inventoryItems[0].title) c.inventoryItems[0].title = "Inventory";
+      }
+    }
+
+    if (c.inventoryItems.length === 0) {
+      c.inventoryItems.push({ title: "Inventory", notes: "" });
+    }
+    if (typeof c.activeInventoryIndex !== "number") c.activeInventoryIndex = 0;
+    if (c.activeInventoryIndex < 0) c.activeInventoryIndex = 0;
+    if (c.activeInventoryIndex >= c.inventoryItems.length) c.activeInventoryIndex = c.inventoryItems.length - 1;
+    if (typeof c.inventorySearch !== "string") c.inventorySearch = "";
+  }, { queueSave: false });
+}
+
+function markDirty() {
+  try { _SaveManager?.markDirty?.(); } catch { /* ignore */ }
+}
+
+function wireHandlers() {
+  // Search
+  if (_searchEl) {
+    _searchEl.value = _state.character.inventorySearch || "";
+    _searchEl.addEventListener("input", () => {
+      _updateCharacterField?.("inventorySearch", _searchEl.value, { queueSave: false });
+      markDirty();
+      renderInventoryTabs();
+    });
+  }
+
+  // Notes typing saves into active item
+  _notesBox.addEventListener("input", () => {
+    const updated = _mutateCharacter?.((character) => {
+      const cur = character.inventoryItems?.[character.activeInventoryIndex];
+      if (!cur) return false;
+      cur.notes = _notesBox.value;
+      return true;
+    }, { queueSave: false });
+    if (!updated) return;
+    markDirty();
+  });
+
+  // Add item (prompt first, cancel aborts)
+  _addBtn?.addEventListener(
+    "click",
+    safeAsync(async () => {
+    // Save current notes into active item before anything else
+    _mutateCharacter?.((character) => {
+      const cur = character.inventoryItems?.[character.activeInventoryIndex];
+      if (!cur) return false;
+      cur.notes = _notesBox.value;
+      return true;
+    }, { queueSave: false });
+
+    const nextNum = (_state.character.inventoryItems?.length || 0) + 1;
+    const defaultTitle = `Item ${nextNum}`;
+
+    // Ask for name BEFORE creating item
+    const proposed = await _uiPrompt?.("Name this item:", {
+      defaultValue: defaultTitle,
+      title: "New Inventory Item"
+    });
+
+    // If user cancels → abort entirely
+    if (proposed === null || proposed === undefined) {
+      return;
+    }
+
+    const name = String(proposed).trim();
+    const finalTitle = name || defaultTitle;
+
+    // Now create the item
+    _mutateCharacter?.((character) => {
+      character.inventoryItems.push({
+        title: finalTitle,
+        notes: ""
+      });
+      character.activeInventoryIndex = character.inventoryItems.length - 1;
+      return true;
+    }, { queueSave: false });
+
+    markDirty();
+    renderInventoryTabs();
+      _notesBox.focus();
+    }, (err) => {
+      console.error(err);
+      notifyStatus(_setStatus, "Add inventory item failed.");
+    })
+  );
+
+
+  // Rename item
+  _renameBtn?.addEventListener(
+    "click",
+    safeAsync(async () => {
+    const cur = _state.character.inventoryItems?.[_state.character.activeInventoryIndex];
+    if (!cur) return;
+
+    const proposed = await _uiPrompt?.("Rename item tab to:", {
+      defaultValue: cur.title || "",
+      title: "Rename Item"
+    });
+    if (proposed === null || proposed === undefined) return;
+
+    _mutateCharacter?.((character) => {
+      const current = character.inventoryItems?.[character.activeInventoryIndex];
+      if (!current) return false;
+      current.title = String(proposed).trim() || current.title || `Item ${character.activeInventoryIndex + 1}`;
+      return true;
+    }, { queueSave: false });
+    markDirty();
+      renderInventoryTabs();
+    }, (err) => {
+      console.error(err);
+      notifyStatus(_setStatus, "Rename inventory item failed.");
+    })
+  );
+
+  // Delete item
+  _deleteBtn?.addEventListener(
+    "click",
+    safeAsync(async (e) => {
+    if ((_state.character.inventoryItems?.length || 0) <= 1) {
+      await _uiAlert?.("You need at least one inventory item.", { title: "Notice" });
+      if (e?.target && "value" in e.target) e.target.value = "";
+      return;
+    }
+
+    const ok = await _uiConfirm?.("Delete this inventory item? This cannot be undone.", {
+      title: "Delete Item",
+      okText: "Delete"
+    });
+    if (!ok) return;
+
+    _mutateCharacter?.((character) => {
+      const idx = character.activeInventoryIndex;
+      character.inventoryItems.splice(idx, 1);
+      character.activeInventoryIndex = Math.max(0, idx - 1);
+      return true;
+    }, { queueSave: false });
+
+    markDirty();
+      renderInventoryTabs();
+    }, (err) => {
+      console.error(err);
+      notifyStatus(_setStatus, "Delete inventory item failed.");
+    })
+  );
+}
+
+function switchInventoryItem(idx) {
+  _mutateCharacter?.((character) => {
+    const items = character.inventoryItems || [];
+    const current = items[character.activeInventoryIndex];
+    if (current) current.notes = _notesBox.value;
+    character.activeInventoryIndex = idx;
+    return true;
+  }, { queueSave: false });
+
+  markDirty();
+  renderInventoryTabs();
+  _notesBox.focus();
+}
+
+export function initEquipmentPanel(deps = {}) {
+  const { 
+    state,
+    SaveManager, 
+    uiPrompt, 
+    uiAlert, 
+    uiConfirm, 
+    autoSizeInput,
+    setStatus
+  } = deps;
+  _state = state;
+
+  if (!_state) {
+    console.warn("initEquipmentPanel: missing state");
+    return;
+  }
+  const { updateCharacterField, mutateCharacter } = createStateActions({ state: _state, SaveManager });
+  _updateCharacterField = updateCharacterField;
+  _mutateCharacter = mutateCharacter;
+
+  const required = {
+    panelEl: "#charEquipmentPanel",
+    tabsEl: "#inventoryTabs",
+    notesBoxEl: "#inventoryNotesBox",
+    searchEl: "#inventorySearch",
+    addBtn: "#addInventoryBtn",
+    renameBtn: "#renameInventoryBtn",
+    deleteBtn: "#deleteInventoryBtn",
+    moneyPP: "#moneyPP",
+    moneyGP: "#moneyGP",
+    moneyEP: "#moneyEP",
+    moneySP: "#moneySP",
+    moneyCP: "#moneyCP"
+  };
+  const guard = requireMany(required, { root: document, setStatus, context: "Equipment panel" });
+  if (!guard.ok) return guard.destroy;
+  const {
+    panelEl,
+    tabsEl,
+    notesBoxEl,
+    searchEl,
+    addBtn,
+    renameBtn,
+    deleteBtn
+  } = guard.els;
+
+  // ---- Inventory tabs UI ----
+  initInventoryUI({
+    tabsEl,
+    notesBox: notesBoxEl,
+    searchEl,
+    addBtn,
+    renameBtn,
+    deleteBtn,
+    SaveManager,
+    uiPrompt,
+    uiAlert,
+    uiConfirm,
+    setStatus,
+    updateCharacterField,
+    mutateCharacter,
+  });
+
+  // ---- Money tiles ----
+  const ensureMoney = () => {
+    _mutateCharacter?.((character) => {
+      if (!character.money) character.money = { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
+      return true;
+    }, { queueSave: false });
+  };
+
+  ensureMoney();
+
+  const bindMoney = (id, key) =>
+    bindNumber({
+      id,
+      get: () => _state.character.money?.[key],
+      set: (v) => {
+        ensureMoney();
+        updateCharacterField(`money.${key}`, (v ?? 0), { queueSave: false });
+      },
+      SaveManager,
+      autoSizeInput,
+      autosizeOpts: { min: 30, max: 320 }, // money wants to grow wider
+    });
+
+  bindMoney("moneyPP", "pp");
+  bindMoney("moneyGP", "gp");
+  bindMoney("moneyEP", "ep");
+  bindMoney("moneySP", "sp");
+  bindMoney("moneyCP", "cp");
+}

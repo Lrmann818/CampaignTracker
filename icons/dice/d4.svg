@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 135.47 135.47"
+     aria-hidden="true"
+     focusable="false">
+  <path 
+    d="m66.121 7.9375a2.6461 2.6461 0 0 0-2.3533 1.4841l-55.562 113.77a2.6461 2.6461 0 0 0 2.3787 3.8065h113.77a2.6461 2.6461 0 0 0 2.3554-3.8514l-58.207-113.77a2.6461 2.6461 0 0 0-2.3807-1.4413zm1.6113 11.555 50.01 97.747-50.01-38.645v-59.102zm-3.1734 0.37v58.754l-47.456 38.418 47.456-97.171zm1.6108 61.536 52.165 40.31h-101.96l49.796-40.31z"
+    fill="currentColor"
+    stroke="currentColor"
+    stroke-width="1.2"
+    stroke-linejoin="round"
+    stroke-linecap="round"/>
+</svg>
