@@ -17,9 +17,13 @@ This project uses ES modules (`<script type="module" src="app.js"></script>`), s
 
 Then open the served URL (not a `file://` path).
 
-## Release
+## Release packaging
 
-Build a release zip and verify it does not contain dev-only content (`.git/`, `node_modules/`, `dist/`, `.vscode/`, `.DS_Store`, `Thumbs.db`). The scripts automatically verify this and fail if banned entries are present.
+There are two zip profiles:
+- Source snapshot zip (`scripts/make-zip.sh` / `scripts/make-zip.ps1`) for backup/share of the project source.
+- GitHub Pages deploy zip (`scripts/make-pages-zip.sh`) with runtime files only (`index.html`, `styles.css`, `app.js`, `boot.js`, `manifest.json` when used, `icons/`, `js/`).
+
+### 1) Source snapshot zip
 
 Windows (PowerShell):
 
@@ -27,7 +31,7 @@ Windows (PowerShell):
 .\scripts\make-zip.ps1
 ```
 
-Linux/Mac/Chromebook (Bash):
+Linux/macOS/Chromebook (Bash):
 
 ```bash
 bash scripts/make-zip.sh
@@ -45,6 +49,30 @@ Optional output folder:
 
 ```bash
 bash scripts/make-zip.sh ./exports
+```
+
+### 2) GitHub Pages deploy zip (runtime-only)
+
+Windows (Git Bash):
+
+```bash
+bash scripts/make-pages-zip.sh
+```
+
+Linux/macOS (Bash):
+
+```bash
+bash scripts/make-pages-zip.sh
+```
+
+Output format:
+- `pages-deploy-YYYYMMDD-HHMM.zip`
+- Script output includes: `Pages zip is clean`
+
+Optional output folder:
+
+```bash
+bash scripts/make-pages-zip.sh ./artifacts
 ```
 
 ## Project structure (high level)
