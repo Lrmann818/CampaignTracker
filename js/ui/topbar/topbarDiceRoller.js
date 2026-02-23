@@ -102,10 +102,11 @@ export function initTopbarDiceRoller(deps) {
 
     const updateDiceIcon = (sides) => {
         const topIcon = document.getElementById("diceBtnIcon");
-        const src = diceIconMap[sides] || diceIconMap[20];
+        const relPath = diceIconMap[sides] || diceIconMap[20];
+        const src = `${import.meta.env.BASE_URL}${relPath}`;
         // Icons are CSS-mask based (span.iconMask), so we swap the --icon url.
-        if (topIcon) topIcon.style.setProperty("--icon", `url('${src || diceIconMap[20]}')`);
-        if (activeIcon) activeIcon.style.setProperty("--icon", `url('${src || diceIconMap[20]}')`);
+        if (topIcon) topIcon.style.setProperty("--icon", `url('${src}')`);
+        if (activeIcon) activeIcon.style.setProperty("--icon", `url('${src}')`);
     };
 
     const readUi = () => {

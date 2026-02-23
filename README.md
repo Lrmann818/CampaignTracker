@@ -8,20 +8,43 @@ A lightweight, offline-first Campaign Tracker web app (vanilla HTML/CSS/JS) for 
 - Character sheet
 - Interactive maps (draw layer + touch/pan/zoom)
 
-## Run locally
+## Vite workflow
 
-This project uses ES modules (`<script type="module" src="app.js"></script>`), so run it from a static server.
+Install dependencies:
 
-- VS Code: **Live Server**
-- Or any local static server of your choice
+```bash
+npm install
+```
 
-Then open the served URL (not a `file://` path).
+Run local dev server:
+
+```bash
+npm run dev
+```
+
+Build production output to `dist/`:
+
+```bash
+npm run build
+```
+
+Preview the built app locally:
+
+```bash
+npm run preview
+```
+
+## GitHub Pages deployment
+
+- Production base path is configured as `/CampaignTracker/` in `vite.config.js`.
+- Hash routing is preserved (`#tracker`, `#character`, `#map`).
+- Deploy the contents of `dist/` to GitHub Pages.
 
 ## Release packaging
 
 There are two zip profiles:
 - Source snapshot zip (`scripts/make-zip.sh` / `scripts/make-zip.ps1`) for backup/share of the project source.
-- GitHub Pages deploy zip (`scripts/make-pages-zip.sh`) with runtime files only (`index.html`, `styles.css`, `app.js`, `boot.js`, `manifest.json` when used, `icons/`, `js/`).
+- GitHub Pages deploy zip (`scripts/make-pages-zip.sh`) for non-Vite runtime packaging workflows.
 
 ### 1) Source snapshot zip
 
@@ -79,6 +102,7 @@ bash scripts/make-pages-zip.sh ./artifacts
 
 - `index.html` - app shell/markup + CSP + root page sections
 - `styles.css` - global styling
+- `public/` - static assets copied as-is by Vite (`icons/`, `manifest.json`)
 - `boot.js` - pre-module boot for initial theme + app version exposure
 - `app.js` - composition root (state guard, persistence wiring, shared UI systems, page init)
 - `docs/architecture.md` - intended boundaries + current wiring details
