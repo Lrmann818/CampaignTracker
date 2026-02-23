@@ -16,7 +16,7 @@ if (import.meta.env.PROD) {
     },
     onOfflineReady() {
       // Intentionally silent: avoid startup console noise in production.
-      console.log("PWA is ready to work offline.");
+      // console.log("PWA is ready to work offline.");
     }
   });
 }
