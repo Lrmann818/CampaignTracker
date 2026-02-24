@@ -22,7 +22,7 @@
     Z"
     fill="currentColor"
     stroke="currentColor"
-    stroke-width="4"
+    stroke-width="1.2"
     stroke-linejoin="round"
     stroke-linecap="round"/>
 
@@ -30,7 +30,7 @@
   <circle cx="49" cy="52" r="6.5"
           fill="currentColor"
           stroke="currentColor"
-          stroke-width="4"
+          stroke-width="1.2"
           stroke-linejoin="round"
           stroke-linecap="round"/>
 
@@ -44,7 +44,7 @@
     Z"
     fill="currentColor"
     stroke="currentColor"
-    stroke-width="4"
+    stroke-width="1.2"
     stroke-linejoin="round"
     stroke-linecap="round"/>
 </svg>

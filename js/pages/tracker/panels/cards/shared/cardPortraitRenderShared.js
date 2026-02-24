@@ -17,15 +17,15 @@ export function renderCardPortrait({
   const createToggleButton = ({ hide } = {}) => {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = `cardPortraitToggleBtn${hide ? " cardPortraitToggleBtnOverlay" : " cardPortraitToggleBtnHeader"}`;
+    btn.className = `moveBtn cardPortraitToggleBtn${hide ? " cardPortraitToggleBtnOverlay" : " cardPortraitToggleBtnHeader"}`;
+    if (hide) btn.classList.add("cardPortraitToggleBtn--portrait");
     const label = hide ? "Hide image" : "Show image";
     btn.setAttribute("aria-label", label);
     btn.title = label;
 
     const icon = document.createElement("span");
-    icon.className = "iconMask cardPortraitToggleIcon";
+    icon.className = "iconMask icon-image cardPortraitToggleIcon";
     icon.setAttribute("aria-hidden", "true");
-    icon.style.setProperty("--icon", `url('${iconPath}')`);
     btn.appendChild(icon);
 
     btn.addEventListener("click", (e) => {

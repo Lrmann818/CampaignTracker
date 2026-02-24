@@ -2496,27 +2496,8 @@ select.npcField:focus {
 }
 
 .cardPortraitToggleBtn {
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border-radius: 7px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface-3) 88%, transparent);
-  color: var(--muted);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
+  margin: 0;
   -webkit-tap-highlight-color: transparent;
-}
-
-.cardPortraitToggleBtn:hover {
-  color: var(--text);
-  background: var(--surface-3-hover);
-}
-
-.cardPortraitToggleBtn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--ring) inset;
 }
 
 .cardPortraitToggleBtnOverlay {
@@ -2526,6 +2507,7 @@ select.npcField:focus {
   z-index: 2;
   opacity: 0;
   transition: opacity .15s ease;
+  background: color-mix(in srgb, var(--surface-3) 88%, transparent);
 }
 
 .npcPortraitTop:hover .cardPortraitToggleBtnOverlay,
@@ -2539,11 +2521,16 @@ select.npcField:focus {
 }
 
 .cardPortraitToggleIcon {
-  width: 12px;
-  height: 12px;
+  width: 1.5em;
+  height: 1.5em;
   display: block;
   pointer-events: none;
   --iconColor: currentColor;
+}
+
+.cardPortraitToggleBtn--portrait .iconMask {
+  width: 2em;
+  height: 2em;
 }
 
 .npcPortraitTop img {
@@ -4120,6 +4107,10 @@ button#colorBtn[aria-expanded="true"] {
   -webkit-mask: var(--icon) no-repeat center / contain;
   mask: var(--icon) no-repeat center / contain;
   display: inline-block;
+}
+
+.icon-image {
+  --icon: url("/icons/imageIcon.svg");
 }
 
 .icon-calc {
