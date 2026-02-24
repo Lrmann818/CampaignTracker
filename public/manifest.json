@@ -1,6 +1,6 @@
 {
-  "name": "Campaign Tracker",
-  "short_name": "Tracker",
+  "name": "Lore Ledger",
+  "short_name": "Ledger",
   "id": "/CampaignTracker/",
   "start_url": "/CampaignTracker/",
   "scope": "/CampaignTracker/",
