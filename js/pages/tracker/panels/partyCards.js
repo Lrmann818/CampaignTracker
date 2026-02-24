@@ -127,7 +127,6 @@ function renderPartyCard(m) {
   headerRow.appendChild(nameInput);
   headerRow.appendChild(moveUp);
   headerRow.appendChild(moveDown);
-  headerRow.appendChild(toggle);
 
   const portrait = renderCardPortrait({
     blobId: m.imgBlobId,
@@ -138,6 +137,7 @@ function renderPartyCard(m) {
     onToggleHidden: (hidden) => _setPartyPortraitHidden?.(m.id, hidden),
     headerControlsEl: headerRow,
   });
+  headerRow.appendChild(toggle);
 
   const collapsible = document.createElement("div");
   collapsible.className = "npcCollapsible";

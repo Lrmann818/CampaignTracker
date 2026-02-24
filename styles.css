@@ -72,6 +72,7 @@
   --portrait-ratio: 3 / 4;
   /* width / height   matches character portrait */
   --tracker-list-max: 720px;
+  --card-min-width: 174px;
 
   /* Scrollbars (theme-aware) */
   --sb-track: color-mix(in srgb, var(--panel) 70%, transparent);
@@ -2296,10 +2297,11 @@ div.mutedSmall {
   box-shadow: 0 0 0 2px var(--ring) inset;
 }
 
-.npcCards {
+.trackerCardsGrid {
+  --cards-grid-gap: 8px;
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cards-grid-gap);
+  grid-template-columns: repeat(2, minmax(var(--card-min-width), 1fr));
   align-items: start;
 }
 
@@ -2352,12 +2354,6 @@ div.mutedSmall {
   /* collapsed card background */
 }
 
-@media (max-width: 600px) {
-  .npcCards {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* PARTY Panel (same vibe as NPC panel, but no group tabs) */
 .partyHeader {
   display: flex;
@@ -2368,19 +2364,6 @@ div.mutedSmall {
 }
 
 
-
-.partyCards {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-}
-
-@media (max-width: 600px) {
-  .partyCards {
-    grid-template-columns: 1fr;
-  }
-}
 
 .locHeader {
   display: flex;
@@ -2394,15 +2377,27 @@ div.mutedSmall {
 
 
 .locCards {
-  display: grid;
-  gap: 4px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
+  --cards-grid-gap: 4px;
 }
 
-@media (max-width: 600px) {
-  .locCards {
+#npcPanel,
+#partyPanel,
+#locationsPanel {
+  container-type: inline-size;
+}
+
+/* 380px ~= (2 * 174px) + 8px gap + 24px grid horizontal padding */
+@container (max-width: 380px) {
+  .trackerCardsGrid {
     grid-template-columns: 1fr;
+  }
+}
+
+@supports not (container-type: inline-size) {
+  @media (max-width: 600px) {
+    .trackerCardsGrid {
+      grid-template-columns: 1fr;
+    }
   }
 }
 
@@ -2556,6 +2551,7 @@ select.npcField:focus {
 
 .npcHeaderRow .npcField {
   flex: 1;
+  min-width: 0;
 }
 
 .npcCollapseToggle {

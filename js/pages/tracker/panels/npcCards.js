@@ -136,7 +136,6 @@ function renderNpcCard(npc) {
   headerRow.appendChild(nameInput);
   headerRow.appendChild(moveUp);
   headerRow.appendChild(moveDown);
-  headerRow.appendChild(toggle);
 
   // --- Portrait (full-width top) ---
   const portrait = renderCardPortrait({
@@ -148,6 +147,7 @@ function renderNpcCard(npc) {
     onToggleHidden: (hidden) => _setNpcPortraitHidden?.(npc.id, hidden),
     headerControlsEl: headerRow,
   });
+  headerRow.appendChild(toggle);
 
   // Collapsible content: everything below name
 

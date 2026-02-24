@@ -178,7 +178,6 @@ export function renderLocationCard(loc) {
   headerRow.appendChild(titleInput);
   headerRow.appendChild(moveUp);
   headerRow.appendChild(moveDown);
-  headerRow.appendChild(toggle);
 
   const portrait = renderCardPortrait({
     blobId: loc.imgBlobId,
@@ -189,6 +188,7 @@ export function renderLocationCard(loc) {
     onToggleHidden: (hidden) => _setLocPortraitHidden?.(loc.id, hidden),
     headerControlsEl: headerRow,
   });
+  headerRow.appendChild(toggle);
 
   // Collapsible content
   const collapsible = document.createElement("div");
