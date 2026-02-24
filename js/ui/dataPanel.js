@@ -262,7 +262,7 @@ export function initDataPanel(deps) {
     safeAsync(async () => {
     const appName = (state?.tracker && typeof state.tracker.campaignTitle === "string" && state.tracker.campaignTitle.trim())
       ? state.tracker.campaignTitle.trim()
-      : "My Campaign Tracker";
+      : "My Lore Ledger";
 
     const schema = Number.isFinite(state?.schemaVersion) ? state.schemaVersion : "?";
     const version = (window.__APP_VERSION__ || window.APP_VERSION || "dev").toString();

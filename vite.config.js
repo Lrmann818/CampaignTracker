@@ -64,10 +64,10 @@ export default defineConfig(({ mode }) => {
         registerType: "prompt",
         injectRegister: false,
         manifest: {
-          name: "Campaign Tracker",
-          short_name: "Tracker",
-          start_url: ".",
-          scope: ".",
+          name: "Lore Ledger",
+          short_name: "Ledger",
+          start_url: "/CampaignTracker/",
+          scope: "/CampaignTracker/",
           display: "standalone",
           theme_color: "#111111",
           background_color: "#111111",
@@ -81,6 +81,12 @@ export default defineConfig(({ mode }) => {
               src: "icons/icon-512-filled.png",
               sizes: "512x512",
               type: "image/png"
+            },
+            {
+              src: "icons/icon-512-maskable.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable"
             }
           ]
         },

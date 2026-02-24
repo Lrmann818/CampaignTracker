@@ -4,7 +4,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd "$script_dir/.." && pwd)"
 verify_script="$script_dir/verify-zip.sh"
-project_name="CampaignTracker"
+project_name="LoreLedger"
 target="web"
 
 output_dir="${1:-$project_root/release}"
