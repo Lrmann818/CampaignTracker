@@ -110,6 +110,14 @@ export function renderLocationCards() {
   if (!_state) return;
 
   const prevScroll = _cardsEl.scrollTop; // keep scroll position
+  const renderRun = startJumpDebugRun({
+    panel: "location",
+    cardId: "render",
+    action: "render",
+    panelEl: _cardsEl,
+    getCardEl: () => _cardsEl?.querySelector(".npcCard"),
+  });
+  renderRun?.log("before-dom-rebuild");
   const sectionId = _state.tracker.locActiveSectionId;
   const q = (_state.tracker.locSearch || "").trim();
   const typeFilter = _state.tracker.locFilter || "all";
@@ -131,6 +139,8 @@ export function renderLocationCards() {
     _cardsEl.scrollTop = prevScroll;
     masonry.attach(_cardsEl, MASONRY_OPTIONS);
     masonry.relayout(_cardsEl);
+    renderRun?.log("after-dom-rebuild-relayout");
+    queueJumpDebugCheckpoints(renderRun);
     return;
   }
 
@@ -138,6 +148,8 @@ export function renderLocationCards() {
   _cardsEl.scrollTop = prevScroll;
   masonry.attach(_cardsEl, MASONRY_OPTIONS);
   masonry.relayout(_cardsEl);
+  renderRun?.log("after-dom-rebuild-relayout");
+  queueJumpDebugCheckpoints(renderRun);
 }
 
 export function renderLocationCard(loc) {
@@ -470,12 +482,24 @@ export function initLocationsPanel(deps = {}) {
     const pos = visible.findIndex(l => l.id === id);
     const newPos = pos + dir;
     if (pos === -1 || newPos < 0 || newPos >= visible.length) return;
+    const action = dir < 0 ? "moveUp" : "moveDown";
+    const jumpRun = startJumpDebugRun({
+      panel: "location",
+      cardId: id,
+      action,
+      panelEl: _cardsEl,
+      getCardEl: () => _cardsEl?.querySelector(`.npcCard[data-card-id="${id}"]`),
+    });
+    jumpRun?.log("before-swap");
 
     const aId = visible[pos].id;
     const bId = visible[newPos].id;
 
     if (!swapTrackerCards("locations", aId, bId)) return;
+    jumpRun?.log("after-swap");
     renderLocationCards();
+    jumpRun?.log("after-render");
+    queueJumpDebugCheckpoints(jumpRun);
   }
 
   async function pickLocImage(id) {

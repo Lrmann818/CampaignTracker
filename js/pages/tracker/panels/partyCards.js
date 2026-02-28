@@ -57,6 +57,14 @@ export function renderPartyCards() {
   if (!_state) return;
 
   const prevScroll = _cardsEl.scrollTop; // keep scroll position
+  const renderRun = startJumpDebugRun({
+    panel: "party",
+    cardId: "render",
+    action: "render",
+    panelEl: _cardsEl,
+    getCardEl: () => _cardsEl?.querySelector(".npcCard"),
+  });
+  renderRun?.log("before-dom-rebuild");
   const q = (_state.tracker.partySearch || "").trim();
   const sectionId = _state.tracker.partyActiveSectionId;
 
@@ -76,6 +84,8 @@ export function renderPartyCards() {
     _cardsEl.scrollTop = prevScroll;
     masonry.attach(_cardsEl, MASONRY_OPTIONS);
     masonry.relayout(_cardsEl);
+    renderRun?.log("after-dom-rebuild-relayout");
+    queueJumpDebugCheckpoints(renderRun);
     return;
   }
 
@@ -84,6 +94,8 @@ export function renderPartyCards() {
   _cardsEl.scrollTop = prevScroll;
   masonry.attach(_cardsEl, MASONRY_OPTIONS);
   masonry.relayout(_cardsEl);
+  renderRun?.log("after-dom-rebuild-relayout");
+  queueJumpDebugCheckpoints(renderRun);
 }
 
 function numberOrNull(v) {
@@ -501,12 +513,24 @@ export function initPartyPanel(deps = {}) {
     const pos = visible.findIndex(m => m.id === id);
     const newPos = pos + dir;
     if (pos === -1 || newPos < 0 || newPos >= visible.length) return;
+    const action = dir < 0 ? "moveUp" : "moveDown";
+    const jumpRun = startJumpDebugRun({
+      panel: "party",
+      cardId: id,
+      action,
+      panelEl: _cardsEl,
+      getCardEl: () => _cardsEl?.querySelector(`.npcCard[data-card-id="${id}"]`),
+    });
+    jumpRun?.log("before-swap");
 
     const aId = visible[pos].id;
     const bId = visible[newPos].id;
 
     if (!swapTrackerCards("party", aId, bId)) return;
+    jumpRun?.log("after-swap");
     renderPartyCards();
+    jumpRun?.log("after-render");
+    queueJumpDebugCheckpoints(jumpRun);
   }
 
   // Wire extracted renderer module

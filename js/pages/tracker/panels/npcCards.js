@@ -53,6 +53,14 @@ function initNpcCards(deps = {}) {
 function renderNpcCards() {
   if (!_state) return;
   const prevScroll = _cardsEl.scrollTop; // keep scroll position
+  const renderRun = startJumpDebugRun({
+    panel: "npc",
+    cardId: "render",
+    action: "render",
+    panelEl: _cardsEl,
+    getCardEl: () => _cardsEl?.querySelector(".npcCard"),
+  });
+  renderRun?.log("before-dom-rebuild");
 
   const sectionId = _state.tracker.npcActiveSectionId;
   const q = (_state.tracker.npcSearch || "").trim();
@@ -74,6 +82,8 @@ function renderNpcCards() {
     _cardsEl.scrollTop = prevScroll; // restore even on empty
     masonry.attach(_cardsEl, MASONRY_OPTIONS);
     masonry.relayout(_cardsEl);
+    renderRun?.log("after-dom-rebuild-relayout");
+    queueJumpDebugCheckpoints(renderRun);
     return;
   }
 
@@ -83,6 +93,8 @@ function renderNpcCards() {
   _cardsEl.scrollTop = prevScroll; // restore after DOM rebuild
   masonry.attach(_cardsEl, MASONRY_OPTIONS);
   masonry.relayout(_cardsEl);
+  renderRun?.log("after-dom-rebuild-relayout");
+  queueJumpDebugCheckpoints(renderRun);
 }
 
 function renderNpcCard(npc) {
@@ -493,12 +505,24 @@ export function initNpcsPanel(deps = {}) {
     const pos = visible.findIndex(n => n.id === id);
     const newPos = pos + dir;
     if (pos === -1 || newPos < 0 || newPos >= visible.length) return;
+    const action = dir < 0 ? "moveUp" : "moveDown";
+    const jumpRun = startJumpDebugRun({
+      panel: "npc",
+      cardId: id,
+      action,
+      panelEl: _cardsEl,
+      getCardEl: () => _cardsEl?.querySelector(`.npcCard[data-card-id="${id}"]`),
+    });
+    jumpRun?.log("before-swap");
 
     const aId = visible[pos].id;
     const bId = visible[newPos].id;
 
     if (!swapTrackerCards("npc", aId, bId)) return;
+    jumpRun?.log("after-swap");
     renderNpcCards();
+    jumpRun?.log("after-render");
+    queueJumpDebugCheckpoints(jumpRun);
   }
 
   async function pickNpcImage(npcId) {
