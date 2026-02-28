@@ -29,6 +29,7 @@ let _updateLoc = null;
 let _setLocPortraitHidden = null;
 let _moveLocCard = null;
 let _deleteLoc = null;
+const USE_INCREMENTAL_CARDS = true;
 const MASONRY_OPTIONS = { panelName: "location", minCardWidth: 175, gapVar: "--cards-grid-gap" };
 
 /**
@@ -101,6 +102,44 @@ function initLocationCards(deps = {}) {
   _setLocPortraitHidden = deps.setLocPortraitHidden;
   _moveLocCard = deps.moveLocCard;
   _deleteLoc = deps.deleteLoc;
+}
+
+function findLocationCardElById(cardId) {
+  return _cardsEl?.querySelector(`.npcCard[data-card-id="${cardId}"]`) || null;
+}
+
+function scheduleLocationMasonryRelayout() {
+  if (!_cardsEl) return;
+  requestAnimationFrame(() => masonry.relayout(_cardsEl));
+}
+
+function focusLocationCardCollapseButton(cardId, fallbackEl = null) {
+  requestAnimationFrame(() => {
+    const btn = findLocationCardElById(cardId)?.querySelector(".cardCollapseBtn") || fallbackEl;
+    try { btn?.focus({ preventScroll: true }); } catch { btn?.focus?.(); }
+  });
+}
+
+function patchLocationCardCollapsed(cardId, collapsed, focusEl = null) {
+  const card = findLocationCardElById(cardId);
+  if (!card) return false;
+
+  card.classList.toggle("collapsed", !!collapsed);
+  const collapsible = card.querySelector(".npcCollapsible");
+  if (collapsible) collapsible.hidden = !!collapsed;
+  const footer = card.querySelector(".npcCardFooter");
+  if (footer) footer.hidden = !!collapsed;
+
+  const toggle = card.querySelector(".cardCollapseBtn");
+  if (toggle) {
+    toggle.setAttribute("aria-label", collapsed ? "Expand card" : "Collapse card");
+    toggle.setAttribute("aria-expanded", (!collapsed).toString());
+    toggle.textContent = collapsed ? "\u25bc" : "\u25b2";
+  }
+
+  scheduleLocationMasonryRelayout();
+  focusLocationCardCollapseButton(cardId, focusEl || toggle);
+  return true;
 }
 
 const matchesSearch = makeFieldSearchMatcher(["title", "notes"]);
@@ -200,7 +239,9 @@ export function renderLocationCard(loc) {
   const toggle = createCollapseButton({
     isCollapsed,
     onToggle: () => {
-      const action = isCollapsed ? "expand" : "collapse";
+      const currentCollapsed = !!_state?.tracker?.locationsList?.find(location => location.id === loc.id)?.collapsed;
+      const nextCollapsed = !currentCollapsed;
+      const action = currentCollapsed ? "expand" : "collapse";
       const jumpRun = startJumpDebugRun({
         panel: "location",
         cardId: loc.id,
@@ -209,8 +250,18 @@ export function renderLocationCard(loc) {
         getCardEl: () => _cardsEl?.querySelector(`.npcCard[data-card-id="${loc.id}"]`) || card,
       });
       jumpRun?.log("before-click-handler");
-      _updateLoc(loc.id, { collapsed: !isCollapsed }, true);
+      _updateLoc(loc.id, { collapsed: nextCollapsed }, false);
       jumpRun?.log("after-state-update");
+
+      if (USE_INCREMENTAL_CARDS && patchLocationCardCollapsed(loc.id, nextCollapsed, toggle)) {
+        jumpRun?.log("after-incremental-patch");
+        queueJumpDebugCheckpoints(jumpRun);
+        return;
+      }
+
+      renderLocationCards();
+      jumpRun?.log("after-render");
+      focusLocationCardCollapseButton(loc.id);
       queueJumpDebugCheckpoints(jumpRun);
     },
   });

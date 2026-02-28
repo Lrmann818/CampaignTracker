@@ -34,6 +34,7 @@ let _movePartyCard = null;
 let _deleteParty = null;
 let _numberOrNull = null;
 let _renderPartyTabs = null;
+const USE_INCREMENTAL_CARDS = true;
 const MASONRY_OPTIONS = { panelName: "party", minCardWidth: 175, gapVar: "--cards-grid-gap" };
 
 const matchesSearch = makeFieldSearchMatcher(["name", "className", "status", "notes"]);
@@ -50,6 +51,44 @@ function initPartyCards(deps = {}) {
   _deleteParty = deps.deleteParty;
   _numberOrNull = deps.numberOrNull;
   _renderPartyTabs = deps.renderPartyTabs;
+}
+
+function findPartyCardElById(cardId) {
+  return _cardsEl?.querySelector(`.npcCard[data-card-id="${cardId}"]`) || null;
+}
+
+function schedulePartyMasonryRelayout() {
+  if (!_cardsEl) return;
+  requestAnimationFrame(() => masonry.relayout(_cardsEl));
+}
+
+function focusPartyCardCollapseButton(cardId, fallbackEl = null) {
+  requestAnimationFrame(() => {
+    const btn = findPartyCardElById(cardId)?.querySelector(".cardCollapseBtn") || fallbackEl;
+    try { btn?.focus({ preventScroll: true }); } catch { btn?.focus?.(); }
+  });
+}
+
+function patchPartyCardCollapsed(cardId, collapsed, focusEl = null) {
+  const card = findPartyCardElById(cardId);
+  if (!card) return false;
+
+  card.classList.toggle("collapsed", !!collapsed);
+  const collapsible = card.querySelector(".npcCollapsible");
+  if (collapsible) collapsible.hidden = !!collapsed;
+  const footer = card.querySelector(".npcCardFooter");
+  if (footer) footer.hidden = !!collapsed;
+
+  const toggle = card.querySelector(".cardCollapseBtn");
+  if (toggle) {
+    toggle.setAttribute("aria-label", collapsed ? "Expand card" : "Collapse card");
+    toggle.setAttribute("aria-expanded", (!collapsed).toString());
+    toggle.textContent = collapsed ? "\u25bc" : "\u25b2";
+  }
+
+  schedulePartyMasonryRelayout();
+  focusPartyCardCollapseButton(cardId, focusEl || toggle);
+  return true;
 }
 
 export function renderPartyCards() {
@@ -149,7 +188,9 @@ function renderPartyCard(m) {
   const toggle = createCollapseButton({
     isCollapsed,
     onToggle: () => {
-      const action = isCollapsed ? "expand" : "collapse";
+      const currentCollapsed = !!_state?.tracker?.party?.find(member => member.id === m.id)?.collapsed;
+      const nextCollapsed = !currentCollapsed;
+      const action = currentCollapsed ? "expand" : "collapse";
       const jumpRun = startJumpDebugRun({
         panel: "party",
         cardId: m.id,
@@ -158,8 +199,18 @@ function renderPartyCard(m) {
         getCardEl: () => _cardsEl?.querySelector(`.npcCard[data-card-id="${m.id}"]`) || card,
       });
       jumpRun?.log("before-click-handler");
-      _updateParty(m.id, { collapsed: !isCollapsed }, true);
+      _updateParty(m.id, { collapsed: nextCollapsed }, false);
       jumpRun?.log("after-state-update");
+
+      if (USE_INCREMENTAL_CARDS && patchPartyCardCollapsed(m.id, nextCollapsed, toggle)) {
+        jumpRun?.log("after-incremental-patch");
+        queueJumpDebugCheckpoints(jumpRun);
+        return;
+      }
+
+      renderPartyCards();
+      jumpRun?.log("after-render");
+      focusPartyCardCollapseButton(m.id);
       queueJumpDebugCheckpoints(jumpRun);
     },
   });

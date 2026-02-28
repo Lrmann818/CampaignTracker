@@ -32,6 +32,7 @@ let _moveNpcCard = null;
 let _moveNpc = null;
 let _deleteNpc = null;
 let _numberOrNull = null;
+const USE_INCREMENTAL_CARDS = true;
 const MASONRY_OPTIONS = { panelName: "npc", minCardWidth: 175, gapVar: "--cards-grid-gap" };
 
 const matchesSearch = makeFieldSearchMatcher(["name", "className", "status", "notes"]);
@@ -48,6 +49,44 @@ function initNpcCards(deps = {}) {
   _moveNpc = deps.moveNpc;
   _deleteNpc = deps.deleteNpc;
   _numberOrNull = deps.numberOrNull;
+}
+
+function findNpcCardElById(cardId) {
+  return _cardsEl?.querySelector(`.npcCard[data-card-id="${cardId}"]`) || null;
+}
+
+function scheduleNpcMasonryRelayout() {
+  if (!_cardsEl) return;
+  requestAnimationFrame(() => masonry.relayout(_cardsEl));
+}
+
+function focusCardCollapseButton(cardId, fallbackEl = null) {
+  requestAnimationFrame(() => {
+    const btn = findNpcCardElById(cardId)?.querySelector(".cardCollapseBtn") || fallbackEl;
+    try { btn?.focus({ preventScroll: true }); } catch { btn?.focus?.(); }
+  });
+}
+
+function patchNpcCardCollapsed(cardId, collapsed, focusEl = null) {
+  const card = findNpcCardElById(cardId);
+  if (!card) return false;
+
+  card.classList.toggle("collapsed", !!collapsed);
+  const collapsible = card.querySelector(".npcCollapsible");
+  if (collapsible) collapsible.hidden = !!collapsed;
+  const footer = card.querySelector(".npcCardFooter");
+  if (footer) footer.hidden = !!collapsed;
+
+  const toggle = card.querySelector(".cardCollapseBtn");
+  if (toggle) {
+    toggle.setAttribute("aria-label", collapsed ? "Expand card" : "Collapse card");
+    toggle.setAttribute("aria-expanded", (!collapsed).toString());
+    toggle.textContent = collapsed ? "\u25bc" : "\u25b2";
+  }
+
+  scheduleNpcMasonryRelayout();
+  focusCardCollapseButton(cardId, focusEl || toggle);
+  return true;
 }
 
 function renderNpcCards() {
@@ -146,7 +185,9 @@ function renderNpcCard(npc) {
   const toggle = createCollapseButton({
     isCollapsed,
     onToggle: () => {
-      const action = isCollapsed ? "expand" : "collapse";
+      const currentCollapsed = !!_state?.tracker?.npcs?.find(n => n.id === npc.id)?.collapsed;
+      const nextCollapsed = !currentCollapsed;
+      const action = currentCollapsed ? "expand" : "collapse";
       const jumpRun = startJumpDebugRun({
         panel: "npc",
         cardId: npc.id,
@@ -161,15 +202,21 @@ function renderNpcCard(npc) {
       const x = window.scrollX;
       const y = window.scrollY;
 
-      _updateNpc(npc.id, { collapsed: !isCollapsed }, true);
+      _updateNpc(npc.id, { collapsed: nextCollapsed }, false);
       jumpRun?.log("after-state-update");
-      queueJumpDebugCheckpoints(jumpRun);
 
+      if (USE_INCREMENTAL_CARDS && patchNpcCardCollapsed(npc.id, nextCollapsed, toggle)) {
+        jumpRun?.log("after-incremental-patch");
+        queueJumpDebugCheckpoints(jumpRun);
+        return;
+      }
+
+      renderNpcCards();
+      jumpRun?.log("after-render");
+      queueJumpDebugCheckpoints(jumpRun);
       requestAnimationFrame(() => {
         window.scrollTo(x, y);
-        // Re-focus the new toggle button without scrolling.
-        const btn = _cardsEl?.querySelector(`.npcCard[data-npc-id="${npc.id}"] .cardCollapseBtn`);
-        try { btn?.focus({ preventScroll: true }); } catch { btn?.focus?.(); }
+        focusCardCollapseButton(npc.id);
       });
     },
   });
