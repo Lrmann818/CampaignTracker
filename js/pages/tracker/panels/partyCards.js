@@ -86,6 +86,10 @@ function patchPartyCardReorder(cardId, adjacentId, dir) {
   const cardEl = findPartyCardElById(cardId);
   const adjacentEl = findPartyCardElById(adjacentId);
   if (!cardEl || !adjacentEl) return false;
+  const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
+
+  const firstRectA = cardEl.getBoundingClientRect();
+  const firstRectB = adjacentEl.getBoundingClientRect();
 
   const prevScroll = _cardsEl.scrollTop;
   if (dir < 0) _cardsEl.insertBefore(cardEl, adjacentEl);
@@ -93,6 +97,45 @@ function patchPartyCardReorder(cardId, adjacentId, dir) {
   _cardsEl.scrollTop = prevScroll;
 
   masonry.relayout(_cardsEl);
+  if (!prefersReducedMotion) {
+    const lastRectA = cardEl.getBoundingClientRect();
+    const lastRectB = adjacentEl.getBoundingClientRect();
+    const baseA = cardEl.style.transform || "";
+    const baseB = adjacentEl.style.transform || "";
+    const deltaAX = firstRectA.left - lastRectA.left;
+    const deltaAY = firstRectA.top - lastRectA.top;
+    const deltaBX = firstRectB.left - lastRectB.left;
+    const deltaBY = firstRectB.top - lastRectB.top;
+
+    cardEl.style.transform = baseA
+      ? `${baseA} translate(${deltaAX}px, ${deltaAY}px)`
+      : `translate(${deltaAX}px, ${deltaAY}px)`;
+    adjacentEl.style.transform = baseB
+      ? `${baseB} translate(${deltaBX}px, ${deltaBY}px)`
+      : `translate(${deltaBX}px, ${deltaBY}px)`;
+    cardEl.offsetHeight; // Force reflow so FLIP transition starts from inverted position.
+
+    cardEl.style.transition = "transform 260ms cubic-bezier(.2,.8,.2,1)";
+    adjacentEl.style.transition = "transform 260ms cubic-bezier(.2,.8,.2,1)";
+    cardEl.style.transform = baseA;
+    adjacentEl.style.transform = baseB;
+
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      cardEl.style.transition = "";
+      adjacentEl.style.transition = "";
+      cardEl.removeEventListener("transitionend", onEndA);
+      adjacentEl.removeEventListener("transitionend", onEndB);
+    };
+    const onEndA = (evt) => { if (evt.propertyName === "transform") cleanup(); };
+    const onEndB = (evt) => { if (evt.propertyName === "transform") cleanup(); };
+    cardEl.addEventListener("transitionend", onEndA);
+    adjacentEl.addEventListener("transitionend", onEndB);
+    setTimeout(cleanup, 260);
+  }
+
   focusPartyCardMoveButton(cardId, dir);
   return true;
 }
