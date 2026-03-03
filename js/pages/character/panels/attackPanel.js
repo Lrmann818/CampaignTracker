@@ -6,6 +6,9 @@
 // - It should not call other Character-page wiring helpers (reorder, abilities, etc).
 // - It must be safe if init is called more than once (guard + no double event listeners).
 import { safeAsync } from "../../../ui/safeAsync.js";
+import { createStateActions } from "../../../domain/stateActions.js";
+import { createMoveButton } from "../../tracker/panels/cards/shared/cardHeaderControlsShared.js";
+import { flipSwapTwo } from "../../../ui/flipSwap.js";
 import { requireMany } from "../../../utils/domGuards.js";
 
 let _state = null;
@@ -25,6 +28,7 @@ export function initAttacksPanel(deps = {}) {
 
   if (!_state.character) _state.character = {};
   if (!Array.isArray(_state.character.attacks)) _state.character.attacks = [];
+  const { mutateCharacter } = createStateActions({ state: _state, SaveManager });
 
   const required = {
     panelEl: "#charAttacksPanel",
@@ -59,11 +63,35 @@ export function initAttacksPanel(deps = {}) {
     }
 
     const frag = document.createDocumentFragment();
-    for (const a of _state.character.attacks) frag.appendChild(renderAttackRow(a));
+    const attacks = _state.character.attacks;
+    for (let i = 0; i < attacks.length; i++) frag.appendChild(renderAttackRow(attacks[i], i, attacks.length));
     listEl.appendChild(frag);
   }
 
-  function renderAttackRow(a) {
+  function syncMoveButtonsState() {
+    const rows = Array.from(listEl.querySelectorAll(".attackRow"));
+    const last = rows.length - 1;
+    rows.forEach((row, idx) => {
+      const up = row.querySelector('.attackHeaderActions .moveBtn[aria-label="Move weapon up"]');
+      const down = row.querySelector('.attackHeaderActions .moveBtn[aria-label="Move weapon down"]');
+      if (up) up.disabled = idx === 0;
+      if (down) down.disabled = idx === last;
+    });
+  }
+
+  function focusMoveButtonForAttack(id, dir) {
+    const row = listEl.querySelector(`.attackRow[data-attack-id="${id}"]`);
+    if (!row) return;
+    const selector = dir < 0
+      ? '.attackHeaderActions .moveBtn[aria-label="Move weapon up"]'
+      : '.attackHeaderActions .moveBtn[aria-label="Move weapon down"]';
+    const target = row.querySelector(selector);
+    requestAnimationFrame(() => {
+      try { target?.focus?.({ preventScroll: true }); } catch { target?.focus?.(); }
+    });
+  }
+
+  function renderAttackRow(a, index, total) {
     const row = document.createElement("div");
     row.className = "attackRow";
     row.dataset.attackId = a.id;
@@ -78,6 +106,31 @@ export function initAttacksPanel(deps = {}) {
     autoSizeInput?.(name, { min: 50, max: 200 });
     name.addEventListener("input", () => patchAttack(a.id, { name: name.value }));
     top.appendChild(name);
+
+    const headerActions = document.createElement("div");
+    headerActions.className = "attackHeaderActions";
+
+    const moveUp = createMoveButton({
+      direction: -1,
+      titleUp: "Move weapon up",
+      titleDown: "Move weapon down",
+      onMove: () => moveAttack(a.id, -1, moveUp),
+    });
+    moveUp.setAttribute("aria-label", "Move weapon up");
+    moveUp.disabled = index === 0;
+
+    const moveDown = createMoveButton({
+      direction: +1,
+      titleUp: "Move weapon up",
+      titleDown: "Move weapon down",
+      onMove: () => moveAttack(a.id, +1, moveDown),
+    });
+    moveDown.setAttribute("aria-label", "Move weapon down");
+    moveDown.disabled = index >= total - 1;
+
+    headerActions.appendChild(moveUp);
+    headerActions.appendChild(moveDown);
+    top.appendChild(headerActions);
 
     const middle = document.createElement("div");
     middle.className = "attackMiddle";
@@ -151,10 +204,13 @@ export function initAttacksPanel(deps = {}) {
   }
 
   function patchAttack(id, patch) {
-    const idx = _state.character.attacks.findIndex((x) => x.id === id);
-    if (idx === -1) return;
-    _state.character.attacks[idx] = { ..._state.character.attacks[idx], ...patch };
-    SaveManager.markDirty();
+    mutateCharacter((character) => {
+      if (!Array.isArray(character.attacks)) return false;
+      const idx = character.attacks.findIndex((x) => x.id === id);
+      if (idx === -1) return false;
+      character.attacks[idx] = { ...character.attacks[idx], ...patch };
+      return true;
+    });
   }
 
   async function deleteAttack(id) {
@@ -163,23 +219,77 @@ export function initAttacksPanel(deps = {}) {
       if (!ok) return;
     }
 
-    _state.character.attacks = _state.character.attacks.filter((x) => x.id !== id);
-    SaveManager.markDirty();
+    mutateCharacter((character) => {
+      if (!Array.isArray(character.attacks)) character.attacks = [];
+      character.attacks = character.attacks.filter((x) => x.id !== id);
+      return true;
+    });
     renderAttacks();
   }
 
   function addAttack() {
-    _state.character.attacks.unshift({
-      id: newAttackId(),
-      name: "",
-      notes: "",
-      bonus: "",
-      damage: "",
-      range: "",
-      type: "",
+    mutateCharacter((character) => {
+      if (!Array.isArray(character.attacks)) character.attacks = [];
+      character.attacks.unshift({
+        id: newAttackId(),
+        name: "",
+        notes: "",
+        bonus: "",
+        damage: "",
+        range: "",
+        type: "",
+      });
+      return true;
     });
-    SaveManager.markDirty();
     renderAttacks();
+  }
+
+  function moveAttack(id, dir, btn) {
+    const list = _state.character.attacks;
+    if (!Array.isArray(list)) return;
+    const i = list.findIndex((x) => x?.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return;
+
+    const attackEl = listEl.querySelector(`.attackRow[data-attack-id="${id}"]`);
+    const adjacentId = list[j]?.id;
+    const adjacentEl = adjacentId
+      ? listEl.querySelector(`.attackRow[data-attack-id="${adjacentId}"]`)
+      : null;
+
+    const didMove = mutateCharacter((character) => {
+      if (!Array.isArray(character.attacks)) return false;
+      const i = character.attacks.findIndex((x) => x?.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= character.attacks.length) return false;
+      [character.attacks[i], character.attacks[j]] = [character.attacks[j], character.attacks[i]];
+      return true;
+    }, { queueSave: false });
+    if (!didMove) return;
+    SaveManager.markDirty();
+
+    const prevListScroll = listEl.scrollTop;
+    const prevPanelScroll = panelEl.scrollTop;
+    const didSwap = flipSwapTwo(attackEl, adjacentEl, {
+      durationMs: 260,
+      easing: "cubic-bezier(.22,1,.36,1)",
+      swap: () => {
+        if (dir < 0) listEl.insertBefore(attackEl, adjacentEl);
+        else listEl.insertBefore(adjacentEl, attackEl);
+        listEl.scrollTop = prevListScroll;
+        panelEl.scrollTop = prevPanelScroll;
+      },
+    });
+    if (didSwap) {
+      syncMoveButtonsState();
+      requestAnimationFrame(() => {
+        try { btn?.focus?.({ preventScroll: true }); } catch { btn?.focus?.(); }
+      });
+      return;
+    }
+
+    renderAttacks();
+    focusMoveButtonForAttack(id, dir);
   }
 
   // Safe: we only wire once due to panel guard above.

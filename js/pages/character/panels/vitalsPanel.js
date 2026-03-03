@@ -305,7 +305,7 @@ export function initVitalsPanel(deps = {}) {
       del.type = "button";
       del.className = "iconBtn danger resourceDeleteBtn";
       del.title = "Remove this resource";
-      del.textContent = "✖";
+      del.textContent = "X";
       del.disabled = (state.character.resources.length <= 1);
       del.addEventListener(
         "click",

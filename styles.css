@@ -3023,8 +3023,15 @@ select.npcField:focus {
 }
 
 .attackTop {
-  grid-template-columns: auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   justify-content: start;
+}
+
+.attackHeaderActions {
+  display: inline-flex;
+  gap: 4px;
+  justify-self: end;
 }
 
 .attackMiddle {
