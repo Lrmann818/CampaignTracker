@@ -2,6 +2,7 @@
 // Character page Abilities panel (abilities + skills + save options)
 
 import { enhanceSelectDropdown } from "../../../ui/selectDropdown.js";
+import { flipSwapTwo } from "../../../ui/flipSwap.js";
 import { requireMany } from "../../../utils/domGuards.js";
 
 export function initAbilitiesPanel(deps = {}) {
@@ -333,9 +334,48 @@ export function initAbilitiesPanel(deps = {}) {
       if (i === -1) return;
       const j = i + dir;
       if (j < 0 || j >= order.length) return;
+      const adjacentKey = order[j];
+      const movedEl = grid.querySelector(`.abilityBlock[data-ability="${key}"]`);
+      const adjacentEl = grid.querySelector(`.abilityBlock[data-ability="${adjacentKey}"]`);
+
       [order[i], order[j]] = [order[j], order[i]];
       SaveManager.markDirty();
-      applyOrder();
+
+      if (!movedEl || !adjacentEl || !grid.contains(movedEl) || !grid.contains(adjacentEl)) {
+        applyOrder();
+        return;
+      }
+
+      const prevPanelScroll = guard.els.panel.scrollTop;
+      const active = document.activeElement;
+      const keepFocusOnActive = !!(
+        active &&
+        (movedEl.contains(active) || adjacentEl.contains(active)) &&
+        active.matches?.("input, textarea, select")
+      );
+
+      // Targeted two-item FLIP: animate only the moved block and the block it swaps with.
+      const didSwap = flipSwapTwo(movedEl, adjacentEl, {
+        durationMs: 260,
+        easing: "cubic-bezier(.22,1,.36,1)",
+        swap: () => {
+          if (dir < 0) grid.insertBefore(movedEl, adjacentEl);
+          else grid.insertBefore(adjacentEl, movedEl);
+          guard.els.panel.scrollTop = prevPanelScroll;
+        },
+      });
+
+      if (!didSwap) {
+        applyOrder();
+        return;
+      }
+
+      if (keepFocusOnActive) {
+        requestAnimationFrame(() => {
+          try { active.focus({ preventScroll: true }); } catch { active.focus?.(); }
+          guard.els.panel.scrollTop = prevPanelScroll;
+        });
+      }
     }
 
     function makeMoveBtn(label, title, onClick) {
