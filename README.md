@@ -1,14 +1,68 @@
 # Campaign Tracker
 
-A lightweight, offline-first Campaign Tracker web app (vanilla HTML/CSS/JS) for managing:
-- Party cards
-- NPC cards
-- Location cards
-- Sessions
-- Character sheet
-- Interactive maps (draw layer + touch/pan/zoom)
+`CampaignTracker` is the repository for `Lore Ledger`, a local-first D&D campaign companion built with vanilla HTML, CSS, and JavaScript. It runs entirely in the browser, persists data on-device, and is packaged for GitHub Pages as an installable Progressive Web App (PWA).
 
-## Vite workflow
+## 1. Project overview
+
+Lore Ledger brings three working areas into one browser app:
+
+- A `Tracker` workspace for sessions, NPCs, party members, locations, and general notes
+- A `Character` workspace for a player character sheet and related notes
+- A `Map` workspace for image-backed drawing, pan/zoom, and annotation
+
+The app is intentionally lightweight: no backend, no account system, no server database, and no framework runtime beyond the browser and the Vite toolchain used for development and builds.
+
+## 2. Why the app exists / current direction
+
+The project exists to keep campaign context in one place without requiring a hosted service or network connection. The current codebase direction is focused on reliability and maintainability more than surface-area growth: clearer module boundaries, explicit state mutation helpers, safer CSP-friendly UI flows, stronger local persistence and migration behavior, and predictable GitHub Pages releases.
+
+That direction is visible in the current structure:
+
+- A single composition root in `app.js`
+- Schema-aware state migration in `js/state.js`
+- A split persistence layer for structured state, images, and long-form text
+- Production PWA behavior handled through Vite and `vite-plugin-pwa`
+- Maintainer docs for architecture, CSP checks, and smoke testing under [`docs/`](docs)
+
+## 3. Feature overview
+
+- Tracker page for campaign title, session tabs and notes, NPC cards, party cards, location cards, and loose notes
+- Sectioned tracker collections with add/rename/delete controls, search inputs, and portrait/image support for cards
+- Character page with portrait, identity fields, vitals, resources, abilities and skills, proficiencies, weapons, spells, equipment, inventory tabs, money, and personality notes
+- Spell management with dynamic spell levels and per-spell notes
+- Map page with multiple maps, background image upload/removal, mouse/touch drawing, pan/zoom gestures, brush and eraser tools, brush size and color controls, and persisted drawings
+- Topbar utilities including a clock, calculator, and dice roller
+- Data and settings panel for theme selection, backup export/import, update checks, targeted storage cleanup, and full reset
+- Local auto-save and backup restore flows designed around browser storage rather than a server
+
+## 4. Tech stack
+
+- Vanilla `HTML`, `CSS`, and ES module `JavaScript`
+- [`Vite`](https://vitejs.dev/) for local development, production builds, and preview
+- [`vite-plugin-pwa`](https://vite-pwa-org.netlify.app/) / Workbox for service worker registration, precaching, and update prompts
+- Browser persistence via `localStorage` and `IndexedDB`
+- GitHub Actions and GitHub Pages for production deployment
+- No backend API, authentication layer, or external database
+
+CI currently builds with `Node 20` in [`.github/workflows/pages.yml`](.github/workflows/pages.yml).
+
+## 5. Architecture summary
+
+At a high level, the app is wired as a modular vanilla JS application:
+
+- `index.html` defines the app shell, root page sections, modal anchors, and the CSP
+- `boot.js` applies the saved theme early and exposes app version/build metadata
+- `app.js` is the composition root that wires shared services, persistence, and page modules
+- `js/state.js` owns default state, schema version history, migration, and save sanitization
+- `js/storage/*` handles `localStorage`, IndexedDB blobs, IndexedDB text storage, backup import/export, and save lifecycle management
+- `js/ui/*` contains shared interface systems such as dialogs, navigation, settings, popovers, theme handling, and topbar widgets
+- `js/features/*` holds reusable flows such as image picking/cropping, portrait handling, autosizing, and number steppers
+- `js/pages/*` contains page-specific orchestration for `tracker`, `character`, and `map`
+- `js/domain/*` contains explicit state action helpers and entity factories
+
+For a deeper maintainer view, see [`docs/architecture.md`](docs/architecture.md).
+
+## 6. Local development
 
 Install dependencies:
 
@@ -16,13 +70,31 @@ Install dependencies:
 npm install
 ```
 
-Run local dev server:
+Run the local dev server:
 
 ```bash
 npm run dev
 ```
 
-Build production output to `dist/`:
+Useful development notes:
+
+- Dev mode is automatically enabled on local hosts such as `localhost`, `127.0.0.1`, `::1`, and `*.local`
+- `?dev=1` forces dev mode on
+- `?dev=0` forces dev mode off
+- `?stateGuard=warn` enables the mutation guard in warning mode
+- `?stateGuard=throw` enables the mutation guard in throwing mode
+- `?stateGuard=off` disables the mutation guard
+- Recommended local URL for refactor work: `/?dev=1&stateGuard=warn`
+
+With the state guard enabled, direct out-of-scope writes warn or throw and point maintainers back toward `createStateActions(...)` helpers. A quick console check in dev mode is:
+
+```js
+__APP_STATE__.tracker.campaignTitle = "Guard test"
+```
+
+## 7. Build and preview
+
+Build the production output into `dist/`:
 
 ```bash
 npm run build
@@ -34,34 +106,11 @@ Preview the built app locally:
 npm run preview
 ```
 
-### Versioning
+### Optional packaging scripts
 
-- Tag `v0.3.0` (or `0.3.0`) to set the major/minor/baseline patch.
-- Build version is computed as `MAJOR.MINOR.(tagPatch + commitsSinceTag)`.
-- Dev server appends `-dev` to the computed version.
-- Build uses short Git SHA when available.
-- If no tag exists (or Git metadata is unavailable), version falls back to `package.json` version and build may be empty.
+The repo also keeps packaging scripts for backup/share workflows outside the normal Vite `dist/` deployment path.
 
-Set a new baseline tag:
-
-```bash
-git tag v0.3.0
-git push origin v0.3.0
-```
-
-## GitHub Pages deployment
-
-- Production base path is configured as `/CampaignTracker/` in `vite.config.js`.
-- Hash routing is preserved (`#tracker`, `#character`, `#map`).
-- Deploy the contents of `dist/` to GitHub Pages.
-
-## Release packaging
-
-There are two zip profiles:
-- Source snapshot zip (`scripts/make-zip.sh` / `scripts/make-zip.ps1`) for backup/share of the project source.
-- GitHub Pages deploy zip (`scripts/make-pages-zip.sh`) for non-Vite runtime packaging workflows.
-
-### 1) Source snapshot zip
+Source snapshot zip:
 
 Windows (PowerShell):
 
@@ -75,11 +124,11 @@ Linux/macOS/Chromebook (Bash):
 bash scripts/make-zip.sh
 ```
 
-Output format:
-- `refactor-export-YYYYMMDD-HHMM.zip`
-- Script output includes: `Release zip is clean`
+Notes:
 
-Optional output folder:
+- Output format: `refactor-export-YYYYMMDD-HHMM.zip`
+- Verification output includes: `Release zip is clean`
+- Optional output folder:
 
 ```powershell
 .\scripts\make-zip.ps1 -OutputDir .\exports
@@ -89,79 +138,114 @@ Optional output folder:
 bash scripts/make-zip.sh ./exports
 ```
 
-### 2) GitHub Pages deploy zip (runtime-only)
-
-Windows (Git Bash):
+Runtime-only pages zip:
 
 ```bash
 bash scripts/make-pages-zip.sh
 ```
 
-Linux/macOS (Bash):
+Notes:
 
-```bash
-bash scripts/make-pages-zip.sh
-```
-
-Output format:
-- `pages-deploy-YYYYMMDD-HHMM.zip`
-- Script output includes: `Pages zip is clean`
-
-Optional output folder:
+- Output format: `LoreLedger-web-YYYYMMDD-HHMM.zip`
+- Verification output includes: `Pages zip is clean`
+- Optional output folder:
 
 ```bash
 bash scripts/make-pages-zip.sh ./artifacts
 ```
 
-## Project structure (high level)
+The runtime-only zip is for alternate/manual packaging workflows. Standard GitHub Pages deployment in this repo uses the built `dist/` output instead.
 
-- `index.html` - app shell/markup + CSP + root page sections
-- `styles.css` - global styling
-- `public/` - static assets copied as-is by Vite (`icons/`, `manifest.json`)
-- `boot.js` - pre-module boot for initial theme + app version exposure
-- `app.js` - composition root (state guard, persistence wiring, shared UI systems, page init)
-- `docs/architecture.md` - intended boundaries + current wiring details
+## 8. Versioning
 
-`js/` modules:
-- `js/state.js` - app state defaults, migrations, save sanitization, map-manager helpers
-- `js/domain/*` - domain factories + explicit state action helpers
-- `js/storage/*` - localStorage + IndexedDB (blobs/text) + backup/import/export + save manager
-- `js/ui/*` - shared UI infrastructure (dialogs, navigation, popovers, topbar, settings/data panel, bindings)
-- `js/features/*` - reusable feature helpers (autosize, image picker/cropper/portrait flow, steppers)
-- `js/pages/tracker/*` - tracker page wiring + panel modules (`sessions`, `npcCards`, `partyCards`, `locationCards`, shared card helpers)
-- `js/pages/character/*` - character page wiring + panel modules
-- `js/pages/map/*` - map page setup + controller/ui/persistence/history/gesture/drawing modules
-- `js/utils/*` - dev/state-guard helpers, DOM guards, general utilities
+Version metadata is resolved at build time in [`vite.config.js`](vite.config.js).
 
-## Notes
+- Use a semver tag such as `v0.4.0` or `0.4.0` to set the major, minor, and baseline patch
+- Production build version is computed as `MAJOR.MINOR.(tagPatch + commitsSinceTag)`
+- Dev builds append `-dev`
+- The build also exposes the short Git SHA when available
+- If Git metadata is unavailable, the app falls back to `package.json` version metadata and the build SHA may be empty
 
-- The app uses a strict CSP in `index.html`.
-- Images use `blob:` + `data:` URLs and are stored via the storage layer.
+Example baseline tag flow:
 
-## DEV flags
+```bash
+git tag v0.4.0
+git push origin v0.4.0
+```
 
-Development mode is auto-enabled on local hosts (`localhost`, `127.0.0.1`, `::1`, `*.local`).
+`package.json` currently keeps a placeholder version and should be treated as the fallback path rather than the primary release source of truth.
 
-- `?dev=1` enables DEV mode.
-- `?dev=0` disables DEV mode.
-- `?stateGuard=warn` enables warning-only mutation guard mode.
-- `?stateGuard=throw` enables throwing mutation guard mode.
-- `?stateGuard=off` disables the mutation guard.
+## 9. GitHub Pages deployment notes
 
-Recommended querystrings:
-- `/?dev=1&stateGuard=warn`
-- `/?dev=1&stateGuard=throw`
-- `/?dev=1&stateGuard=off`
+- Production base path is `/CampaignTracker/` in [`vite.config.js`](vite.config.js)
+- Hash-based navigation is preserved for `#tracker`, `#character`, and `#map`
+- The Pages workflow is defined in [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
+- On pushes to `main` and on manual dispatch, the workflow checks out tags, runs `npm ci`, runs `npm run build`, and deploys `dist/`
+- If you deploy manually, publish the contents of `dist/`, not the repository root
 
-Behavior summary:
-- DEV off: mutation guard is off unless explicitly requested.
-- DEV on + warn: direct out-of-scope state writes warn once per path.
-- DEV on + throw: direct out-of-scope state writes throw with a helper message.
-- Normal app UI usage remains functional in DEV guard modes because registered UI lifecycle callbacks are treated as allowed mutation scopes.
+If the GitHub Pages path ever changes, update the following together:
 
-Quick guard check from console in DEV mode:
-- `__APP_STATE__.tracker.campaignTitle = "Guard test"`
+- Vite `base`
+- PWA manifest `id`, `start_url`, and `scope`
+- Workbox navigation fallback paths
 
-When enabled, direct state writes outside action helpers log warnings (or throw in `throw` mode) and point to `createStateActions(...)` helpers.
+## 10. Persistence and storage overview
 
-See `docs/architecture.md` for the intended boundaries and how the modules fit together.
+The app is local-first and stores data in the browser:
+
+- Structured app state is saved to `localStorage` under `localCampaignTracker_v1`
+- The active tab is saved separately under `localCampaignTracker_activeTab`
+- IndexedDB database `localCampaignTracker_db` stores binary assets in `blobs` and large text payloads in `texts`
+- Portraits, map background images, and persisted map drawings are stored as IndexedDB blobs
+- Spell notes are stored separately in IndexedDB text storage
+- `loadAll()` migrates older saved shapes and legacy image data URLs into the current schema/storage model during startup
+- Backup export bundles sanitized state, stored images, and stored text into a JSON file; backup import validates, migrates, restores, and then reloads the app
+
+Intentionally non-persistent runtime state:
+
+- Map undo/redo history
+- Dice history
+- Calculator history
+
+For maintainers, this split matters: copying `localStorage` alone is not a complete backup of a populated app.
+
+## 11. PWA / offline behavior overview
+
+Production builds register a service worker through `vite-plugin-pwa`. Dev builds do not register the service worker.
+
+- The app shell and built assets are precached so the site can reopen offline after it has been loaded online at least once
+- Same-origin navigation requests use a `NetworkFirst` strategy with a `3` second timeout and fall back to cached `index.html`
+- Same-origin images use a `CacheFirst` runtime cache
+- Cross-origin images are not included in the runtime image cache rule
+- Update handling uses a prompt flow: when a new version is available, the app can show an in-app refresh banner
+- The settings panel also exposes a `Check for updates` action
+- Old caches are cleaned up during updates via `cleanupOutdatedCaches: true`
+
+See [`docs/PWA_NOTES.md`](docs/PWA_NOTES.md) for offline test steps and cache reset guidance.
+
+## 12. Documentation index
+
+Existing documentation:
+
+- [`docs/architecture.md`](docs/architecture.md) - module boundaries, startup order, dependency direction, and page wiring
+- [`docs/PWA_NOTES.md`](docs/PWA_NOTES.md) - offline cache behavior, update prompts, and reset steps
+- [`docs/CSP_AUDIT.md`](docs/CSP_AUDIT.md) - DEV-mode CSP verification checklist
+- [`docs/SMOKE_TEST.md`](docs/SMOKE_TEST.md) - persistence-focused pre-ship smoke test
+- [`SMOKE_TEST.md`](SMOKE_TEST.md) - quick Vite and offline validation checklist
+- [`AI_RULES.md`](AI_RULES.md) - repository editing rules for AI-assisted changes
+- [`.github/workflows/pages.yml`](.github/workflows/pages.yml) - production Pages build/deploy workflow
+
+Planned documentation placeholders:
+
+- [`docs/storage.md`](docs/storage.md) - TODO: persistent data model, storage keys, IndexedDB stores, and backup format
+- [`docs/release-process.md`](docs/release-process.md) - TODO: tagging, build verification, packaging scripts, and release checklist
+- [`docs/maintainer-guide.md`](docs/maintainer-guide.md) - TODO: common change paths, module entrypoints, and troubleshooting notes
+
+## 13. Current status / known limitations
+
+- The app is single-user and browser-local. There is no sync, login, or shared backend.
+- Clearing site data or switching browser profiles will remove local data unless a backup JSON has been exported first.
+- Offline support is a production-build feature; `npm run dev` does not exercise the service worker path.
+- Map undo/redo is intentionally in-memory only and resets on refresh.
+- GitHub Pages deployment assumes the `/CampaignTracker/` base path today.
+- Runtime validation is currently documentation-driven rather than automated; the repo does not currently define a test suite in `package.json`.

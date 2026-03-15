@@ -1,183 +1,693 @@
 # Architecture
 
-This doc captures intended module boundaries, aligned with the current refactor implementation.
+This document is the architecture source of truth for the current Lore Ledger / Campaign Tracker codebase. It describes the code that exists today, not a target refactor state. When a change alters startup order, state shape, persistence behavior, or module boundaries, update this file in the same change.
+
+> AI-assisted editing rules live in `/AI_RULES.md`.
 
 ## Design goals
 
-- **Offline-first**: everything works without a network.
-- **Modular**: page modules are isolated and wired from one composition root.
-- **CSP-friendly**: avoid inline handlers/eval and keep dialog/storage flows safe.
-- **Low global surface area**: prefer ES modules + injected deps over globals.
-
-> Editing rules for AI-assisted changes live in `/AI_RULES.md`.
+- **Local-first and offline-capable**: the app must function without a backend or live network connection.
+- **Single composition root**: shared services and startup order are wired in one place (`app.js`), not scattered across page modules.
+- **Explicit mutation and save awareness**: application state changes should be visible in code and should participate in the save lifecycle intentionally.
+- **Clear page ownership**: tracker, character, and map logic should live in their own page folders, with shared behavior extracted only when it is truly cross-page.
+- **CSP-friendly UI**: dialogs, menus, and rendering paths must work under the strict `index.html` CSP without inline handlers or `eval`.
+- **Backward-compatible persistence**: saved data, backups, legacy images, and old field names are migrated forward instead of silently discarded.
+- **Fail-soft production behavior**: missing DOM anchors or partial init failures should degrade to no-op APIs and status messages instead of white-screening the whole app.
 
 ## Top-level entrypoints
 
 ### `index.html`
-- Defines the app shell and page sections (`#page-tracker`, `#page-character`, `#page-map`).
-- Loads `boot.js` in `<head>` and `app.js` as an ES module at the end of `<body>`.
-- Defines strict CSP and all required DOM anchors for page/panel modules.
+
+- Defines the app shell, topbar, page sections, modal roots, and all DOM anchors required by page and shared UI modules.
+- Owns the three top-level pages:
+  - `#page-tracker`
+  - `#page-character`
+  - `#page-map`
+- Owns the shared status line (`#statusText`), top navigation tabs, calculator/dice dropdown markup, and the Data & Settings panel shell.
+- Loads `boot.js` in `<head>`, `styles.css`, and `app.js` at the end of `<body>`.
+- Defines the runtime CSP. This is an architectural constraint, not a cosmetic choice.
 
 ### `boot.js`
+
 - Runs before `app.js`.
-- Reads the Vite-defined `__APP_VERSION__` constant and exposes `window.__APP_VERSION__`/`window.APP_VERSION`.
-- Reads persisted theme from local storage and applies `document.documentElement.dataset.theme` early to avoid flash/mismatch.
+- Reads Vite build metadata and exposes:
+  - `window.__APP_VERSION__` / `window.APP_VERSION`
+  - `window.__APP_BUILD__` / `window.APP_BUILD`
+- Reads the current saved state from `localStorage["localCampaignTracker_v1"]`.
+- Applies `document.documentElement.dataset.theme` early from persisted theme state to avoid theme flash/mismatch.
+- Does not initialize app modules or load page logic.
 
 ### `app.js`
-- Acts as the composition root.
-- Creates shared services (state guard, SaveManager, Popovers, Theme, status API, shared image picker).
-- Loads/migrates persisted state, then wires global UI and page modules.
-- Owns startup order and dependency injection, but not page-level rendering details.
 
-## Startup and wiring flow (current)
+- Is the composition root.
+- Imports `./js/pwa/pwa.js` so production builds register PWA update behavior.
+- Installs the dev state mutation guard over the exported `state` object from `js/state.js`.
+- Creates shared services:
+  - `SaveManager`
+  - popover manager
+  - theme manager
+  - shared image picker
+  - status API surface
+- Loads and migrates persisted state.
+- Initializes shared UI and page modules in a fixed order.
+- Owns dependency injection. Deep modules should not reach back into `app.js`.
 
-1. Install the dev state mutation guard (`installStateMutationGuard`) and use the guarded `appState`.
-2. Build shared services:
+## Startup and runtime flow
+
+### Startup sequence
+
+1. `boot.js` runs first and applies the saved theme plus version/build globals.
+2. `app.js` loads, installs the dev mutation guard, and exposes `globalThis.__APP_STATE__` in DEV mode.
+3. `app.js` creates app-lifetime services:
+   - shared file picker (`createFilePicker`)
    - `SaveManager` (`createSaveManager`)
+   - exit-save hooks (`installExitSave`)
    - popover manager (`createPopoverManager`)
    - theme manager (`createThemeManager`)
-   - shared file picker (`createFilePicker`)
-3. Load persisted state via `loadAll(...)` (migration + legacy image/map conversions).
-4. Initialize shared UI systems:
-   - dialogs (`initDialogs`)
-   - theme (`Theme.initFromState`)
-   - top navigation (`initTopTabsNavigation`)
-   - settings/data panel (`setupSettingsPanel`)
-   - topbar widgets (`initTopbarUI`)
-5. Initialize pages/features:
-   - tracker page (`initTrackerPage`) which also initializes character page UI
-   - textarea and numeric autosize helpers
-   - map page (`setupMapPage` -> map controller)
-6. Flush once after startup (`SaveManager.flush()`), then mark save lifecycle ready (`SaveManager.init()`).
+4. The bootstrap IIFE creates the status API (`createStatus`) and installs global error handlers.
+5. Startup state work is wrapped in `withAllowedStateMutationAsync(...)` so guard-protected startup mutations are explicit.
+6. `loadAllPersist(...)`:
+   - reads `localStorage["localCampaignTracker_v1"]`
+   - parses and migrates data through `migrateState(...)`
+   - merges migrated data into the existing exported state object with `Object.assign(...)`
+   - restores root `ui` data
+   - clears map undo/redo
+   - migrates legacy image data URLs into IndexedDB blobs
+   - folds legacy map fields into the current multi-map structure
+   - calls `ensureMapManager()`
+   - marks the app dirty so migrated state is written back once
+7. Shared UI modules initialize in this order:
+   - `initDialogs()`
+   - `Theme.initFromState()`
+   - `initTopTabsNavigation(...)`
+   - `setupSettingsPanel(...)`
+   - `initTopbarUI(...)`
+8. Page/features initialize in this order:
+   - `initTrackerPage(...)`
+   - `autosizeAllNumbers()`
+   - `setupTextareaSizing(...)`
+   - `setupMapPage(...)`
+9. `initTrackerPage(...)` currently also initializes:
+   - tracker campaign title + misc bindings
+   - tracker panel reordering
+   - tracker panels (sessions, NPCs, party, locations)
+   - `initCharacterPageUI(...)`
+   - `initPanelHeaderCollapse(...)`
+   - number stepper enhancement
+10. `setupMapPage(...)` creates a map controller, loads `state.map`, and initializes the live map canvas/controller runtime.
+11. `SaveManager.flush()` runs once after startup so migrations and normalization writes are persisted.
+12. `SaveManager.init()` resets the save lifecycle UI to a clean saved state.
+
+### Steady-state runtime flow
+
+- UI events mutate the guarded `appState` object directly or through `createStateActions(...)`.
+- Save-aware mutations call `SaveManager.markDirty()`.
+- `SaveManager` debounces writes, updates the status line, and serializes the sanitized main state into local storage.
+- Binary assets and long-form spell notes are written to IndexedDB separately; the main save persists only the IDs and structured metadata needed to find them again.
+- Page navigation shows/hides top-level pages, updates `state.ui.activeTab`, updates the URL hash, and also persists the active tab under `localStorage["localCampaignTracker_activeTab"]`.
+- Best-effort save flushes also run on `beforeunload`, `pagehide`, and when the document becomes hidden.
 
 ## Module layers and dependency direction
 
-### `js/state.js`
-- Canonical state defaults + schema migration + serialization sanitization.
-- Also owns map-manager helpers (`ensureMapManager`, `getActiveMap`, `newMapEntry`).
+### Layer map
 
-### `js/domain/*`
-- Domain-level helpers:
-  - `factories.js` for tracker entity creation (`makeNpc`, `makePartyMember`, `makeLocation`)
-  - `stateActions.js` for explicit state mutation helpers (`createStateActions`)
+- `app.js`
+  - Composition root and startup ordering.
+- `js/state.js`
+  - State defaults, schema versioning, migration, save sanitization, and current map-manager helpers (`ensureMapManager`, `getActiveMap`, `newMapEntry`).
+- `js/domain/*`
+  - Domain helpers:
+    - `factories.js`
+    - `stateActions.js`
+- `js/storage/*`
+  - Persistence and backup layer:
+    - `persistence.js`
+    - `saveManager.js`
+    - `idb.js`
+    - `blobs.js`
+    - `texts-idb.js`
+    - `backup.js`
+- `js/ui/*`
+  - Shared UI infrastructure and generic UI state helpers.
+- `js/features/*`
+  - Reusable flows that are not page-specific but are higher-level than `utils`.
+- `js/pages/*`
+  - Page-level orchestration and page-specific panels/controllers.
+- `js/pwa/*`
+  - PWA service worker registration, update detection, and update banner behavior.
+- `js/utils/*`
+  - Low-level helpers with minimal app knowledge.
 
-### `js/storage/*`
-- Persistence layer:
-  - localStorage (`persistence.js`)
-  - IndexedDB (`idb.js`, `blobs.js`, `texts-idb.js`)
-  - backup/import/reset (`backup.js`)
-  - save lifecycle manager (`saveManager.js`)
+### Dependency direction rules
 
-### `js/ui/*`
-- Shared UI infrastructure:
-  - dialogs (`dialogs.js`)
-  - popovers/dropdowns (`popovers.js`, `selectDropdown.js`)
-  - navigation/theme/status/settings/topbar helpers
-  - generic bindings/reorder/collapse helpers
+1. `app.js` may import from any layer. No other module should import from `app.js`.
+2. `js/state.js` is below UI, storage, and pages. It should not import from `js/pages/*`, `js/ui/*`, or `js/storage/*`.
+3. `js/domain/*` should stay below pages and shared UI. It may depend on `js/utils/*`.
+4. `js/storage/*` owns browser persistence details and should stay page-agnostic.
+   - Current exception: `js/storage/backup.js` imports `js/ui/dialogs.js` for confirm/alert UX.
+5. `js/ui/*` should be page-agnostic shared infrastructure.
+   - It may depend on `js/domain/*`, `js/utils/*`, and in limited cases `js/pwa/*`.
+   - It should not import page modules.
+6. `js/features/*` may depend on `js/ui/*`, `js/domain/*`, and `js/utils/*`, but should not import `js/pages/*`.
+7. `js/pages/*` may depend on `js/ui/*`, `js/features/*`, `js/domain/*`, `js/utils/*`, and injected storage functions.
+8. `js/pages/*` should not become a shared dependency for other layers.
+   - Current implemented exception: `js/pages/tracker/trackerPage.js` imports `js/pages/character/characterPage.js` and owns character-page bootstrap.
+9. Prefer dependency injection through a `deps` object over adding new cross-layer imports.
+10. Avoid circular imports. If two modules need each other, extract a lower-level helper into `domain`, `ui`, `features`, or `utils` instead.
 
-### `js/features/*`
-- Reusable flows/helpers not tied to one page:
-  - autosize
-  - image picking/cropping/portrait flow
-  - number steppers
+## State model and persistence boundaries
 
-### `js/pages/*`
-- Page-specific orchestration and panel/controller modules:
-  - tracker
-  - character
-  - map
+### Canonical in-memory state
 
-### `js/utils/*`
-- Low-level utilities (`dev.js`, `domGuards.js`, numeric helpers, etc.).
+- `js/state.js` exports a single canonical `state` object.
+- `app.js` wraps that object with the dev mutation guard and uses the guarded `appState` everywhere.
+- State is not replaced wholesale during load/import. `loadAllPersist(...)` and backup import merge into existing objects with `Object.assign(...)` so existing references stay valid.
 
-### Direction (as implemented)
-- `app.js` imports from all layers and wires them together.
-- `js/pages/*` depends on `ui`, `features`, `domain`, `utils`, and receives storage functions via injected deps.
-- `js/ui/*` is mostly page-agnostic; `ui/panelHeaderCollapse.js` intentionally consumes `domain/stateActions.js`.
-- `js/storage/*` is mostly UI-agnostic; current exception: `storage/backup.js` uses `ui/dialogs.js` for confirm/alert UX.
-- `js/state.js` does not import from pages/ui/storage.
+Top-level state buckets:
 
-## Page module boundaries
+- `state.schemaVersion`
+- `state.tracker`
+- `state.character`
+- `state.map`
+- `state.ui`
 
-### Tracker page (`js/pages/tracker/*`)
-- Entry: `initTrackerPage(deps)`.
-- Wires campaign title/misc bindings, tracker section reorder, and panel modules:
-  - `panels/sessions.js`
-  - `panels/npcCards.js`
-  - `panels/partyCards.js`
-  - `panels/locationCards.js`
-- Card panels share helpers under `panels/cards/shared/*` (search, footer/header controls, portrait rendering, section select, etc.).
-- Also initializes character UI (`initCharacterPageUI`) as part of tracker/character bootstrap.
+### Persisted stores
 
-### Character page (`js/pages/character/*`)
-- Entry: `initCharacterPageUI(deps)`.
-- Delegates to panel modules:
-  - `basicsPanel`, `vitalsPanel`, `abilitiesPanel`, `proficienciesPanel`
-  - `attackPanel`, `spellsPanel`, `equipmentPanel`, `personalityPanel`
-- Includes character section reorder + collapsible textarea state wiring.
+- Main structured save:
+  - `localStorage["localCampaignTracker_v1"]`
+  - written by `saveAllLocal(...)`
+  - payload comes from `sanitizeForSave(...)`
+- Separate active-tab key:
+  - `localStorage["localCampaignTracker_activeTab"]`
+  - written by `initTopTabsNavigation(...)`
+- IndexedDB database:
+  - `localCampaignTracker_db`
+  - object stores:
+    - `blobs`
+    - `texts`
 
-### Map page (`js/pages/map/*`)
-- Entry: `setupMapPage(deps)` manages active map-page controller lifecycle.
-- Core controller: `createMapController(...)` with API `{ init, load, destroy, render, serialize }`.
-- Controller composes focused modules:
-  - canvas/render (`mapCanvas.js`)
-  - drawing actions (`mapDrawing.js`)
-  - history stack (`mapHistory.js`)
-  - persistence helpers (`mapPersistence.js`)
-  - background image actions (`mapBackgroundActions.js`)
-  - gestures/pan-zoom (`mapGestures.js`)
-  - pointer drawing handlers (`mapPointerHandlers.js`)
-  - toolbar/list UI (`mapToolbarUI.js`, `mapListUI.js`)
-  - color/math utils (`mapUtils.js`)
+### Persisted main-save state
 
-## Dependency injection (`deps` object) pattern
+Persisted through `sanitizeForSave(...)` into `localStorage["localCampaignTracker_v1"]`:
 
-Most page/panel modules accept a single `deps` object and validate required dependencies up front.
+- `state.schemaVersion`
+- `state.tracker`
+- `state.character`
+- `state.map` except runtime-only history
+- `state.ui` except runtime-only calculator/dice state
 
-Common injected deps include:
+Important persisted UI/state examples:
+
+- Root UI:
+  - `state.ui.theme`
+  - `state.ui.textareaHeights`
+  - `state.ui.panelCollapsed`
+  - `state.ui.activeTab`
+- Tracker page UI:
+  - `state.tracker.ui.sectionOrder`
+- Character page UI:
+  - `state.character.ui.sectionOrder`
+  - `state.character.ui.vitalsOrder`
+  - `state.character.ui.abilityOrder`
+  - `state.character.ui.abilityCollapse`
+  - `state.character.ui.textareaCollapse`
+- Map UI:
+  - `state.map.ui.activeTool`
+  - `state.map.ui.brushSize`
+  - `state.map.ui.viewScale`
+- Per-map persisted fields:
+  - `bgBlobId`
+  - `drawingBlobId`
+  - `brushSize`
+  - `colorKey`
+
+### Persisted outside the main save
+
+- IndexedDB `blobs` stores:
+  - character portrait blobs
+  - NPC portrait blobs
+  - party portrait blobs
+  - location image blobs
+  - map background blobs
+  - map drawing blobs
+- IndexedDB `texts` stores:
+  - spell notes keyed by `textKey_spellNotes(spellId)`
+- `localStorage["localCampaignTracker_activeTab"]` stores the last active top-level page separately from the main save so page restore does not depend on a dirty-save cycle.
+
+### Runtime-only state
+
+Runtime-only state currently includes:
+
+- `state.map.undo`
+- `state.map.redo`
+- `state.ui.dice`
+- `state.ui.calc.history`
+- map controller runtime canvas/image/gesture/pointer state
+- `blobs.js` object URL cache
+- `SaveManager` lifecycle state (`SAVED`, `DIRTY`, `SAVING`, `ERROR`)
+
+Important rule: a field living on `state` does **not** guarantee that it is persisted. `sanitizeForSave(...)` is the source of truth for what survives a save/export.
+
+### Canonical-vs-legacy UI buckets
+
+- Cross-app UI state belongs in `state.ui`.
+- `state.tracker.ui` and `state.character.ui` are page-scoped UI buckets.
+- The current code still preserves some legacy `tracker.ui` data:
+  - theme fallback/read paths in `dataPanel.js`
+  - textarea-height migration in `setupTextareaSizing(...)`
+- Do not add new cross-app UI settings under `tracker.ui`.
+
+### Schema migration rules
+
+- Current schema version: `2`
+- Migration lives in `migrateState(...)` in `js/state.js`.
+- `normalizeState(...)` restores runtime-only UI defaults after migration/load/import.
+- Unknown future schema versions are accepted as-is to avoid destructive downgrade behavior.
+
+When adding persisted state:
+
+1. Add the default shape in `js/state.js`.
+2. Append schema history in `SCHEMA_MIGRATION_HISTORY`.
+3. Add/extend a migration step in `migrateState(...)` if older saves need backfill.
+4. Decide whether the new field belongs in the main save, IndexedDB, or runtime-only state.
+5. Update `sanitizeForSave(...)` if the new field is runtime-only.
+
+## Save lifecycle summary
+
+### Main structured save lifecycle
+
+1. A UI event mutates structured state.
+2. The mutating code calls `SaveManager.markDirty()` unless it intentionally opted out with `queueSave: false`.
+3. `SaveManager`:
+   - marks the app dirty
+   - delays the visible `DIRTY` status slightly to avoid flicker
+   - debounces save calls
+4. `SaveManager.flush()`:
+   - transitions to `SAVING`
+   - calls `saveAllLocal()`
+   - `saveAllLocal()` sanitizes the state and writes `localStorage["localCampaignTracker_v1"]`
+   - transitions to `SAVED` or `ERROR`
+5. `installExitSave(...)` triggers best-effort flushes on background/exit events.
+
+### Split payload lifecycle
+
+Not all user-visible data follows the same write path:
+
+- Portraits and map images:
+  - written to IndexedDB immediately through `putBlob(...)`
+  - structured state keeps only blob IDs
+  - `SaveManager.markDirty()` is still required so the blob IDs are saved into the main state payload
+- Map drawing snapshots:
+  - `persistDrawingSnapshot(...)` converts the drawing layer to PNG
+  - replaces the previous `drawingBlobId`
+  - marks the main state dirty so the new blob ID is persisted
+- Spell notes:
+  - saved separately through `putText(...)`
+  - keyed by `textKey_spellNotes(spellId)`
+  - deleted separately when spells or spell levels are deleted
+  - not embedded in `state.character.spells`
+
+### Backup/reset lifecycle
+
+- Export:
+  - `exportBackup(...)` bundles sanitized structured state plus all referenced blobs and all stored texts into a versioned JSON file.
+- Import:
+  - validates file size and JSON shape
+  - migrates incoming state
+  - restores blobs/texts first
+  - merges migrated state into the live state object
+  - writes local storage
+  - reloads the app
+- Reset / clear-images / clear-texts:
+  - flush first
+  - update state and/or IDB
+  - reload afterward for a clean runtime
+
+## Page-by-page ownership boundaries
+
+### Tracker page: `js/pages/tracker/*`
+
+Entry point:
+
+- `initTrackerPage(deps)`
+
+Page-level ownership:
+
+- `#page-tracker`
+- campaign title binding (`#campaignTitle` -> `state.tracker.campaignTitle`)
+- `#misc` -> `state.tracker.misc`
+- tracker page panel ordering via `setupTrackerSectionReorder(...)`
+
+Panel ownership:
+
+- `panels/sessions.js`
+  - owns `state.tracker.sessions`
+  - owns `state.tracker.sessionSearch`
+  - owns `state.tracker.activeSessionIndex`
+- `panels/npcCards.js`
+  - owns `state.tracker.npcs`
+  - owns `state.tracker.npcSections`
+  - owns `state.tracker.npcActiveSectionId`
+  - migrates legacy `state.tracker.npcActiveGroup`
+- `panels/partyCards.js`
+  - owns `state.tracker.party`
+  - owns `state.tracker.partySearch`
+  - owns `state.tracker.partySections`
+  - owns `state.tracker.partyActiveSectionId`
+- `panels/locationCards.js`
+  - owns `state.tracker.locationsList`
+  - owns `state.tracker.locSearch`
+  - owns `state.tracker.locFilter`
+  - owns `state.tracker.locSections`
+  - owns `state.tracker.locActiveSectionId`
+
+Tracker-card shared helper boundary:
+
+- `js/pages/tracker/panels/cards/shared/*` is shared only by tracker card-style panels (`npcCards`, `partyCards`, `locationCards`).
+- Put tracker-card-specific shared behavior there only if it applies to at least two of those panels.
+- Do not use that folder as a generic shared UI dumping ground.
+
+Current implemented coupling:
+
+- `initTrackerPage(...)` currently also calls `initCharacterPageUI(...)`.
+- `initTrackerPage(...)` also initializes `initPanelHeaderCollapse(...)` and the global number-stepper enhancement.
+- Contributors should treat this as a current bootstrap seam, not as a general pattern to copy into new page modules.
+
+### Character page: `js/pages/character/*`
+
+Entry point:
+
+- `initCharacterPageUI(deps)`
+
+Current bootstrap owner:
+
+- `initCharacterPageUI(...)` is invoked from `initTrackerPage(...)`, not directly from `app.js`.
+
+Page-level ownership:
+
+- `#page-character`
+- character page panel ordering via `setupCharacterSectionReorder(...)`
+- page-local bind helpers used by panel modules (`bindText`, `bindNumber`)
+
+Panel ownership:
+
+- `panels/basicsPanel.js`
+  - `state.character.name`
+  - `classLevel`
+  - `race`
+  - `background`
+  - `alignment`
+  - `experience`
+  - `features`
+  - `imgBlobId`
+  - document title sync
+- `panels/vitalsPanel.js`
+  - HP, AC, initiative, speed, proficiency, spell attack/DC, hit-die fields
+  - `state.character.resources`
+  - `state.character.ui.vitalsOrder`
+- `panels/abilitiesPanel.js`
+  - `state.character.abilities`
+  - skills/skill notes
+  - `state.character.ui.abilityOrder`
+  - `state.character.ui.abilityCollapse`
+- `panels/proficienciesPanel.js`
+  - armor/weapon/tool/language text fields
+- `panels/attackPanel.js`
+  - `state.character.attacks`
+- `panels/spellsPanel.js`
+  - `state.character.spells.levels`
+  - per-spell notes in IndexedDB `texts`
+- `panels/equipmentPanel.js`
+  - `state.character.inventoryItems`
+  - `state.character.activeInventoryIndex`
+  - `state.character.inventorySearch`
+  - `state.character.money`
+  - legacy migration from `state.character.equipment`
+- `panels/personalityPanel.js`
+  - `state.character.personality`
+  - collapsible textarea state via `state.character.ui.textareaCollapse`
+
+Character-specific boundary notes:
+
+- Only spell notes use separate IndexedDB text storage. Other character notes stay in the main structured save.
+- Character portrait storage uses the shared image flow, but ownership of `state.character.imgBlobId` stays in character modules.
+
+### Map page: `js/pages/map/*`
+
+Entry point:
+
+- `setupMapPage(deps)`
+
+Controller boundary:
+
+- `setupMapPage(...)` creates and owns one active map controller at a time.
+- The controller API is `{ init, load, destroy, render, serialize }`.
+
+Persistent map state ownership:
+
+- `state.map.activeMapId`
+- `state.map.maps`
+- `state.map.ui.activeTool`
+- `state.map.ui.brushSize`
+- `state.map.ui.viewScale`
+- per-map:
+  - `id`
+  - `name`
+  - `bgBlobId`
+  - `drawingBlobId`
+  - `brushSize`
+  - `colorKey`
+
+Runtime map state ownership:
+
+- live canvases and drawing contexts
+- loaded background `Image`
+- pointer session state
+- gesture session state
+- current toolbar/list UI controller references
+- current listener `AbortController`
+
+Submodule ownership inside the map page:
+
+- `mapCanvas.js`
+  - canvas creation and final render composition
+- `mapDrawing.js`
+  - draw/erase stroke behavior and restore/clear helpers
+- `mapHistory.js`
+  - in-memory undo/redo stack
+- `mapPersistence.js`
+  - load/save drawing and background blob helpers
+- `mapBackgroundActions.js`
+  - background upload/remove behavior
+- `mapGestures.js`
+  - pan/zoom/view-scale behavior
+- `mapPointerHandlers.js`
+  - pointer-to-drawing coordination
+- `mapToolbarUI.js`
+  - active tool, color, brush size, undo/redo, clear
+- `mapListUI.js`
+  - add/rename/delete/switch map UI
+- `mapUtils.js`
+  - map color/math helpers
+
+Map boundary rule:
+
+- Canvas, drawing, gesture, and map-list logic should stay in `js/pages/map/*`.
+- Shared UI modules should not know about map canvas internals.
+
+## Shared UI infrastructure boundaries
+
+### Shared UI systems in `js/ui/*`
+
+- `dialogs.js`
+  - CSP-safe replacement for native `alert`, `confirm`, and `prompt`
+- `navigation.js`
+  - top-level page switching, URL hash syncing, and persisted active-tab restore
+- `settingsPanel.js` + `dataPanel.js`
+  - Data & Settings modal wiring
+  - theme changes
+  - export/import/reset
+  - storage maintenance
+  - update checks
+- `theme.js`
+  - theme resolution and system-theme listener management
+- `topbar/*`
+  - clock
+  - calculator
+  - dice roller
+- `popovers.js` + `selectDropdown.js` + `positioning.js` + `topbarPopover.js`
+  - shared dropdown/popover behavior and placement
+- `pagePanelReorder.js`
+  - generic two-column panel reorder engine
+- `panelHeaderCollapse.js`
+  - generic panel collapse/expand persistence for `section.panel`
+- `collapsibleTextareas.js`
+  - generic textarea collapse/expand persistence used by character-page textareas
+- `status.js`
+  - shared status line and global error surface
+- `searchHighlightOverlay.js`
+  - in-field search highlight overlay
+- `masonryLayout.js`, `flipSwap.js`
+  - generic layout/animation helpers
+- `safeAsync.js`
+  - promise wrapper for async event handlers
+- `bindings.js`
+  - generic text/number/contenteditable/checkbox bind helpers
+
+### UI boundary rules
+
+- Shared UI modules may own generic UI state and DOM behavior.
+- Shared UI modules should not own tracker/character/map business rules.
+- Shared UI modules should validate required DOM anchors with `requireEl(...)` / `requireMany(...)`.
+- Shared UI modules should fail soft in production and provide a `destroy()` no-op fallback where practical.
+
+### Narrow global hooks that already exist
+
+The current codebase intentionally exposes a few narrow globals:
+
+- version/build metadata from `boot.js`
+- `window.openDataPanel`
+- `window.__applyTextareaSize`
+- `window.renderNpcTabs`
+- `window.renderLocTabs`
+- `globalThis.__APP_STATE__` in DEV mode
+
+These are existing seams, not a preferred extension mechanism. New behavior should use module imports or injected callbacks unless there is no reasonable alternative.
+
+## Dependency injection (`deps`) pattern
+
+Most page entries, controllers, and panel modules accept a single `deps` object and validate required values up front.
+
+Common injected dependencies:
+
 - `state`
 - `SaveManager`
-- status surface (`setStatus`)
-- dialog APIs (`uiAlert`, `uiConfirm`, `uiPrompt`)
-- popover manager (`Popovers`)
-- storage helpers (`putBlob`, `deleteBlob`, `blobIdToObjectUrl`, `putText`, `getText`, etc.)
-- domain helpers/factories (`createStateActions`, `makeNpc`, `makePartyMember`, `makeLocation`)
+- `setStatus`
+- `uiAlert`, `uiConfirm`, `uiPrompt`
+- `Popovers`
+- blob helpers:
+  - `putBlob`
+  - `deleteBlob`
+  - `blobIdToObjectUrl`
+- text helpers:
+  - `putText`
+  - `getText`
+  - `deleteText`
+  - `textKey_spellNotes`
+- domain helpers and factories:
+  - `createStateActions(...)`
+  - `makeNpc`
+  - `makePartyMember`
+  - `makeLocation`
 
-This keeps wiring centralized in `app.js`, reduces hidden coupling, and makes modules easier to refactor/test.
+Rules:
 
-## Naming conventions (current)
+- If a deep module needs storage, dialogs, or page services, inject them.
+- Do not add new hidden global dependencies when a `deps` field will do.
+- Prefer a single `deps` object over a long positional parameter list.
 
-- `create*`: build a service/controller/helper object (for example `createMapController`, `createSaveManager`, `createPopoverManager`).
-- `init*`: initialize and wire a concrete UI module/panel/page section.
-- `setup*`: higher-level composition wrappers or one-time setup helpers (for example `setupMapPage`, `setupSettingsPanel`, `setupTextareaSizing`, `setupPagePanelReorder`).
+## Naming conventions and lifecycle expectations
 
-## Lifecycle expectations
+### Naming conventions
 
-- Controller/service modules usually expose `destroy()` for teardown.
-- Map controller exposes `init/load/destroy` and is torn down before re-init in `setupMapPage`.
-- Many UI modules are idempotent by design (dataset guards + noop destroy fallback via `getNoopDestroyApi()`).
-- Listener ownership is explicit in controller-driven modules (commonly via `AbortController`).
+- `create*`
+  - build a service/controller/helper object
+  - examples: `createSaveManager`, `createMapController`, `createThemeManager`
+- `init*`
+  - initialize and wire a concrete UI module/panel/widget/page
+  - examples: `initTrackerPage`, `initTopbarUI`, `initDialogs`
+- `setup*`
+  - higher-level one-time composition or configuration helpers
+  - examples: `setupMapPage`, `setupSettingsPanel`, `setupTextareaSizing`
 
-## Cross-cutting systems
+### Lifecycle expectations
 
-- **Save lifecycle**: `SaveManager` centralizes dirty/saving/saved/error state, debounce, and flush.
-- **Persistence flow**: `persistence.loadAll()` migrates legacy shapes and blob/data-url state; `saveAllLocal()` writes sanitized state.
-- **State mutation guard (dev)**: `utils/dev.js` proxies state and warns/throws on direct writes outside allowed mutation scopes.
-- **State action helpers**: `domain/stateActions.js` provides explicit mutation helpers that also queue save.
-- **Popovers/dropdowns**: shared manager in `ui/popovers.js`, with `ui/selectDropdown.js` and topbar/map integrations.
-- **Dialogs**: CSP-safe modal replacements in `ui/dialogs.js` (`uiAlert`, `uiConfirm`, `uiPrompt`).
-- **Search highlight overlay**: `ui/searchHighlightOverlay.js`, used in sessions, tracker cards, and equipment notes.
+- Modules that own listeners or long-lived resources should return a `destroy()` API.
+- Prefer `AbortController` for listener ownership.
+- Re-initializable modules should clean up previous instances before creating new ones.
+- Shared init helpers commonly return `getNoopDestroyApi()` when prerequisites are missing.
 
-## CSP and DOM safety
+Current reality to be aware of:
 
-- CSP is enforced at `index.html` (no inline script handlers, `script-src 'self'`).
-- UI modules use explicit DOM guards (`requireEl`) and fail soft with status reporting when anchors are missing.
-- Dialog/search rendering paths use DOM APIs and `textContent` for user text instead of raw HTML injection.
+- Some older panel modules use module-scoped mutable variables such as `_state`, `_wired`, and singleton flags.
+- Those modules are effectively single-instance for the lifetime of the page.
+- Do not copy that pattern into new modules unless there is a strong reason.
 
-## Adding a new page/section
+## Guidance for where new code should go
 
-1. Add page markup to `index.html` (for example `#page-foo`).
-2. Add a matching tab button with `data-tab="foo"`.
-3. Create `js/pages/foo/*` module(s) with `init*`/`setup*` entry function(s) that take `deps`.
-4. Wire the new page in `app.js` by passing required dependencies.
-5. Keep page-specific logic in `js/pages/foo/*`; keep shared UI/storage behavior in their existing layers.
+- New app-wide startup ordering or shared service wiring:
+  - `app.js`
+- New persisted state defaults, schema history, migrations, or save sanitization:
+  - `js/state.js`
+- New explicit mutation helpers or factories:
+  - `js/domain/*`
+- New local persistence/backups/IndexedDB behavior:
+  - `js/storage/*`
+- New shared UI primitives or generic DOM infrastructure:
+  - `js/ui/*`
+- New reusable cross-page flows:
+  - `js/features/*`
+- New page-specific controller/panel logic:
+  - `js/pages/<page>/*`
+- New tracker-card shared logic used by NPC/party/location cards:
+  - `js/pages/tracker/panels/cards/shared/*`
+- New low-level helpers without page/storage knowledge:
+  - `js/utils/*`
+- New service-worker/update behavior:
+  - `js/pwa/*`
+
+Placement rule:
+
+- Default to the narrowest existing boundary that fits.
+- Only create a new shared abstraction after at least two concrete callers need the same behavior.
+
+## Anti-patterns to avoid
+
+- Writing directly to `localStorage` or IndexedDB from page modules when a storage helper already exists.
+- Treating every field on `state` as persisted without checking `sanitizeForSave(...)`.
+- Adding new cross-app UI state under `tracker.ui` instead of `state.ui`.
+- Importing page modules into shared UI/storage/features layers.
+- Copying tracker/character bootstrap coupling into new page modules.
+- Adding new narrow globals on `window` when injection or normal imports would work.
+- Mutating persisted state without calling `SaveManager.markDirty()` or an action helper that queues saves.
+- Bypassing `createStateActions(...)` in code paths where explicit save-aware mutation helpers are available.
+- Storing large binary/text payloads inline in the main save when the existing IndexedDB stores are the right fit.
+- Mixing migration logic, DOM rendering, and storage I/O in the same module.
+- Using raw `innerHTML` for user content instead of DOM APIs / `textContent`.
+- Reimplementing dialogs/popovers/navigation instead of using the shared infrastructure already in `js/ui/*`.
+
+## Safe extension rules for future contributors and AI assistants
+
+1. Start from the current boundaries. Extend an existing page/storage/ui module before inventing a new layer.
+2. If you add persisted data, update `js/state.js` defaults and migration logic in the same change.
+3. If you add runtime-only state under `state`, strip it in `sanitizeForSave(...)` and restore defaults in `normalizeState(...)` if needed.
+4. If you add large text or images, store payloads in IndexedDB and persist only IDs/references in the main save.
+5. Keep page-specific business rules in `js/pages/<page>/*`.
+6. Keep generic UI behavior in `js/ui/*` and reusable flows in `js/features/*`.
+7. Validate DOM anchors with `requireMany(...)` / `requireEl(...)` and provide fail-soft behavior outside DEV.
+8. Own listeners explicitly and return `destroy()` when a module has real lifecycle.
+9. Preserve CSP-safe patterns: use shared dialogs, DOM APIs, and explicit event listeners.
+10. Update this document when changing:
+   - startup order
+   - state shape
+   - persistence contract
+   - page/module ownership
+   - dependency direction rules
+
+## Adding a new page or panel
+
+### Adding a new top-level page
+
+1. Add the page shell to `index.html` as `#page-<name>`.
+2. Add a matching top-level tab button with `data-tab="<name>"`.
+3. Create `js/pages/<name>/*` with an `init*` or `setup*` entry that accepts `deps`.
+4. Wire that page from `app.js`.
+5. Add any new persisted state to `js/state.js`.
+6. Keep page-specific logic inside `js/pages/<name>/*`.
+
+### Adding a new panel to an existing page
+
+1. Add the required DOM anchors to that page section in `index.html`.
+2. Create the panel module under the page's existing folder.
+3. Initialize it from the page entry module, not directly from `app.js` unless it is truly cross-page.
+4. If the panel adds persisted layout/collapse state, put that state in the owning page's UI bucket or root `state.ui` as appropriate.

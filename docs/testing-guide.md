@@ -1,0 +1,295 @@
+# Testing Guide
+
+This is the authoritative manual testing guide for Campaign Tracker / Lore Ledger. It consolidates the current guidance from `docs/SMOKE_TEST.md`, `SMOKE_TEST.md`, and `docs/CSP_AUDIT.md` into one release-quality checklist.
+
+## 1. Testing philosophy
+
+The project is currently validated primarily through manual testing. Because the app is local-first and splits persistence across `localStorage`, IndexedDB blobs, IndexedDB texts, and PWA caches, the highest-risk regressions are:
+
+- data loss after refresh
+- broken image or drawing persistence
+- failed backup/restore recovery
+- offline/PWA regressions in production builds
+- CSP or asset-loading failures that block normal usage
+
+Use the smallest test set that matches the change, but always bias toward validating real user flows rather than isolated UI clicks.
+
+Standard setup:
+
+- Use a local server or Vite; never test from `file://`.
+- Use `npm run dev` for day-to-day UI, routing, theme, and CSP diagnostics.
+- Use `npm run build` and `npm run preview` or a deployed production build for PWA/offline checks. Dev does not register the service worker.
+- Prefer a clean browser profile for release validation and any persistence-sensitive checks.
+- Optional Windows helper for a clean profile:
+
+```powershell
+.\scripts\open-clean-profile.ps1 -Url "http://localhost:5500"
+```
+
+Treat any data-loss, restore, offline-shell, or CSP regression as a merge/release blocker.
+
+## 2. Pre-merge minimum checks
+
+Run these before merging any user-visible change:
+
+1. `npm run build`
+   Expected: production build succeeds with no unexpected errors.
+2. Open the app in `npm run dev` or another local served environment.
+   Expected: the changed area loads cleanly and normal interaction does not produce unexpected console errors.
+3. Reload the relevant top-level route.
+   Expected: `#tracker`, `#character`, and `#map` continue to restore the same page after reload when that area was touched.
+4. Run the detailed checks for the affected surface:
+   - Persistence or storage change: sections 4 and 8
+   - Tracker change: section 5
+   - Character change: section 6
+   - Map, drawing, or image change: section 7
+   - PWA, assets, routing base path, or build-output change: section 9
+   - CSP, boot, startup, or asset-loading change: section 10
+5. If the change touched themes or boot-time styling, reload once with a non-default theme selected.
+   Expected: the saved theme applies immediately with no obvious flash to the wrong theme.
+
+## 3. Pre-release minimum checks
+
+Before any release candidate or production deploy, run the full set below in a clean browser profile:
+
+1. Complete section 4, including refresh durability and intentional non-persistence checks.
+2. Complete sections 5, 6, and 7 for Tracker, Character, and Map.
+3. Complete section 8 using a real exported backup file and `Reset Everything`.
+4. Complete section 9 against a production build or deployed site.
+5. Complete section 10 with `?dev=1`, then repeat a quick normal flow without the dev flag.
+6. Cover the browser/device matrix in section 11.
+7. Capture failure evidence using section 12.
+
+## 4. Persistence regression checks
+
+Use these whenever persistence, save timing, storage migration, image handling, or page initialization changes.
+
+Recommended seeded data:
+
+- one Tracker NPC with a portrait
+- one Character portrait plus at least one spell note body
+- one Map with a background image and visible drawing
+
+Checks:
+
+1. Refresh durability
+   - Edit seeded data on each page.
+   - Refresh once.
+   - Expected: text, numbers, portraits, spell notes, map background, and map drawing all remain.
+2. Active tab restoration
+   - Open `#tracker`, `#character`, and `#map` one at a time and reload on each.
+   - Expected: the same top-level page remains active after reload.
+3. Cross-store persistence
+   - Confirm structured fields, blob-backed images, drawing snapshots, and text-backed spell notes all survive the same reload cycle.
+4. Persisted UI state when touched by the change
+   - Verify the affected search text, filters, collapse state, panel order, textarea size, or active selection survives reload.
+5. Intentional non-persistence
+   - On `Map`, draw one extra stroke, use `Undo`, then `Redo`, then refresh.
+   - Without drawing anything new, press `Undo` and `Redo` again.
+   - Expected: the final drawing state persists, but the pre-refresh undo/redo history does not.
+   - Also remember that dice history and calculator history are runtime-only.
+
+## 5. Tracker page checks
+
+Baseline checks:
+
+1. Campaign and sessions
+   - Edit the campaign title.
+   - Add or rename a session, enter notes, switch sessions, and reload.
+   - Expected: title, session notes, and active session are preserved.
+2. NPCs
+   - Add an NPC.
+   - Set `Name`, `Class / Role`, `HP Cur`, `HP Max`, `Status`, and notes.
+   - Add a portrait image and reload.
+   - Expected: the NPC card, field values, and portrait persist.
+3. Party
+   - Add a party member, edit its main fields, add a portrait if relevant, and reload.
+   - Expected: data and images persist.
+4. Locations
+   - Add a location, set title/type/notes, add an image if relevant, and reload.
+   - Expected: data and images persist.
+
+Additional checks when the change touched Tracker rendering or organization:
+
+- Create sections for NPCs, Party, or Locations; move cards between sections; reload; confirm the section assignment persists.
+- Use search and filter controls, especially location filtering, and confirm the affected behavior still matches the visible cards.
+- Collapse and expand cards, or reorder/collapse Tracker panels if touched, then reload and confirm the UI state persists.
+- Watch for duplicate event behavior after rerenders. One click should equal one action.
+
+## 6. Character page checks
+
+Baseline checks:
+
+1. Basics
+   - Set character identity fields such as name, class/level, race, background, alignment, experience, and features.
+   - Add a character portrait and reload.
+   - Expected: fields and portrait persist.
+2. Vitals and resources
+   - Edit HP, AC, initiative, speed, proficiency, spell attack, spell DC, and at least one resource tracker.
+   - Reload.
+   - Expected: values persist.
+3. Abilities and skills
+   - Change at least one ability score and one proficiency/save setting.
+   - Expected: derived modifiers, saves, and skills recalculate consistently and remain correct after reload.
+4. Attacks, spells, and inventory
+   - Add one attack row, one spell, one inventory item, and edit money values.
+   - Add a spell note body and reload.
+   - Expected: structured rows persist, and the spell note body also persists.
+5. Personality and notes
+   - Edit one or more personality/notes textareas and reload.
+   - Expected: content persists.
+
+Additional checks when the change touched Character-specific UI persistence:
+
+- Reorder Character panels and confirm the order survives reload.
+- Reorder vitals/resources or ability blocks if the change touched those systems.
+- Verify textarea sizing/collapse behavior still persists for any field using persisted UI sizing.
+- If inventory search or the active inventory item changed, confirm the selection/search state survives reload.
+
+## 7. Map page checks
+
+Baseline checks:
+
+1. Map image and drawing persistence
+   - Open `Map`.
+   - Set a map image.
+   - Draw at least one visible stroke.
+   - Refresh once.
+   - Expected: the map image and drawing remain visible.
+2. Undo/redo behavior
+   - Draw an additional stroke.
+   - Click `Undo`, then `Redo`.
+   - Refresh once.
+   - Without drawing again, click `Undo` and `Redo`.
+   - Expected: the drawing itself persists, but the old undo/redo stack does not.
+
+Additional checks when the change touched map management, tools, or gestures:
+
+- Add a second map, rename it, switch between maps, and verify each map keeps its own background/drawing state.
+- Use brush and eraser tools, change brush size and color, and confirm the final rendered state is correct after reload.
+- Verify pan/zoom behavior if canvas gestures or view state changed.
+- If `Remove Image`, `Clear Map`, or delete-map behavior changed, confirm the action affects only the intended map.
+- On a touch-capable device, verify drawing and gesture behavior with touch input.
+
+## 8. Backup/import/export checks
+
+Run this flow whenever persistence, import/export, blobs, texts, or migrations change. It is also a required pre-release check.
+
+1. Seed representative data:
+   - Tracker NPC with portrait
+   - Character portrait and spell note
+   - Map background and drawing
+2. Open `Data & Settings`.
+3. Under `Backups`, click `Export Backup (.json)` and save the file.
+4. Under `Danger Zone`, click `Reset Everything` and confirm.
+   Expected: the app reloads to a clean/default state.
+5. Open `Data & Settings` again and import the backup file from step 3.
+6. Wait for import to finish.
+   Expected: import triggers an automatic page refresh.
+7. After refresh, verify that prior data returns:
+   - Tracker cards and portraits
+   - Character data, portrait, and spell note text
+   - Map background image and drawing
+
+If import/export code changed, also try one bad input path such as invalid JSON or an unsupported file and confirm the app fails safely instead of partially replacing live data.
+
+## 9. PWA/offline checks
+
+Use a production build or deployed production site for this section.
+
+1. Run `npm run build`.
+2. Run `npm run preview` or open the deployed build.
+3. Verify built assets load correctly.
+   - Favicon and apple-touch icon load.
+   - Dice, settings, calculator, and other UI icons render.
+   - The built page exposes a manifest and registers a service worker in production.
+4. Open the site once while online.
+5. In DevTools, open `Application` and confirm an active service worker is registered.
+6. In DevTools `Network`, enable `Offline`.
+7. Reload the page.
+   Expected: the app shell still loads and `#tracker`, `#character`, and `#map` still work offline.
+
+When the change touched update handling:
+
+- Use the `Check for updates` action in `Data & Settings` and confirm it does not error.
+- If you have a staged newer build available, verify the update banner appears and the `Refresh` / `Later` actions behave correctly.
+
+If caches become stale during testing:
+
+1. Unregister the service worker in DevTools.
+2. Clear site data in DevTools `Application` -> `Storage`.
+3. Close all app tabs, reopen online, and refresh once.
+
+## 10. CSP/security checks
+
+Run this when touching startup code, CSP, asset loading, imports, or browser APIs that may be blocked by policy.
+
+Setup:
+
+1. Serve the app from a local server.
+2. Open `http://localhost:5500/?dev=1` or the equivalent dev URL with `?dev=1`.
+3. Open DevTools Console.
+
+Intentional DEV-only violation check:
+
+```js
+const s = document.createElement("script");
+s.textContent = "window.__cspInlineProbe = 'blocked-if-csp-is-working'";
+document.head.appendChild(s);
+```
+
+Expected result:
+
+- Console shows a clear `[DEV][CSP VIOLATION]` error
+- The logged object includes the violation details such as directive and blocked URI
+
+Normal usage audit flows with `?dev=1`:
+
+1. Map draw flow
+   - Set a map image, draw on the map, refresh, and confirm persistence.
+2. NPC portrait flow
+   - Add an NPC, set a name, pick a portrait, refresh, and confirm persistence.
+3. Backup flow
+   - Export a backup, reset everything, import the backup, and confirm restoration.
+
+Expected result for all normal flows:
+
+- No `securitypolicyviolation` events during normal usage
+- No unexpected CSP errors in Console
+
+DEV-off check:
+
+1. Open the app without the dev flag, for example `http://localhost:5500/` or `?dev=0`.
+2. Repeat one quick normal flow such as map drawing.
+
+Expected result:
+
+- No DEV CSP audit logging
+- No extra CSP audit status noise during normal use
+
+## 11. Suggested browser/device matrix
+
+| Scope | Minimum coverage | Primary purpose |
+| --- | --- | --- |
+| Every PR | Latest stable Chrome or Edge on desktop | Fast baseline for UI, persistence, and routing |
+| Pre-release | Latest stable Chromium desktop plus latest stable Firefox desktop | Cross-browser check for local storage, IndexedDB, layout, and CSP behavior |
+| Touch-heavy or map changes | One touch device: iOS Safari or Android Chrome | Drawing, gestures, portrait/image picking, and mobile layout |
+| PWA/offline focused changes | One installed PWA or mobile browser with service worker support | Offline shell, update prompt, and cache behavior |
+
+If only one mobile platform is available, prioritize a real touch device over a desktop emulator.
+
+## 12. What evidence to capture on failure
+
+For any failed check, record:
+
+- the exact section and step that failed
+- expected result versus actual result
+- app version, commit SHA, and whether you were using `npm run dev`, `npm run preview`, or a deployed URL
+- browser name/version, OS, device type, and whether a clean profile was used
+- whether the failure happened online or offline
+- screenshot or short video of the failure
+- relevant Console errors, network failures, service worker details, or CSP logs
+- the exported backup file, corrupted input file, or sample image involved when the failure is storage-related
+- whether the issue reproduces after a hard refresh or in a fresh browser profile
+
+When the failure involves persistence or recovery, include exactly which artifacts were lost: text fields, portraits, spell notes, map background, map drawing, or UI state.
