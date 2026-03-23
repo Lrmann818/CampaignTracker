@@ -5030,3 +5030,56 @@ section.panel[data-collapsed="true"]> :not([data-panel-header]) {
   opacity: 0;
   pointer-events: none;
 }
+
+/* ── Save failure banner ─────────────────────────────────────── */
+.saveBanner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  background: var(--color-error, #c0392b);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.saveBanner.isHidden {
+  display: none;
+}
+
+.saveBanner__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.saveBanner__btn {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.saveBanner__btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.saveBanner__btn--primary {
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+.saveBanner__btn--primary:hover {
+  background: rgba(255, 255, 255, 0.35);
+}

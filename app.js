@@ -69,6 +69,7 @@ import { numberOrNull } from "./js/utils/number.js";
 import { makeNpc, makePartyMember, makeLocation } from "./js/domain/factories.js";
 import { positionMenuOnScreen } from "./js/ui/positioning.js";
 import { createStatus } from "./js/ui/status.js";
+import { showSaveBanner, hideSaveBanner } from "./js/ui/saveBanner.js";
 import { getNoopDestroyApi } from "./js/utils/domGuards.js";
 
 import { initDialogs, uiAlert, uiConfirm, uiPrompt } from "./js/ui/dialogs.js";
@@ -117,6 +118,16 @@ const saveAll = () => saveAllLocal({
 const SaveManager = createSaveManager({
   saveAll,
   setStatus: (...args) => StatusApi.setSaveStatus(...args),
+  showSaveBanner: (opts) => showSaveBanner(opts),   // ADD
+  hideSaveBanner: () => hideSaveBanner(),             // ADD
+  onExport: () => _exportBackup({                     // ADD
+    state: appState,
+    ensureMapManager,
+    getBlob,
+    blobToDataUrl,
+    getAllTexts,
+    sanitizeForSave
+  }),
   debounceMs: 250,
   savedText: "Saved locally.",
   dirtyText: "Unsaved changes",
@@ -213,6 +224,7 @@ function disableAutocompleteGlobally(root = document) {
         sanitizeForSave,
         saveAll,
         putBlob,
+        deleteBlob,        // ADD THIS
         dataUrlToBlob,
         clearAllBlobs,
         clearAllTexts,
@@ -220,7 +232,6 @@ function disableAutocompleteGlobally(root = document) {
         ACTIVE_TAB_KEY,
         STORAGE_KEY,
         afterImport: async () => {
-          // simplest + safest: refresh the UI after importing
           try { location.reload(); } catch (_) { }
         }
       })),

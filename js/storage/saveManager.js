@@ -53,6 +53,9 @@ export function createSaveManager(opts) {
   const {
     saveAll,
     setStatus,
+    showSaveBanner,
+    hideSaveBanner,
+    onExport,
     debounceMs = 250,
     // Prevent "Unsaved changes" flicker when we auto-save quickly (e.g., tab switches
     // that trigger harmless state normalization). If dirty clears before this delay,
@@ -146,6 +149,7 @@ export function createSaveManager(opts) {
     try {
       const ok = saveAll();
       if (!ok) throw new Error("local save failed");
+      hideSaveBanner?.();
       dirty = false;
       clearDirtyUiTimer();
       stateNow = SaveState.SAVED;
@@ -153,6 +157,7 @@ export function createSaveManager(opts) {
       return true;
     } catch (err) {
       console.warn("Save failed:", err);
+      showSaveBanner?.({ onExport });
       clearDirtyUiTimer();
       stateNow = SaveState.ERROR;
       renderStatus();

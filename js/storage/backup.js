@@ -157,8 +157,11 @@ export async function importBackup(e, deps) {
     migrateState,
     saveAll,
     putBlob,
-    dataUrlToBlob,
     putText,
+    deleteBlob,           // NEW — needed for abort cleanup
+    dataUrlToBlob,
+    clearAllBlobs,        // NEW — needed for post-success cleanup
+    clearAllTexts,        // NEW — needed for post-success cleanup
     ACTIVE_TAB_KEY,
     STORAGE_KEY,
     afterImport,
@@ -168,161 +171,222 @@ export async function importBackup(e, deps) {
   const file = e.target.files?.[0];
   if (!file) return;
 
+  // ── 1. VALIDATE ────────────────────────────────────────────────────────────
+  // No side effects in this section. Bail early if anything looks wrong.
+
+  if (file.size > MAX_BACKUP_BYTES) {
+    await uiAlert("Backup file is too large.", { title: "Import failed" });
+    e.target.value = "";
+    return;
+  }
+
+  let text = "";
   try {
-    if (file.size > MAX_BACKUP_BYTES) {
-      await uiAlert("Backup file is too large.", { title: "Import failed" });
-      e.target.value = "";
-      return;
-    }
-
-    // Read contents (avoid FileReader 'load' handler blocking warnings)
-    let text = "";
-    try {
-      text = await file.text();
-    } catch (err) {
-      console.error("Import failed: could not read file:", err);
-      await uiAlert("Could not read that file.", { title: "Import failed" });
-      e.target.value = "";
-      return;
-    }
-
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch (err) {
-      console.error("Import failed: invalid JSON:", err);
-      await uiAlert("That file isn't valid JSON.", { title: "Import failed" });
-      e.target.value = "";
-      return;
-    }
-
-    let normalized;
-    try {
-      normalized = normalizeIncomingBackup(parsed);
-    } catch (err) {
-      console.error("Import failed: unsupported backup format:", err);
-      await uiAlert(err?.message || "Unsupported backup format.", { title: "Import failed" });
-      e.target.value = "";
-      return;
-    }
-    const { incomingState, incomingBlobs, incomingTexts } = normalized;
-
-    let migrated;
-    try {
-      migrated = migrateState(incomingState);
-    } catch (err) {
-      console.error("Import failed: could not migrate state:", err);
-      await uiAlert(err?.message || "Backup state is invalid.", { title: "Import failed" });
-      e.target.value = "";
-      return;
-    }
-
-    const blobEntries = Object.entries(incomingBlobs);
-    if (blobEntries.length > MAX_BLOBS) {
-      await uiAlert("Backup contains too many images.", { title: "Import failed" });
-      e.target.value = "";
-      return;
-    }
-    for (const [, dataUrl] of blobEntries) {
-      if (!isSafeImageDataUrl(dataUrl)) {
-        await uiAlert("Backup contains an unsupported image format.", { title: "Import failed" });
-        e.target.value = "";
-        return;
-      }
-    }
-
-    // Stage blobs/texts first; state is only mutated after all writes succeed.
-    // Keep original blob IDs when possible; only remap entries that must fall back.
-    const idMap = new Map(); // oldId -> newId (fallback only)
-    for (const [oldId, dataUrl] of Object.entries(incomingBlobs)) {
-      let blob;
-      try {
-        blob = dataUrlToBlob(dataUrl);
-      } catch (err) {
-        console.error("Import failed: corrupt image data for blob:", oldId, err);
-        await uiAlert("Import failed: one of the images in this backup is corrupted.", { title: "Import failed" });
-        e.target.value = "";
-        return;
-      }
-
-      try {
-        await putBlob(blob, oldId);
-      } catch (err) {
-        console.warn("Import: failed to preserve blob ID, falling back to remap:", oldId, err);
-        try {
-          const newId = await putBlob(blob);
-          idMap.set(oldId, newId);
-        } catch (fallbackErr) {
-          console.error("Import failed: could not store image blob:", oldId, fallbackErr);
-          await uiAlert("Import failed while saving images.", { title: "Import failed" });
-          e.target.value = "";
-          return;
-        }
-      }
-    }
-
-    // Restore texts (same ids)
-    for (const [tid, tval] of Object.entries(incomingTexts)) {
-      await putText(tval, tid);
-    }
-
-    if (idMap.size > 0) {
-      const remap = (id) => (id ? (idMap.get(id) || id) : id);
-      if (Array.isArray(migrated?.tracker?.npcs)) {
-        for (const npc of migrated.tracker.npcs) if (npc?.imgBlobId) npc.imgBlobId = remap(npc.imgBlobId);
-      }
-      if (Array.isArray(migrated?.tracker?.party)) {
-        for (const m of migrated.tracker.party) if (m?.imgBlobId) m.imgBlobId = remap(m.imgBlobId);
-      }
-      if (Array.isArray(migrated?.tracker?.locationsList)) {
-        for (const loc of migrated.tracker.locationsList) if (loc?.imgBlobId) loc.imgBlobId = remap(loc.imgBlobId);
-      }
-      if (Array.isArray(migrated?.map?.maps)) {
-        for (const mp of migrated.map.maps) {
-          if (mp?.bgBlobId) mp.bgBlobId = remap(mp.bgBlobId);
-          if (mp?.drawingBlobId) mp.drawingBlobId = remap(mp.drawingBlobId);
-        }
-      }
-      if (migrated?.character?.imgBlobId) migrated.character.imgBlobId = remap(migrated.character.imgBlobId);
-    }
-
-    // Restore state (with migrations and remapped blob IDs)
-    state.schemaVersion = migrated.schemaVersion;
-    Object.assign(state.tracker, migrated.tracker || {});
-    Object.assign(state.character, migrated.character || {});
-    Object.assign(state.map, migrated.map || {});
-
-    // restore root UI (theme, textarea heights)
-    if (!state.ui || typeof state.ui !== "object") state.ui = {};
-    Object.assign(state.ui, migrated.ui || {});
-
-    ensureMapManager?.();
-
-    // Persist + active tab
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizeBackupState(state, sanitizeForSave))); } catch (_) {}
-    try { localStorage.setItem(ACTIVE_TAB_KEY, state.ui?.activeTab || "tracker"); } catch (_) {}
-
-    try { saveAll?.(); } catch (err) { console.warn("saveAll hook failed:", err); }
-
-    // Update UI immediately (optional hook from app.js)
-    try { await afterImport?.(); } catch (err) { console.warn("afterImport hook failed:", err); }
-
-    if (blobEntries.length === 0) {
-      try {
-        await uiAlert("This backup did not include images. Existing portraits were kept.", { title: "Import complete" });
-      } catch (err) {
-        console.warn("import complete notice failed:", err);
-      }
-    }
-
-    // success
-    e.target.value = "";
+    text = await file.text();
   } catch (err) {
-    console.error("Import failed:", err);
-    await uiAlert("Import failed due to an unexpected error.", { title: "Import failed" });
+    console.error("Import failed: could not read file:", err);
+    await uiAlert("Could not read that file.", { title: "Import failed" });
     e.target.value = "";
+    return;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    console.error("Import failed: invalid JSON:", err);
+    await uiAlert("That file isn't valid JSON.", { title: "Import failed" });
+    e.target.value = "";
+    return;
+  }
+
+  let normalized;
+  try {
+    normalized = normalizeIncomingBackup(parsed);
+  } catch (err) {
+    console.error("Import failed: unsupported backup format:", err);
+    await uiAlert(err?.message || "Unsupported backup format.", { title: "Import failed" });
+    e.target.value = "";
+    return;
+  }
+
+  const { incomingState, incomingBlobs, incomingTexts } = normalized;
+
+  let migrated;
+  try {
+    migrated = migrateState(incomingState);
+  } catch (err) {
+    console.error("Import failed: could not migrate state:", err);
+    await uiAlert(err?.message || "Backup state is invalid.", { title: "Import failed" });
+    e.target.value = "";
+    return;
+  }
+
+  const blobEntries = Object.entries(incomingBlobs);
+  if (blobEntries.length > MAX_BLOBS) {
+    await uiAlert("Backup contains too many images.", { title: "Import failed" });
+    e.target.value = "";
+    return;
+  }
+  for (const [, dataUrl] of blobEntries) {
+    if (!isSafeImageDataUrl(dataUrl)) {
+      await uiAlert("Backup contains an unsupported image format.", { title: "Import failed" });
+      e.target.value = "";
+      return;
+    }
+  }
+
+  // ── 2. SNAPSHOT ────────────────────────────────────────────────────────────
+  // Deep clone current state before touching anything.
+  // If anything fails after this point we can restore it.
+
+  let stateSnapshot;
+  try {
+    stateSnapshot = JSON.parse(JSON.stringify(sanitizeForSave(state)));
+  } catch (err) {
+    console.error("Import failed: could not snapshot current state:", err);
+    await uiAlert("Import failed: could not create a safe restore point.", { title: "Import failed" });
+    e.target.value = "";
+    return;
+  }
+
+  // ── ROLLBACK HELPERS ───────────────────────────────────────────────────────
+  // Track every new blob written so we can clean up partial writes on failure.
+  const newBlobIds = [];
+
+  // Called if something fails BEFORE we touch state.
+  const abort = async (err, message) => {
+    for (const id of newBlobIds) {
+      try { await deleteBlob(id); } catch (_) {}
+    }
+    console.error("Import failed:", err);
+    await uiAlert(message || "Import failed due to an unexpected error.", { title: "Import failed" });
+    e.target.value = "";
+  };
+
+  // Called if something fails AFTER we've started mutating state.
+  const rollback = async (err, message) => {
+    const restored = JSON.parse(JSON.stringify(stateSnapshot));
+    state.schemaVersion = restored.schemaVersion;
+    state.tracker = restored.tracker;
+    state.character = restored.character;
+    state.map = restored.map;
+    state.ui = restored.ui;
+    await abort(err, message);
+  };
+
+  // ── 3. WRITE NEW BLOBS ─────────────────────────────────────────────────────
+  // Write before clearing old ones. Old blobs stay intact until success.
+
+  const idMap = new Map();
+  for (const [oldId, dataUrl] of blobEntries) {
+    let blob;
+    try {
+      blob = dataUrlToBlob(dataUrl);
+    } catch (err) {
+      await abort(err, "Import failed: one of the images in this backup is corrupted.");
+      return;
+    }
+
+    try {
+      await putBlob(blob, oldId);
+      newBlobIds.push(oldId);
+    } catch (err) {
+      try {
+        const newId = await putBlob(blob);
+        idMap.set(oldId, newId);
+        newBlobIds.push(newId);
+      } catch (fallbackErr) {
+        await abort(fallbackErr, "Import failed while saving images.");
+        return;
+      }
+    }
+  }
+
+  // Remap blob IDs in migrated state if any IDs changed during write
+  if (idMap.size > 0) {
+    const remap = (id) => (id ? (idMap.get(id) || id) : id);
+    if (Array.isArray(migrated?.tracker?.npcs)) {
+      for (const npc of migrated.tracker.npcs) if (npc?.imgBlobId) npc.imgBlobId = remap(npc.imgBlobId);
+    }
+    if (Array.isArray(migrated?.tracker?.party)) {
+      for (const m of migrated.tracker.party) if (m?.imgBlobId) m.imgBlobId = remap(m.imgBlobId);
+    }
+    if (Array.isArray(migrated?.tracker?.locationsList)) {
+      for (const loc of migrated.tracker.locationsList) if (loc?.imgBlobId) loc.imgBlobId = remap(loc.imgBlobId);
+    }
+    if (Array.isArray(migrated?.map?.maps)) {
+      for (const mp of migrated.map.maps) {
+        if (mp?.bgBlobId) mp.bgBlobId = remap(mp.bgBlobId);
+        if (mp?.drawingBlobId) mp.drawingBlobId = remap(mp.drawingBlobId);
+      }
+    }
+    if (migrated?.character?.imgBlobId) migrated.character.imgBlobId = remap(migrated.character.imgBlobId);
+  }
+
+  // ── 4. WRITE NEW TEXTS ─────────────────────────────────────────────────────
+
+  for (const [tid, tval] of Object.entries(incomingTexts)) {
+    try {
+      await putText(tval, tid);
+    } catch (err) {
+      await abort(err, "Import failed: could not store text data.");
+      return;
+    }
+  }
+
+  // ── 5. SWAP STATE ──────────────────────────────────────────────────────────
+  // Point of no return. Use rollback from here on if anything fails.
+
+  try {
+    const clean = JSON.parse(JSON.stringify(migrated));
+    state.schemaVersion = clean.schemaVersion;
+    state.tracker = clean.tracker;
+    state.character = clean.character;
+    state.map = clean.map;
+    state.ui = clean.ui;
+    ensureMapManager?.();
+  } catch (err) {
+    await rollback(err, "Import failed: could not apply backup data. Your previous data has been restored.");
+    return;
+  }
+
+  // ── 6. SAVE ────────────────────────────────────────────────────────────────
+
+  try {
+    await saveAll();
+  } catch (err) {
+    await rollback(err, "Import failed: could not save. Your previous data has been restored.");
+    return;
+  }
+
+  // ── 7. CLEAN UP OLD DATA ───────────────────────────────────────────────────
+  // Only reached on full success. Safe to delete old data now.
+  // Non-fatal if cleanup fails — import already succeeded.
+
+  try { await clearAllBlobs(); } catch (err) {
+    console.warn("Import: old blobs cleanup failed (non-fatal):", err);
+  }
+  try { await clearAllTexts(); } catch (err) {
+    console.warn("Import: old texts cleanup failed (non-fatal):", err);
+  }
+
+  // ── 8. RELOAD UI ───────────────────────────────────────────────────────────
+
+  if (blobEntries.length === 0) {
+    try {
+      await uiAlert("This backup did not include images. Existing portraits were kept.", { title: "Import complete" });
+    } catch (err) {
+      console.warn("Import complete notice failed:", err);
+    }
+  }
+
+  e.target.value = "";
+  try { await afterImport?.(); } catch (err) {
+    console.warn("afterImport hook failed:", err);
   }
 }
+
 
 export async function resetAll(deps) {
   const {
