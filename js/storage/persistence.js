@@ -28,7 +28,7 @@ export function saveAllLocal(opts) {
   }
 
   const payload = sanitizeForSave(state, { currentSchemaVersion });
-  
+
   try {
     localStorage.setItem(storageKey, JSON.stringify(payload));
     return true;
@@ -66,16 +66,12 @@ export async function loadAll(opts) {
     const parsed = JSON.parse(raw);
     const migrated = migrateState(parsed);
 
-    state.schemaVersion = migrated.schemaVersion;
-    // Keep existing object references where possible (most code reads from state directly),
-    // but Object.assign is safer than replacing whole objects.
-    Object.assign(state.tracker, migrated.tracker || {});
-    Object.assign(state.character, migrated.character || {});
-    Object.assign(state.map, migrated.map || {});
-
-    // Restore root UI (theme, textarea heights)
-    if (!state.ui || typeof state.ui !== "object") state.ui = {};
-    Object.assign(state.ui, migrated.ui || {});
+    const clean = JSON.parse(JSON.stringify(migrated)); 
+    state.schemaVersion = clean.schemaVersion;
+    state.tracker = clean.tracker;
+    state.character = clean.character;
+    state.map = clean.map;
+    state.ui = clean.ui;
 
     // Ensure undo/redo start empty (in-memory only)
     state.map.undo = [];
