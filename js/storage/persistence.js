@@ -23,34 +23,12 @@ export function saveAllLocal(opts) {
   if (!storageKey) throw new Error("saveAllLocal: storageKey is required");
   if (!state) throw new Error("saveAllLocal: state is required");
 
-  const payload = (typeof sanitizeForSave === "function")
-    ? sanitizeForSave(state, { currentSchemaVersion })
-    : (() => {
-      // Fallback path keeps behavior deterministic if caller does not inject a sanitizer.
-      const serializableMap = { ...(state.map || {}) };
-      delete serializableMap.undo;
-      delete serializableMap.redo;
-      const serializableUi = { ...(state.ui || {}) };
-      delete serializableUi.dice;
-      if (serializableUi.calc && typeof serializableUi.calc === "object") {
-        const serializableCalc = { ...serializableUi.calc };
-        delete serializableCalc.history;
-        if (Object.keys(serializableCalc).length === 0) {
-          delete serializableUi.calc;
-        } else {
-          serializableUi.calc = serializableCalc;
-        }
-      }
+  if (typeof sanitizeForSave !== "function") {
+    throw new Error("saveAllLocal: sanitizeForSave() is required");
+  }
 
-      return {
-        schemaVersion: state.schemaVersion ?? currentSchemaVersion,
-        tracker: state.tracker,
-        character: state.character,
-        map: serializableMap,
-        ui: serializableUi
-      };
-    })();
-
+  const payload = sanitizeForSave(state, { currentSchemaVersion });
+  
   try {
     localStorage.setItem(storageKey, JSON.stringify(payload));
     return true;
@@ -224,7 +202,7 @@ export function installExitSave(SaveManager) {
   const handler = (e) => {
     const st = SaveManager.getStatus();
     if (st?.dirty) {
-      try { SaveManager.flush(); } catch (_) {}
+      try { SaveManager.flush(); } catch (_) { }
       // Trigger the native "Leave site?" prompt (message ignored by most browsers).
       e.preventDefault();
       e.returnValue = "";
@@ -236,7 +214,7 @@ export function installExitSave(SaveManager) {
   const backgroundFlush = () => {
     const st = SaveManager.getStatus();
     if (st?.dirty) {
-      try { SaveManager.flush(); } catch (_) {}
+      try { SaveManager.flush(); } catch (_) { }
     }
   };
 

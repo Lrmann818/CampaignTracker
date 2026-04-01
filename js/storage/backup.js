@@ -65,33 +65,6 @@ function normalizeIncomingBackup(parsed) {
   return { incomingState: parsed, incomingBlobs: {}, incomingTexts: {} };
 }
 
-function sanitizeBackupState(state, sanitizeForSave) {
-  if (typeof sanitizeForSave === "function") return sanitizeForSave(state);
-
-  const serializableMap = { ...(state?.map || {}) };
-  delete serializableMap.undo;
-  delete serializableMap.redo;
-  const serializableUi = { ...(state?.ui || {}) };
-  delete serializableUi.dice;
-  if (serializableUi.calc && typeof serializableUi.calc === "object") {
-    const serializableCalc = { ...serializableUi.calc };
-    delete serializableCalc.history;
-    if (Object.keys(serializableCalc).length === 0) {
-      delete serializableUi.calc;
-    } else {
-      serializableUi.calc = serializableCalc;
-    }
-  }
-
-  return {
-    schemaVersion: state?.schemaVersion,
-    tracker: state?.tracker,
-    character: state?.character,
-    map: serializableMap,
-    ui: serializableUi
-  };
-}
-
 export async function exportBackup(deps) {
   const {
     state,
@@ -101,6 +74,10 @@ export async function exportBackup(deps) {
     getAllTexts,
     sanitizeForSave
   } = deps;
+
+  if (typeof sanitizeForSave !== "function") {
+    throw new Error("exportBackup: sanitizeForSave() is required");
+  }
 
   // Collect all blob IDs used by state
   const ids = new Set();
@@ -130,7 +107,7 @@ export async function exportBackup(deps) {
   const backup = {
     version: 2,
     exportedAt: new Date().toISOString(),
-    state: sanitizeBackupState(state, sanitizeForSave),
+    state: sanitizeForSave(state),
     blobs,
     texts: await getAllTexts()
   };
@@ -257,7 +234,7 @@ export async function importBackup(e, deps) {
   // Called if something fails BEFORE we touch state.
   const abort = async (err, message) => {
     for (const id of newBlobIds) {
-      try { await deleteBlob(id); } catch (_) {}
+      try { await deleteBlob(id); } catch (_) { }
     }
     console.error("Import failed:", err);
     await uiAlert(message || "Import failed due to an unexpected error.", { title: "Import failed" });
@@ -386,7 +363,6 @@ export async function importBackup(e, deps) {
     console.warn("afterImport hook failed:", err);
   }
 }
-
 
 export async function resetAll(deps) {
   const {
