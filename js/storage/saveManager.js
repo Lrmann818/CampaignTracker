@@ -23,7 +23,6 @@
 
 /**
  * @typedef {{
- *   // queueSave is a compatibility alias used in some docs; markDirty is canonical.
  *   markDirty: () => void,
  *   queueSave?: () => void,
  *   flush: () => Promise<boolean>,
@@ -42,6 +41,9 @@
  *   dirtyText?: string,
  *   savingText?: string,
  *   errorText?: string
+ *   showSaveBanner?: (opts?: { onExport?: () => void }) => void,
+ *   hideSaveBanner?: () => void
+ *   onExport?: () => Promise<void>
  * }} SaveManagerOptions
  */
 
