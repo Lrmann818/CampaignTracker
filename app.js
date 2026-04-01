@@ -167,17 +167,31 @@ function disableAutocompleteGlobally(root = document) {
   StatusApi.installGlobalErrorHandlers = Status.installGlobalErrorHandlers;
   StatusApi.installGlobalErrorHandlers();
 
+  const _reportModuleInitError = (moduleName, err) => {
+    console.error(`[app] ${moduleName} init failed:`, err);
+    const message = DEV_MODE
+      ? `${moduleName} failed in DEV mode. Check console for details.`
+      : `${moduleName} failed to initialize. Check console for details.`;
+    StatusApi.setStatus(message, { stickyMs: 5000 });
+  };
+
   const runModuleInit = (moduleName, initFn) => {
+    let result;
     try {
-      return initFn();
+      result = initFn();
     } catch (err) {
-      console.error(`[app] ${moduleName} init failed:`, err);
-      const message = DEV_MODE
-        ? `${moduleName} failed in DEV mode. Check console for details.`
-        : `${moduleName} failed to initialize. Check console for details.`;
-      StatusApi.setStatus(message, { stickyMs: 5000 });
+      _reportModuleInitError(moduleName, err);
       return getNoopDestroyApi();
     }
+
+    // If initFn returned a Promise, attach a rejection handler so async
+    // failures are surfaced visibly rather than silently eaten or only
+    // appearing as unhandledRejection noise in the console.
+    if (result != null && typeof result.catch === "function") {
+      result.catch((err) => _reportModuleInitError(moduleName, err));
+    }
+
+    return result;
   };
 
   await withAllowedStateMutationAsync(async () => {
