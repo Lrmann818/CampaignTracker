@@ -1,15 +1,33 @@
-// @ts-nocheck
+// @ts-check
 import { DEV_MODE } from "../utils/dev.js";
+
+/**
+ * @typedef {{ stickyMs?: number }} StatusOptions
+ */
+
+/**
+ * @typedef {{
+ *   setStatus: (message?: string | null, opts?: StatusOptions) => void,
+ *   setSaveStatus: (message?: string | null) => void,
+ *   installGlobalErrorHandlers: () => void
+ * }} StatusApi
+ */
 
 /**
  * Creates a lightweight status line helper and installs global error handlers.
  *
- * @param {{ statusEl?: HTMLElement|null }} opts
+ * @param {{ statusEl?: HTMLElement | null }} [opts]
+ * @returns {StatusApi}
  */
 export function createStatus(opts = {}) {
   const statusEl = opts.statusEl || null;
   let lockUntil = 0;
 
+  /**
+   * @param {string | null | undefined} msg
+   * @param {StatusOptions} [opts]
+   * @returns {void}
+   */
   function setStatus(msg, opts = {}) {
     if (!statusEl) return;
     const stickyMs = Number(opts?.stickyMs);
@@ -17,12 +35,19 @@ export function createStatus(opts = {}) {
     statusEl.textContent = msg || "";
   }
 
+  /**
+   * @param {string | null | undefined} msg
+   * @returns {void}
+   */
   function setSaveStatus(msg) {
     if (!statusEl) return;
     if (Date.now() < lockUntil) return;
     statusEl.textContent = msg || "";
   }
 
+  /**
+   * @returns {void}
+   */
   function installGlobalErrorHandlers() {
     // JS/runtime errors
     window.addEventListener("error", (event) => {

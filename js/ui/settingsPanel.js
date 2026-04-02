@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-check
 // js/ui/settingsPanel.js — wiring for the Settings / Data panel modal
 //
 // Keeps app.js as a composition root by moving DOM wiring for the settings
@@ -7,6 +7,12 @@
 import { initDataPanel } from "./dataPanel.js";
 import { requireMany } from "../utils/domGuards.js";
 
+/** @typedef {Parameters<typeof initDataPanel>[0]} SettingsPanelDeps */
+
+/**
+ * @param {SettingsPanelDeps} deps
+ * @returns {ReturnType<typeof initDataPanel> | void}
+ */
 export function setupSettingsPanel(deps) {
   const {
     state,
@@ -53,6 +59,7 @@ export function setupSettingsPanel(deps) {
   const { settingsBtn } = guard.els;
 
   settingsBtn.addEventListener("click", () => {
-    if (typeof window.openDataPanel === "function") window.openDataPanel();
+    const appWindow = /** @type {Window & { openDataPanel?: (() => void) | undefined }} */ (window);
+    if (typeof appWindow.openDataPanel === "function") appWindow.openDataPanel();
   });
 }

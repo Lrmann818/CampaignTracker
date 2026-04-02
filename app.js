@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-check
 
 /************************ App Composition Root ************************
  * Wires shared services (state guard, persistence, popovers, theme)
@@ -83,7 +83,49 @@ import { initTrackerPage } from "./js/pages/tracker/trackerPage.js";
 
 import { setupMapPage } from "./js/pages/map/mapPage.js";
 
+/** @typedef {import("./js/state.js").State} AppState */
+/** @typedef {ReturnType<typeof createSaveManager>} SaveManagerApi */
+/** @typedef {ReturnType<typeof createStatus>} StatusManager */
+/** @typedef {ReturnType<typeof createPopoverManager>} PopoversApi */
+/** @typedef {ReturnType<typeof createThemeManager>} ThemeManager */
+/** @typedef {Parameters<StatusManager["setStatus"]>[1]} StatusOptions */
+/** @typedef {(message: string, opts?: StatusOptions) => void} SetStatusFn */
+/** @typedef {{ destroy?: () => void } | (() => void) | void} ModuleInitResult */
+/** @typedef {Promise<ModuleInitResult>} ModuleInitPromise */
+/** @typedef {() => ModuleInitResult | ModuleInitPromise} AppModuleInitFn */
+/** @typedef {Parameters<typeof loadAllPersist>[0]} LoadAllDeps */
+/** @typedef {Parameters<typeof _exportBackup>[0]} ExportBackupDeps */
+/** @typedef {Parameters<typeof _importBackup>[1]} ImportBackupDeps */
+/** @typedef {Parameters<typeof _resetAll>[0]} ResetAllDeps */
+/** @typedef {Parameters<typeof setupSettingsPanel>[0]} SettingsPanelDeps */
+/** @typedef {Parameters<typeof initTrackerPage>[0]} TrackerPageDeps */
+/** @typedef {Parameters<typeof setupMapPage>[0]} MapPageDeps */
+/**
+ * @typedef {Parameters<typeof setupTextareaSizing>[0] & {
+ *   state: AppState,
+ *   markDirty: SaveManagerApi["markDirty"],
+ *   saveAll: typeof saveAll,
+ *   setStatus: SetStatusFn
+ * }} TextareaSizingDeps
+ */
+/**
+ * @typedef {{
+ *   setStatus: SetStatusFn,
+ *   setSaveStatus: SetStatusFn,
+ *   installGlobalErrorHandlers: () => void
+ * }} StatusApi
+ */
+
+/**
+ * @param {unknown} value
+ * @returns {value is ModuleInitPromise}
+ */
+function isModuleInitPromise(value) {
+  return !!value && typeof value === "object" && "catch" in value && typeof value.catch === "function";
+}
+
 // Status line + global error surface
+/** @type {StatusApi} */
 const StatusApi = {
   setStatus: () => { },
   setSaveStatus: () => { },
@@ -94,9 +136,11 @@ const StateGuard = installStateMutationGuard(state, {
   mode: DEV_STATE_GUARD_MODE,
   helperHint: "Use createStateActions(...) helpers for mutations so changes stay explicit and save-aware."
 });
+/** @type {AppState} */
 const appState = StateGuard.state;
 if (DEV_MODE) {
-  globalThis.__APP_STATE__ = appState;
+  const appGlobals = /** @type {typeof globalThis & { __APP_STATE__?: AppState }} */ (globalThis);
+  appGlobals.__APP_STATE__ = appState;
 }
 if (DEV_MODE && StateGuard.enabled) {
   installStateMutationAllowanceLifecycle();
@@ -107,27 +151,89 @@ if (DEV_MODE && StateGuard.enabled) {
 const ImagePicker = createFilePicker({ accept: "image/*" });
 
 // Local persistence (kept as a tiny wrapper for SaveManager + autosize integration)
-const saveAll = () => saveAllLocal({
-  storageKey: STORAGE_KEY,
-  state: appState,
-  currentSchemaVersion: CURRENT_SCHEMA_VERSION,
-  sanitizeForSave
-});
+function saveAll() {
+  return saveAllLocal({
+    storageKey: STORAGE_KEY,
+    state: appState,
+    currentSchemaVersion: CURRENT_SCHEMA_VERSION,
+    sanitizeForSave
+  });
+}
 
-// ---------- Save Manager (debounced + queued) ----------
-const SaveManager = createSaveManager({
-  saveAll,
-  setStatus: (...args) => StatusApi.setSaveStatus(...args),
-  showSaveBanner: (opts) => showSaveBanner(opts),   // ADD
-  hideSaveBanner: () => hideSaveBanner(),             // ADD
-  onExport: () => _exportBackup({                     // ADD
+/**
+ * @returns {ExportBackupDeps}
+ */
+function createExportBackupDeps() {
+  return {
     state: appState,
     ensureMapManager,
     getBlob,
     blobToDataUrl,
     getAllTexts,
     sanitizeForSave
-  }),
+  };
+}
+
+/**
+ * @returns {LoadAllDeps}
+ */
+function createLoadAllDeps() {
+  return {
+    storageKey: STORAGE_KEY,
+    state: appState,
+    migrateState,
+    ensureMapManager,
+    dataUrlToBlob,
+    putBlob,
+    setStatus: StatusApi.setStatus,
+    markDirty: SaveManager.markDirty
+  };
+}
+
+/**
+ * @returns {ImportBackupDeps}
+ */
+function createImportBackupDeps() {
+  return {
+    state: appState,
+    ensureMapManager,
+    migrateState,
+    sanitizeForSave,
+    saveAll,
+    putBlob,
+    deleteBlob,
+    dataUrlToBlob,
+    putText,
+    afterImport: async () => {
+      try { location.reload(); } catch (_) { }
+    }
+  };
+}
+
+/**
+ * @returns {ResetAllDeps}
+ */
+function createResetAllDeps() {
+  return {
+    ACTIVE_TAB_KEY,
+    STORAGE_KEY,
+    clearAllBlobs,
+    clearAllTexts,
+    flush: async () => {
+      await SaveManager.flush();
+    },
+    setStatus: StatusApi.setStatus
+  };
+}
+
+// ---------- Save Manager (debounced + queued) ----------
+/** @type {SaveManagerApi} */
+const SaveManager = createSaveManager({
+  saveAll,
+  setStatus: (message, opts) => StatusApi.setSaveStatus(message, opts),
+  showSaveBanner: (opts) => showSaveBanner(opts),
+  hideSaveBanner: () => hideSaveBanner(),
+  onExport: () => _exportBackup(createExportBackupDeps()),
   debounceMs: 250,
   savedText: "Saved locally.",
   dirtyText: "Unsaved changes",
@@ -139,21 +245,113 @@ const SaveManager = createSaveManager({
 installExitSave(SaveManager);
 // Centralized popover/dropdown manager (outside click, escape, resize reposition)
 // Uses the shared positioning helper below (function declaration hoists).
+/** @type {PopoversApi} */
 const Popovers = createPopoverManager({
   positionFn: (menu, anchor, opts) => positionMenuOnScreen(menu, anchor, opts)
 });
 
 // Theme manager (system/light/dark + named themes)
+/** @type {ThemeManager} */
 const Theme = createThemeManager({
   state: appState
 });
 
 // Disable autocomplete globally (prevent password managers from hijacking our custom dialogs)
+/**
+ * @param {Document | HTMLElement} [root]
+ * @returns {void}
+ */
 function disableAutocompleteGlobally(root = document) {
   const fields = root.querySelectorAll('input, textarea, select');
   fields.forEach(el => {
     el.setAttribute('autocomplete', 'off');
   });
+}
+
+/**
+ * @returns {SettingsPanelDeps}
+ */
+function createSettingsPanelDeps() {
+  return {
+    state: appState,
+    storageKeys: { STORAGE_KEY, ACTIVE_TAB_KEY },
+    applyTheme: Theme.applyTheme,
+    markDirty: () => SaveManager.markDirty(),
+    flush: () => SaveManager.flush(),
+    Popovers,
+    exportBackup: () => _exportBackup(createExportBackupDeps()),
+    importBackup: (event) => withAllowedStateMutationAsync(() => _importBackup(event, createImportBackupDeps())),
+    resetAll: () => _resetAll(createResetAllDeps()),
+    clearAllBlobs,
+    clearAllTexts,
+    setStatus: StatusApi.setStatus
+  };
+}
+
+/**
+ * @returns {TrackerPageDeps}
+ */
+function createTrackerPageDeps() {
+  return {
+    state: appState,
+    SaveManager,
+    Popovers,
+    uiPrompt,
+    uiAlert,
+    uiConfirm,
+    setStatus: StatusApi.setStatus,
+    makeNpc,
+    makePartyMember,
+    makeLocation,
+    enhanceNumberSteppers,
+    numberOrNull,
+    pickCropStorePortrait,
+    ImagePicker,
+    deleteBlob,
+    putBlob,
+    cropImageModal,
+    getPortraitAspect,
+    blobIdToObjectUrl,
+    textKey_spellNotes,
+    putText,
+    getText,
+    deleteText,
+    autoSizeInput
+  };
+}
+
+/**
+ * @returns {MapPageDeps}
+ */
+function createMapPageDeps() {
+  return {
+    state: appState,
+    SaveManager,
+    setStatus: StatusApi.setStatus,
+    positionMenuOnScreen,
+    Popovers,
+    ensureMapManager,
+    getActiveMap,
+    newMapEntry,
+    blobIdToObjectUrl,
+    putBlob,
+    deleteBlob,
+    uiPrompt,
+    uiAlert,
+    uiConfirm
+  };
+}
+
+/**
+ * @returns {TextareaSizingDeps}
+ */
+function createTextareaSizingDeps() {
+  return {
+    state: appState,
+    markDirty: SaveManager.markDirty,
+    saveAll,
+    setStatus: StatusApi.setStatus
+  };
 }
 
 /************************ Boot ***********************/
@@ -167,6 +365,11 @@ function disableAutocompleteGlobally(root = document) {
   StatusApi.installGlobalErrorHandlers = Status.installGlobalErrorHandlers;
   StatusApi.installGlobalErrorHandlers();
 
+  /**
+   * @param {string} moduleName
+   * @param {unknown} err
+   * @returns {void}
+   */
   const _reportModuleInitError = (moduleName, err) => {
     console.error(`[app] ${moduleName} init failed:`, err);
     const message = DEV_MODE
@@ -175,6 +378,11 @@ function disableAutocompleteGlobally(root = document) {
     StatusApi.setStatus(message, { stickyMs: 5000 });
   };
 
+  /**
+   * @param {string} moduleName
+   * @param {AppModuleInitFn} initFn
+   * @returns {ModuleInitResult | ModuleInitPromise}
+   */
   const runModuleInit = (moduleName, initFn) => {
     let result;
     try {
@@ -187,7 +395,7 @@ function disableAutocompleteGlobally(root = document) {
     // If initFn returned a Promise, attach a rejection handler so async
     // failures are surfaced visibly rather than silently eaten or only
     // appearing as unhandledRejection noise in the console.
-    if (result != null && typeof result.catch === "function") {
+    if (isModuleInitPromise(result)) {
       result.catch((err) => _reportModuleInitError(moduleName, err));
     }
 
@@ -195,16 +403,7 @@ function disableAutocompleteGlobally(root = document) {
   };
 
   await withAllowedStateMutationAsync(async () => {
-    await loadAllPersist({
-      storageKey: STORAGE_KEY,
-      state: appState,
-      migrateState,
-      ensureMapManager,
-      dataUrlToBlob,
-      putBlob,
-      setStatus: StatusApi.setStatus,
-      markDirty: SaveManager.markDirty
-    });
+    await loadAllPersist(createLoadAllDeps());
     // Wire CSP-safe modal dialogs (replaces window.confirm/prompt)
     runModuleInit("Dialogs", () => initDialogs());
     runModuleInit("Theme", () => Theme.initFromState());
@@ -214,108 +413,18 @@ function disableAutocompleteGlobally(root = document) {
       setStatus: StatusApi.setStatus,
       activeTabStorageKey: ACTIVE_TAB_KEY
     }));
-    runModuleInit("Settings panel", () => setupSettingsPanel({
-      state: appState,
-      storageKeys: { STORAGE_KEY, ACTIVE_TAB_KEY },
-      applyTheme: Theme.applyTheme,
-      markDirty: () => SaveManager.markDirty(),
-      flush: () => SaveManager.flush(),
-      Popovers,
-
-      // Backups/reset are dependency-injected; bind the deps here so UI can call them with no args.
-      exportBackup: () => _exportBackup({
-        state: appState,
-        ensureMapManager,
-        getBlob,
-        blobToDataUrl,
-        getAllTexts,
-        sanitizeForSave
-      }),
-      importBackup: (e) => withAllowedStateMutationAsync(() => _importBackup(e, {
-        state: appState,
-        ensureMapManager,
-        migrateState,
-        sanitizeForSave,
-        saveAll,
-        putBlob,
-        deleteBlob,        // ADD THIS
-        dataUrlToBlob,
-        clearAllBlobs,
-        clearAllTexts,
-        putText,
-        ACTIVE_TAB_KEY,
-        STORAGE_KEY,
-        afterImport: async () => {
-          try { location.reload(); } catch (_) { }
-        }
-      })),
-      resetAll: () => _resetAll({
-        ACTIVE_TAB_KEY,
-        STORAGE_KEY,
-        clearAllBlobs,
-        clearAllTexts,
-        flush: () => SaveManager.flush(),
-        setStatus: StatusApi.setStatus
-      }),
-
-      clearAllBlobs,
-      clearAllTexts,
-      setStatus: StatusApi.setStatus
-    }));
+    runModuleInit("Settings panel", () => setupSettingsPanel(createSettingsPanelDeps()));
     runModuleInit(
       "Topbar",
       () => initTopbarUI({ state: appState, SaveManager, Popovers, positionMenuOnScreen, setStatus: StatusApi.setStatus })
     );
-    runModuleInit("Tracker page", () => initTrackerPage({
-      state: appState,
-      SaveManager,
-      Popovers,
-      uiPrompt,
-      uiAlert,
-      uiConfirm,
-      setStatus: StatusApi.setStatus,
-      makeNpc,
-      makePartyMember,
-      makeLocation,
-      enhanceNumberSteppers,
-      numberOrNull,
-      pickCropStorePortrait,
-      ImagePicker,
-      deleteBlob,
-      putBlob,
-      cropImageModal,
-      getPortraitAspect,
-      blobIdToObjectUrl,
-      textKey_spellNotes,
-      putText,
-      getText,
-      deleteText,
-      autoSizeInput,
-    }));
+    runModuleInit("Tracker page", () => initTrackerPage(createTrackerPageDeps()));
     runModuleInit("Autosize numbers", () => autosizeAllNumbers());
     runModuleInit(
       "Textarea sizing",
-      () => setupTextareaSizing({ state: appState, markDirty: SaveManager.markDirty, saveAll, setStatus: StatusApi.setStatus })
+      () => setupTextareaSizing(createTextareaSizingDeps())
     );
-    runModuleInit(
-      "Map page",
-      () => setupMapPage({
-        state: appState,
-        SaveManager,
-        setStatus: StatusApi.setStatus,
-        positionMenuOnScreen,
-        Popovers,
-        ensureMapManager,
-        getActiveMap,
-        newMapEntry,
-        blobIdToObjectUrl,
-        putBlob,
-        deleteBlob,
-        uiPrompt,
-        uiAlert,
-        uiConfirm
-      })
-    );
+    runModuleInit("Map page", () => setupMapPage(createMapPageDeps()));
     // If migrations or initial setup changed state, persist once, then show clean status.
     await SaveManager.flush();
   });

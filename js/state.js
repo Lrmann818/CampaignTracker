@@ -32,34 +32,341 @@ export const SCHEMA_MIGRATION_HISTORY = Object.freeze([
   }
 ]);
 
+/** @typedef {number | null} NullableNumber */
+
+/** @typedef {Record<string, number>} NumberLookup */
+
+/** @typedef {Record<string, boolean>} BooleanLookup */
+
 /**
- * Broad app state shape used for lightweight JS type-checking.
- *
- * @typedef {Record<string, any>} LooseObject
+ * @typedef {{
+ *   title: string,
+ *   notes: string,
+ *   [key: string]: unknown
+ * }} NotesEntry
+ */
+
+/**
+ * @typedef {{
+ *   imgBlobId?: string | null,
+ *   imgDataUrl?: string,
+ *   [key: string]: unknown
+ * }} PortraitRef
+ */
+
+/**
+ * @typedef {{
+ *   score: NullableNumber,
+ *   mod: NullableNumber,
+ *   save: NullableNumber
+ * }} AbilityScoreRow
+ */
+
+/**
+ * @typedef {{
+ *   str: AbilityScoreRow,
+ *   dex: AbilityScoreRow,
+ *   con: AbilityScoreRow,
+ *   int: AbilityScoreRow,
+ *   wis: AbilityScoreRow,
+ *   cha: AbilityScoreRow
+ * }} CharacterAbilities
+ */
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   name: string,
+ *   cur: NullableNumber,
+ *   max: NullableNumber,
+ *   [key: string]: unknown
+ * }} CharacterResource
+ */
+
+/**
+ * @typedef {{
+ *   id?: string,
+ *   name?: string,
+ *   bonus?: string | number | null,
+ *   damage?: string,
+ *   range?: string,
+ *   type?: string,
+ *   notes?: string,
+ *   [key: string]: unknown
+ * }} AttackEntry
+ */
+
+/**
+ * @typedef {{
+ *   used?: NullableNumber | string,
+ *   total?: NullableNumber | string,
+ *   list?: string,
+ *   [key: string]: unknown
+ * }} LegacySpellBucket
+ */
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   name: string,
+ *   notesCollapsed: boolean,
+ *   known: boolean,
+ *   prepared: boolean,
+ *   expended: boolean,
+ *   [key: string]: unknown
+ * }} CharacterSpell
+ */
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   label: string,
+ *   hasSlots: boolean,
+ *   used: NullableNumber,
+ *   total: NullableNumber,
+ *   collapsed: boolean,
+ *   spells: CharacterSpell[],
+ *   [key: string]: unknown
+ * }} CharacterSpellLevel
+ */
+
+/**
+ * @typedef {{
+ *   levels: CharacterSpellLevel[],
+ *   cantrips?: string,
+ *   lvl1?: LegacySpellBucket,
+ *   lvl2?: LegacySpellBucket,
+ *   lvl3?: LegacySpellBucket,
+ *   [key: string]: unknown
+ * }} CharacterSpells
+ */
+
+/**
+ * @typedef {{
+ *   pp: number,
+ *   gp: number,
+ *   ep: number,
+ *   sp: number,
+ *   cp: number,
+ *   [key: string]: unknown
+ * }} MoneyState
+ */
+
+/**
+ * @typedef {{
+ *   traits: string,
+ *   ideals: string,
+ *   bonds: string,
+ *   flaws: string,
+ *   notes: string,
+ *   [key: string]: unknown
+ * }} PersonalityState
+ */
+
+/**
+ * @typedef {{
+ *   textareaHeights: NumberLookup,
+ *   [key: string]: unknown
+ * }} CharacterUiState
+ */
+
+/**
+ * @typedef {{
+ *   textareaHeights: NumberLookup,
+ *   textareaHeigts?: NumberLookup,
+ *   theme?: string,
+ *   [key: string]: unknown
+ * }} TrackerUiState
+ */
+
+/**
+ * @typedef {{
+ *   campaignTitle: string,
+ *   sessions: NotesEntry[],
+ *   sessionSearch: string,
+ *   activeSessionIndex: number,
+ *   npcs: PortraitRef[],
+ *   npcActiveGroup: string,
+ *   npcSearch: string,
+ *   party: PortraitRef[],
+ *   partySearch: string,
+ *   locationsList: PortraitRef[],
+ *   locSearch: string,
+ *   locFilter: string,
+ *   misc: string,
+ *   ui: TrackerUiState,
+ *   [key: string]: unknown
+ * }} TrackerState
+ */
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   name: string,
+ *   bgBlobId: string | null,
+ *   drawingBlobId: string | null,
+ *   brushSize: number,
+ *   colorKey: string,
+ *   [key: string]: unknown
+ * }} MapEntry
+ */
+
+/**
+ * @typedef {{
+ *   activeTool: string,
+ *   brushSize: number,
+ *   viewScale?: number,
+ *   [key: string]: unknown
+ * }} MapUiState
+ */
+
+/**
+ * @typedef {{
+ *   count: number,
+ *   sides: number,
+ *   mod: number,
+ *   mode: "normal" | "adv" | "dis",
+ *   [key: string]: unknown
+ * }} DiceLastState
+ */
+
+/**
+ * @typedef {{
+ *   history: unknown[],
+ *   last?: DiceLastState,
+ *   [key: string]: unknown
+ * }} DiceUiState
+ */
+
+/**
+ * @typedef {{
+ *   history: unknown[],
+ *   [key: string]: unknown
+ * }} CalcUiState
+ */
+
+/**
+ * @typedef {{
+ *   theme: string,
+ *   textareaHeights: NumberLookup,
+ *   panelCollapsed: BooleanLookup,
+ *   dice?: DiceUiState,
+ *   calc?: CalcUiState,
+ *   [key: string]: unknown
+ * }} RootUiState
+ */
+
+/**
+ * @typedef {{
+ *   imgBlobId: string | null,
+ *   imgDataUrl?: string,
+ *   name: string,
+ *   classLevel: string,
+ *   race: string,
+ *   background: string,
+ *   alignment: string,
+ *   experience: NullableNumber,
+ *   features: string,
+ *   hpCur: NullableNumber,
+ *   hpMax: NullableNumber,
+ *   hitDieAmt: NullableNumber,
+ *   hitDieSize: NullableNumber,
+ *   ac: NullableNumber,
+ *   initiative: NullableNumber,
+ *   speed: NullableNumber,
+ *   proficiency: NullableNumber,
+ *   spellAttack: NullableNumber,
+ *   spellDC: NullableNumber,
+ *   resources: CharacterResource[],
+ *   abilities: CharacterAbilities,
+ *   skills: Record<string, unknown>,
+ *   skillsNotes: string,
+ *   armorProf: string,
+ *   weaponProf: string,
+ *   toolProf: string,
+ *   languages: string,
+ *   attacks: AttackEntry[],
+ *   spells: CharacterSpells,
+ *   inventoryItems: NotesEntry[],
+ *   activeInventoryIndex: number,
+ *   inventorySearch: string,
+ *   equipment: string,
+ *   money: MoneyState,
+ *   personality: PersonalityState,
+ *   ui?: CharacterUiState,
+ *   resourceName?: string,
+ *   resourceCur?: NullableNumber,
+ *   resourceMax?: NullableNumber,
+ *   [key: string]: unknown
+ * }} CharacterState
+ */
+
+/**
+ * @typedef {{
+ *   activeMapId: string | null,
+ *   maps: MapEntry[],
+ *   undo: unknown[],
+ *   redo: unknown[],
+ *   ui?: MapUiState,
+ *   bgBlobId?: string | null,
+ *   drawingBlobId?: string | null,
+ *   bgDataUrl?: string,
+ *   drawingDataUrl?: string,
+ *   brushSize?: number,
+ *   colorKey?: string,
+ *   character?: CharacterState,
+ *   [key: string]: unknown
+ * }} MapState
+ */
+
+/**
+ * @typedef {{
+ *   activeMapId: string | null,
+ *   maps: MapEntry[],
+ *   ui?: MapUiState,
+ *   bgBlobId?: string | null,
+ *   drawingBlobId?: string | null,
+ *   bgDataUrl?: string,
+ *   drawingDataUrl?: string,
+ *   brushSize?: number,
+ *   colorKey?: string,
+ *   [key: string]: unknown
+ * }} PersistedMapState
+ */
+
+/**
+ * @typedef {{
+ *   theme: string,
+ *   textareaHeights: NumberLookup,
+ *   panelCollapsed: BooleanLookup,
+ *   calc?: Record<string, unknown>,
+ *   [key: string]: unknown
+ * }} PersistedUiState
  */
 
 /**
  * @typedef {{
  *   schemaVersion: number,
- *   tracker: LooseObject,
- *   character: LooseObject,
- *   map: {
- *     activeMapId: string | null,
- *     maps: LooseObject[],
- *     undo: unknown[],
- *     redo: unknown[],
- *     ui?: LooseObject,
- *     [key: string]: unknown
- *   },
- *   ui: {
- *     theme: string,
- *     textareaHeights: Record<string, number>,
- *     panelCollapsed: Record<string, boolean>,
- *     [key: string]: unknown
- *   },
+ *   tracker: TrackerState,
+ *   character: CharacterState,
+ *   map: MapState,
+ *   ui: RootUiState,
  *   [key: string]: unknown
  * }} State
  */
+
+/**
+ * @typedef {{
+ *   schemaVersion: number,
+ *   tracker: TrackerState | undefined,
+ *   character: CharacterState | undefined,
+ *   map: PersistedMapState,
+ *   ui: PersistedUiState,
+ *   [key: string]: unknown
+ * }} SanitizedState
+ */
+
+/** @typedef {State | SanitizedState} StateLike */
 
 /** @type {State} */
 export const state = {
@@ -175,16 +482,19 @@ function normalizeDiceMode(mode) {
 /**
  * Apply runtime-only UI defaults after load/import migration.
  * Dice count/mod are always reset on full load.
- * @param {State | LooseObject | null | undefined} data
- * @returns {State | LooseObject | null | undefined}
+ * @param {State} data
+ * @returns {State}
  */
 export function normalizeState(data) {
-  if (!data || typeof data !== "object") return data;
-  if (!data.ui || typeof data.ui !== "object") data.ui = {};
-  if (!data.ui.dice || typeof data.ui.dice !== "object") data.ui.dice = {};
+  if (!data.ui || typeof data.ui !== "object") {
+    data.ui = { theme: "system", textareaHeights: {}, panelCollapsed: {} };
+  }
+  if (!data.ui.dice || typeof data.ui.dice !== "object") data.ui.dice = { history: [] };
   data.ui.dice.history = [];
 
-  const prevLast = (data.ui.dice.last && typeof data.ui.dice.last === "object") ? data.ui.dice.last : {};
+  const prevLast = (data.ui.dice.last && typeof data.ui.dice.last === "object")
+    ? data.ui.dice.last
+    : /** @type {Partial<DiceLastState>} */ ({});
   data.ui.dice.last = {
     ...prevLast,
     count: DICE_LAST_DEFAULTS.count,
@@ -192,7 +502,7 @@ export function normalizeState(data) {
     sides: clampDiceSides(prevLast.sides),
     mode: normalizeDiceMode(prevLast.mode)
   };
-  if (!data.ui.calc || typeof data.ui.calc !== "object") data.ui.calc = {};
+  if (!data.ui.calc || typeof data.ui.calc !== "object") data.ui.calc = { history: [] };
   data.ui.calc.history = [];
 
   return data;
@@ -200,12 +510,13 @@ export function normalizeState(data) {
 
 /**
  * Remove ephemeral UI from persistence/export payloads.
- * @param {State | LooseObject | null | undefined} source
+ * @param {StateLike | null | undefined} source
  * @param {{ currentSchemaVersion?: number }} [opts]
+ * @returns {SanitizedState}
  */
 export function sanitizeForSave(source, opts = {}) {
   const { currentSchemaVersion = CURRENT_SCHEMA_VERSION } = opts;
-  const input = (source && typeof source === "object") ? source : {};
+  const input = /** @type {Partial<StateLike>} */ ((source && typeof source === "object") ? source : {});
 
   const serializableMap = { ...(input.map || {}) };
   delete serializableMap.undo;
@@ -227,24 +538,11 @@ export function sanitizeForSave(source, opts = {}) {
     schemaVersion: input.schemaVersion ?? currentSchemaVersion,
     tracker: input.tracker,
     character: input.character,
-    map: serializableMap,
-    ui: serializableUi
+    map: /** @type {PersistedMapState} */ (serializableMap),
+    ui: /** @type {PersistedUiState} */ (serializableUi)
   };
 }
-
-
 // ---------- Map manager (multiple maps) ----------
-/**
- * @typedef {{
- *   id: string,
- *   name: string,
- *   bgBlobId: string | null,
- *   drawingBlobId: string | null,
- *   brushSize: number,
- *   colorKey: string
- * }} MapEntry
- */
-
 /**
  * @param {string} [name]
  * @returns {MapEntry}
@@ -262,11 +560,13 @@ export function newMapEntry(name = "World Map") {
 
 // Exported because app.js (and backup import/export) need to call it.
 export function ensureMapManager() {
-  if (!state.map || typeof state.map !== "object") state.map = {};
+  if (!state.map || typeof state.map !== "object") {
+    state.map = { activeMapId: null, maps: [], undo: [], redo: [] };
+  }
   if (!Array.isArray(state.map.maps)) state.map.maps = [];
 
   // UI / preferences (tool + shared brush size)
-  if (!state.map.ui || typeof state.map.ui !== "object") state.map.ui = {};
+  if (!state.map.ui || typeof state.map.ui !== "object") state.map.ui = { activeTool: "brush", brushSize: 6 };
   if (typeof state.map.ui.activeTool !== "string") state.map.ui.activeTool = "brush"; // brush | eraser
   if (typeof state.map.ui.brushSize !== "number") state.map.ui.brushSize = 6;
 
@@ -312,20 +612,36 @@ export function getActiveMap() {
  */
 export function migrateState(raw) {
   // Accept either a full state object or a partial/legacy blob.
-  const data = (raw && typeof raw === "object") ? raw : {};
+  const data = /** @type {Omit<Partial<State>, "tracker" | "character" | "map" | "ui"> & {
+   *   tracker?: Partial<TrackerState> & Record<string, unknown>,
+   *   character?: Partial<CharacterState> & Record<string, unknown>,
+   *   map?: Partial<MapState> & Record<string, unknown>,
+   *   ui?: Partial<RootUiState> & Record<string, unknown>,
+   *   [key: string]: unknown
+   * }} */ ((raw && typeof raw === "object") ? raw : {});
 
   // Older saves won't have schemaVersion.
   const parsedVersion = Number(data.schemaVersion);
   let v = Number.isFinite(parsedVersion) ? Math.trunc(parsedVersion) : 0;
   if (v < 0) v = 0;
 
+  /**
+   * @param {Record<string, unknown>} parent
+   * @param {string} key
+   * @returns {Record<string, unknown>}
+   */
   function ensureObj(parent, key) {
     if (!parent[key] || typeof parent[key] !== "object") parent[key] = {};
-    return parent[key];
+    return /** @type {Record<string, unknown>} */ (parent[key]);
   }
+  /**
+   * @param {Record<string, unknown>} parent
+   * @param {string} key
+   * @returns {unknown[]}
+   */
   function ensureArr(parent, key) {
     if (!Array.isArray(parent[key])) parent[key] = [];
-    return parent[key];
+    return /** @type {unknown[]} */ (parent[key]);
   }
 
   function migrateToV1() {
@@ -341,7 +657,7 @@ export function migrateState(raw) {
     ensureObj(data, "map");
 
     // Tracker UI defaults + typo fix
-    const t = data.tracker;
+    const t = /** @type {Partial<TrackerState> & Record<string, unknown>} */ (data.tracker);
     ensureObj(t, "ui");
     if (t.ui?.textareaHeigts && !t.ui.textareaHeights) {
       t.ui.textareaHeights = t.ui.textareaHeigts;
@@ -355,7 +671,7 @@ export function migrateState(raw) {
     if (typeof t.activeSessionIndex !== "number") t.activeSessionIndex = 0;
 
     // Character defaults (only fill missing, never overwrite)
-    const c = data.character;
+    const c = /** @type {Partial<CharacterState> & Record<string, unknown>} */ (data.character);
     if (!("imgBlobId" in c)) c.imgBlobId = null;
     if (!c.money || typeof c.money !== "object") c.money = { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
     if (!c.personality || typeof c.personality !== "object") {
@@ -436,7 +752,7 @@ export function migrateState(raw) {
     if (!("hitDieSize" in c)) c.hitDieSize = null;
 
     // Map defaults (multi-map manager expects these)
-    const m = data.map;
+    const m = /** @type {Partial<MapState> & Record<string, unknown>} */ (data.map);
     ensureArr(m, "maps");
     ensureObj(m, "ui");
     if (typeof m.ui.activeTool !== "string") m.ui.activeTool = "brush";
@@ -445,28 +761,32 @@ export function migrateState(raw) {
 
     // Root UI bucket used by textarea persistence helpers
     ensureObj(data, "ui");
-    ensureObj(data.ui, "textareaHeights");
-    ensureObj(data.ui, "panelCollapsed");
+    const rootUi = /** @type {Partial<RootUiState> & Record<string, unknown>} */ (data.ui);
+    ensureObj(rootUi, "textareaHeights");
+    ensureObj(rootUi, "panelCollapsed");
     // Default theme should match fresh installs ("system")
-    if (typeof data.ui.theme !== "string") data.ui.theme = "system";
+    if (typeof rootUi.theme !== "string") rootUi.theme = "system";
 
     // ---- THEME MIGRATION (important) ----
-    if (!data.ui) data.ui = {};
+    if (!data.ui) data.ui = { theme: "system", textareaHeights: {}, panelCollapsed: {} };
 
     // Prefer root ui.theme
-    if (typeof data.ui.theme !== "string") {
+    if (typeof rootUi.theme !== "string") {
       // Fallback to legacy tracker.ui.theme if present
-      if (typeof data.tracker?.ui?.theme === "string") {
-        data.ui.theme = data.tracker.ui.theme;
+      if (typeof t.ui?.theme === "string") {
+        rootUi.theme = t.ui.theme;
       } else {
-        data.ui.theme = "system";
+        rootUi.theme = "system";
       }
     }
   }
 
   function migrateToV2() {
     // Ensure inventoryItems exists even for v1 saves (schemaVersion already 1)
-    const c = data.character || (data.character = {});
+    if (!data.character) {
+      data.character = /** @type {Partial<CharacterState> & Record<string, unknown>} */ ({});
+    }
+    const c = /** @type {Partial<CharacterState> & Record<string, unknown>} */ (data.character);
     if (!Array.isArray(c.inventoryItems) || c.inventoryItems.length === 0) {
       const legacy = typeof c.equipment === "string" ? c.equipment : "";
       c.inventoryItems = [{ title: "Inventory", notes: legacy || "" }];
@@ -496,7 +816,7 @@ export function migrateState(raw) {
 
   // Unknown future versions are accepted as-is to avoid downgrade/clobbering.
   if (v > CURRENT_SCHEMA_VERSION) {
-    return normalizeState(data);
+    return normalizeState(/** @type {State} */ (data));
   }
 
   while (v < CURRENT_SCHEMA_VERSION) {
@@ -505,5 +825,5 @@ export function migrateState(raw) {
   }
 
   data.schemaVersion = CURRENT_SCHEMA_VERSION;
-  return normalizeState(data);
+  return normalizeState(/** @type {State} */ (data));
 }

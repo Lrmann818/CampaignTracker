@@ -1,8 +1,23 @@
+// @ts-check
+
+/**
+ * @typedef {{
+ *   onRefresh?: () => Promise<unknown> | unknown,
+ *   onDismiss?: () => void
+ * }} UpdateBannerOptions
+ */
+
+/** @type {HTMLDivElement | null} */
 let bannerEl = null;
+/** @type {HTMLButtonElement | null} */
 let refreshBtnEl = null;
+/** @type {HTMLButtonElement | null} */
 let dismissBtnEl = null;
 let dismissed = false;
 
+/**
+ * @returns {void}
+ */
 function ensureBanner() {
   if (bannerEl) return;
 
@@ -33,6 +48,10 @@ function ensureBanner() {
   document.body.appendChild(bannerEl);
 }
 
+/**
+ * @param {UpdateBannerOptions} [options]
+ * @returns {void}
+ */
 export function showUpdateBanner({ onRefresh, onDismiss } = {}) {
   if (dismissed) return;
 
@@ -59,6 +78,9 @@ export function showUpdateBanner({ onRefresh, onDismiss } = {}) {
   bannerEl.style.display = "";
 }
 
+/**
+ * @returns {void}
+ */
 export function hideUpdateBanner() {
   if (!bannerEl) return;
   bannerEl.hidden = true;

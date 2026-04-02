@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-check
 // js/storage/persistence.js — load + migrate + exit-safety helpers
 //
 // Keeps app.js slimmer and makes persistence logic reusable/testable.
@@ -7,10 +7,83 @@
 //   legacy image migrations (dataUrl -> IndexedDB blobs) and map-manager folding.
 // - installExitSave(): best-effort flush on tab close/background.
 
+/** @typedef {typeof import("../state.js").state} AppState */
+/** @typedef {typeof import("../state.js").state["tracker"]["npcs"][number]} PortraitRef */
+/** @typedef {typeof import("../state.js").state["map"]["maps"][number]} MapEntry */
+/** @typedef {ReturnType<typeof import("../state.js").sanitizeForSave>} SanitizedState */
+/** @typedef {ReturnType<typeof import("./saveManager.js").createSaveManager>} SaveManagerLike */
+
+/**
+ * @typedef {{
+ *   storageKey: string,
+ *   state: AppState,
+ *   currentSchemaVersion?: number,
+ *   sanitizeForSave: typeof import("../state.js").sanitizeForSave
+ * }} SaveAllLocalOptions
+ */
+
+/**
+ * @typedef {{
+ *   storageKey: string,
+ *   state: AppState,
+ *   migrateState: typeof import("../state.js").migrateState,
+ *   ensureMapManager: typeof import("../state.js").ensureMapManager,
+ *   dataUrlToBlob: typeof import("./blobs.js").dataUrlToBlob,
+ *   putBlob: typeof import("./blobs.js").putBlob,
+ *   setStatus: (message: string) => void,
+ *   markDirty: () => void
+ * }} LoadAllOptions
+ */
+
+/**
+ * @param {AppState | SanitizedState} source
+ * @returns {AppState}
+ */
+function cloneState(source) {
+  return /** @type {AppState} */ (JSON.parse(JSON.stringify(source)));
+}
+
+/**
+ * @param {AppState} target
+ * @param {AppState} source
+ * @returns {void}
+ */
+function replaceStateBuckets(target, source) {
+  target.schemaVersion = source.schemaVersion;
+  target.tracker = source.tracker;
+  target.character = source.character;
+  target.map = source.map;
+  target.ui = source.ui;
+}
+
+/**
+ * @param {PortraitRef[]} items
+ * @param {typeof import("./blobs.js").dataUrlToBlob} dataUrlToBlob
+ * @param {typeof import("./blobs.js").putBlob} putBlob
+ * @param {(message: string) => void} setStatus
+ * @param {string} label
+ * @returns {Promise<void>}
+ */
+async function migratePortraitDataUrls(items, dataUrlToBlob, putBlob, setStatus, label) {
+  for (const item of items) {
+    if (!item.imgDataUrl || item.imgBlobId) continue;
+    const blob = dataUrlToBlob(item.imgDataUrl);
+    try {
+      item.imgBlobId = await putBlob(blob);
+      delete item.imgDataUrl;
+    } catch (err) {
+      console.warn(`Migration: failed to store ${label} image blob:`, err);
+      setStatus("Storage is full. Some images couldn't be migrated. Export a backup.");
+    }
+  }
+}
+
 /**
  * Save the app state to localStorage.
  *
  * NOTE: Undo/redo are in-memory only and are intentionally excluded.
+ * @param {SaveAllLocalOptions} opts
+ * @returns {boolean}
  */
 export function saveAllLocal(opts) {
   const {
@@ -38,6 +111,10 @@ export function saveAllLocal(opts) {
   }
 }
 
+/**
+ * @param {LoadAllOptions} opts
+ * @returns {Promise<boolean>}
+ */
 export async function loadAll(opts) {
   const {
     storageKey,
@@ -66,66 +143,24 @@ export async function loadAll(opts) {
     const parsed = JSON.parse(raw);
     const migrated = migrateState(parsed);
 
-    const clean = JSON.parse(JSON.stringify(migrated)); 
-    state.schemaVersion = clean.schemaVersion;
-    state.tracker = clean.tracker;
-    state.character = clean.character;
-    state.map = clean.map;
-    state.ui = clean.ui;
+    const clean = cloneState(migrated);
+    replaceStateBuckets(state, clean);
 
     // Ensure undo/redo start empty (in-memory only)
     state.map.undo = [];
     state.map.redo = [];
 
     // ---- MIGRATION: imgDataUrl -> IndexedDB blobId ----
-    // NPCs
-    for (const npc of (state.tracker.npcs || [])) {
-      if (npc.imgDataUrl && !npc.imgBlobId) {
-        const blob = dataUrlToBlob(npc.imgDataUrl);
-        try {
-          npc.imgBlobId = await putBlob(blob);
-          delete npc.imgDataUrl;
-        } catch (err) {
-          console.warn("Migration: failed to store NPC image blob:", err);
-          setStatus("Storage is full. Some images couldn't be migrated. Export a backup.");
-        }
-      }
-    }
-
-    // Party
-    for (const m of (state.tracker.party || [])) {
-      if (m.imgDataUrl && !m.imgBlobId) {
-        const blob = dataUrlToBlob(m.imgDataUrl);
-        try {
-          m.imgBlobId = await putBlob(blob);
-          delete m.imgDataUrl;
-        } catch (err) {
-          console.warn("Migration: failed to store party image blob:", err);
-          setStatus("Storage is full. Some images couldn't be migrated. Export a backup.");
-        }
-      }
-    }
-
-    // Locations
-    for (const loc of (state.tracker.locationsList || [])) {
-      if (loc.imgDataUrl && !loc.imgBlobId) {
-        const blob = dataUrlToBlob(loc.imgDataUrl);
-        try {
-          loc.imgBlobId = await putBlob(blob);
-          delete loc.imgDataUrl;
-        } catch (err) {
-          console.warn("Migration: failed to store location image blob:", err);
-          setStatus("Storage is full. Some images couldn't be migrated. Export a backup.");
-        }
-      }
-    }
+    await migratePortraitDataUrls(state.tracker.npcs, dataUrlToBlob, putBlob, setStatus, "NPC");
+    await migratePortraitDataUrls(state.tracker.party, dataUrlToBlob, putBlob, setStatus, "party");
+    await migratePortraitDataUrls(state.tracker.locationsList, dataUrlToBlob, putBlob, setStatus, "location");
 
     // Map (legacy -> multi-map)
     ensureMapManager();
 
     const defaultMap =
-      state.map.maps?.find(m => m.id === state.map.activeMapId) ||
-      state.map.maps?.[0];
+      state.map.maps.find((mapEntry) => mapEntry.id === state.map.activeMapId) ||
+      state.map.maps[0];
 
     // Fold legacy top-level map fields into the default map entry
     if (defaultMap) {
@@ -188,6 +223,10 @@ export async function loadAll(opts) {
   }
 }
 
+/**
+ * @param {SaveManagerLike} SaveManager
+ * @returns {() => void}
+ */
 export function installExitSave(SaveManager) {
   if (!SaveManager || typeof SaveManager.flush !== "function" || typeof SaveManager.getStatus !== "function") {
     throw new Error("installExitSave: SaveManager with flush() and getStatus() is required");
@@ -195,6 +234,10 @@ export function installExitSave(SaveManager) {
 
   // Best-effort: try to flush when the page is backgrounded or closed.
   // beforeunload is the only hook that *may* show a confirmation if unsaved.
+  /**
+   * @param {BeforeUnloadEvent} e
+   * @returns {string | undefined}
+   */
   const handler = (e) => {
     const st = SaveManager.getStatus();
     if (st?.dirty) {

@@ -1,3 +1,4 @@
+// @ts-check
 // js/ui/dataPanel.js
 // Modal "Data & Settings" panel.
 // Keeps app.js lean by dependency-injecting actions (backup/reset/theme/etc).
@@ -5,12 +6,46 @@
 import { uiConfirm, uiAlert } from "./dialogs.js";
 import { enhanceSelectDropdown } from "./selectDropdown.js";
 import { safeAsync } from "./safeAsync.js";
-import { requireMany, getNoopDestroyApi } from "../utils/domGuards.js";
+import { requireMany } from "../utils/domGuards.js";
 import { initPwaUpdates } from "../pwa/updates.js";
 import { showUpdateBanner } from "../pwa/updateBanner.js";
 
+/** @typedef {import("../state.js").State} State */
+/** @typedef {ReturnType<typeof import("../ui/popovers.js").createPopoverManager>} PopoversApi */
+/** @typedef {(message: string, opts?: { stickyMs?: number }) => void} SetStatusFn */
+/** @typedef {{ STORAGE_KEY: string, ACTIVE_TAB_KEY: string }} StorageKeys */
+/**
+ * @typedef {{
+ *   state: State,
+ *   storageKeys: StorageKeys,
+ *   applyTheme: (theme: string) => void,
+ *   markDirty: () => void,
+ *   flush: () => Promise<unknown> | unknown,
+ *   exportBackup: () => Promise<unknown> | unknown,
+ *   importBackup: (event: Event) => Promise<unknown> | unknown,
+ *   resetAll: () => Promise<unknown> | unknown,
+ *   clearAllBlobs: () => Promise<unknown> | unknown,
+ *   clearAllTexts: () => Promise<unknown> | unknown,
+ *   setStatus?: SetStatusFn,
+ *   Popovers?: PopoversApi
+ * }} DataPanelDeps
+ */
+/** @typedef {{ destroy: () => void }} DataPanelApi */
+/**
+ * @typedef {{
+ *   applyUpdate?: () => Promise<boolean | void>,
+ *   checkForUpdates?: () => Promise<boolean | void>
+ * } | null} PwaUpdatesApi
+ */
+
+/** @type {DataPanelApi | null} */
 let _activeDataPanel = null;
 
+/**
+ * @param {SetStatusFn | undefined} setStatus
+ * @param {string} message
+ * @returns {void}
+ */
 function notifyStatus(setStatus, message) {
   if (typeof setStatus === "function") {
     setStatus(message);
@@ -20,20 +55,32 @@ function notifyStatus(setStatus, message) {
 }
 
 /**
- * @param {{
- *  state: any,
- *  storageKeys: { STORAGE_KEY: string, ACTIVE_TAB_KEY: string },
- *  applyTheme: (theme:string)=>void,
- *  markDirty: ()=>void,
- *  flush: ()=>Promise<any>|any,
- *  exportBackup: ()=>Promise<any>|any,
- *  importBackup: (e:Event)=>Promise<any>|any,
- *  resetAll: ()=>Promise<any>|any,
- *  clearAllBlobs: ()=>Promise<any>|any,
- *  clearAllTexts: ()=>Promise<any>|any,
- *  setStatus: (msg:string)=>void,
- *  Popovers?: any,
- * }} deps
+ * @param {State} state
+ * @returns {State["ui"]}
+ */
+function ensureRootUiState(state) {
+  if (!state.ui || typeof state.ui !== "object") {
+    state.ui = {
+      theme: "system",
+      textareaHeights: {},
+      panelCollapsed: {}
+    };
+  }
+  if (!state.ui.textareaHeights || typeof state.ui.textareaHeights !== "object") {
+    state.ui.textareaHeights = {};
+  }
+  if (!state.ui.panelCollapsed || typeof state.ui.panelCollapsed !== "object") {
+    state.ui.panelCollapsed = {};
+  }
+  if (typeof state.ui.theme !== "string") {
+    state.ui.theme = "system";
+  }
+  return state.ui;
+}
+
+/**
+ * @param {DataPanelDeps} deps
+ * @returns {DataPanelApi | (() => void)}
  */
 export function initDataPanel(deps) {
   _activeDataPanel?.destroy?.();
@@ -69,6 +116,13 @@ export function initDataPanel(deps) {
 
   const listenerController = new AbortController();
   const listenerSignal = listenerController.signal;
+  /**
+   * @param {{ addEventListener?: EventTarget["addEventListener"] } | null | undefined} target
+   * @param {string} type
+   * @param {(event: Event) => void} handler
+   * @param {AddEventListenerOptions | boolean} [options]
+   * @returns {void}
+   */
   const addListener = (target, type, handler, options) => {
     if (!target || typeof target.addEventListener !== "function") return;
     const listenerOptions =
@@ -125,14 +179,16 @@ export function initDataPanel(deps) {
   }
 
   // allow other modules (settings dropdown) to open it
-  window.openDataPanel = open;
+  const appWindow = /** @type {Window & { openDataPanel?: (() => void) | undefined }} */ (window);
+  appWindow.openDataPanel = open;
 
   // Close interactions
   if (closeBtn) addListener(closeBtn, "click", close);
   addListener(overlay, "click", (e) => {
     if (e.target === overlay) close();
   });
-  addListener(document, "keydown", (e) => {
+  addListener(document, "keydown", (event) => {
+    const e = /** @type {KeyboardEvent} */ (event);
     if (e.key === "Escape" && !overlay.hidden) close();
   });
 
@@ -144,8 +200,7 @@ export function initDataPanel(deps) {
       // Preserve whichever UI bucket exists (legacy tracker.ui or root ui).
       if (state?.tracker?.ui) state.tracker.ui.theme = val;
       else {
-        state.ui = state.ui || {};
-        state.ui.theme = val;
+        ensureRootUiState(state).theme = val;
       }
       markDirty();
     });
@@ -168,6 +223,7 @@ export function initDataPanel(deps) {
   };
 
   let updateReadySeen = false;
+  /** @type {PwaUpdatesApi} */
   let updatesApi = null;
 
   if (exportBtn) addListener(exportBtn, "click", () => exportBackup());
@@ -234,9 +290,12 @@ export function initDataPanel(deps) {
       try { localStorage.removeItem(storageKeys.ACTIVE_TAB_KEY); } catch {}
       // Reset UI subtree
       if (state?.tracker?.ui) {
-        state.tracker.ui = { textareaHeights: {} };
+        state.tracker.ui = { ...state.tracker.ui, textareaHeights: {} };
       } else if (state?.ui) {
-        state.ui = { textareaHeights: {} };
+        state.ui = {
+          ...ensureRootUiState(state),
+          textareaHeights: {}
+        };
       }
       applyTheme("system");
       markDirty();
@@ -315,8 +374,9 @@ export function initDataPanel(deps) {
       : "My Lore Ledger";
 
     const schema = Number.isFinite(state?.schemaVersion) ? state.schemaVersion : "?";
-    const version = (window.__APP_VERSION__ || window.APP_VERSION || "dev").toString();
-    const build = (window.__APP_BUILD__ || window.APP_BUILD || "").toString();
+    const appWindow = /** @type {Window & { __APP_VERSION__?: unknown, APP_VERSION?: unknown, __APP_BUILD__?: unknown, APP_BUILD?: unknown }} */ (window);
+    const version = (appWindow.__APP_VERSION__ || appWindow.APP_VERSION || "dev").toString();
+    const build = (appWindow.__APP_BUILD__ || appWindow.APP_BUILD || "").toString();
     const lastModified = (document.lastModified || "").toString();
 
     const lines = [
@@ -330,7 +390,7 @@ export function initDataPanel(deps) {
       "Local storage keys:",
       `• Data: ${storageKeys?.STORAGE_KEY || "(unknown)"}`,
       `• UI tab: ${storageKeys?.ACTIVE_TAB_KEY || "(unknown)"}`,
-    ].filter(Boolean);
+    ].filter((line) => typeof line === "string");
 
       await uiAlert(lines.join("\n"), { title: "About" });
     }, (err) => {
@@ -339,11 +399,13 @@ export function initDataPanel(deps) {
     })
   );
 
+  /** @type {DataPanelApi} */
   const api = {
     destroy() {
       listenerController.abort();
-      if (window.openDataPanel === open) {
-        delete window.openDataPanel;
+      const appWindow = /** @type {Window & { openDataPanel?: (() => void) | undefined }} */ (window);
+      if (appWindow.openDataPanel === open) {
+        delete appWindow.openDataPanel;
       }
       if (_activeDataPanel === api) _activeDataPanel = null;
     }
@@ -353,6 +415,10 @@ export function initDataPanel(deps) {
   return api;
 }
 
+/**
+ * @param {HTMLSelectElement} select
+ * @returns {void}
+ */
 function buildThemeOptions(select) {
   // value => label (label is what the user sees)
   const light = [
@@ -396,7 +462,12 @@ function buildThemeOptions(select) {
   select.appendChild(gDark);
 }
 
-/** Remove any *BlobId references inside an object graph (best effort). */
+/**
+ * Remove any *BlobId references inside an object graph (best effort).
+ *
+ * @param {unknown} root
+ * @returns {void}
+ */
 function removeAllBlobIds(root) {
   const seen = new Set();
   const stack = [root];
@@ -412,10 +483,11 @@ function removeAllBlobIds(root) {
       continue;
     }
 
-    for (const k of Object.keys(cur)) {
-      const v = cur[k];
+    const record = /** @type {Record<string, unknown>} */ (cur);
+    for (const k of Object.keys(record)) {
+      const v = record[k];
       if (k === "imgBlobId" || k === "bgBlobId" || k === "drawingBlobId" || k.endsWith("BlobId")) {
-        cur[k] = null;
+        record[k] = null;
         continue;
       }
       if (v && typeof v === "object") stack.push(v);

@@ -1,15 +1,65 @@
+// @ts-check
 // js/ui/theme.js
 // Theme manager (system/light/dark + named themes) with a safe system listener.
 
-export function createThemeManager({ state, redraw } = {}) {
+/** @typedef {import("../state.js").State} State */
+/**
+ * @typedef {typeof ALLOWED_THEMES[number]} ThemeChoice
+ */
+/**
+ * @typedef {{
+ *   state: State,
+ *   redraw?: () => void
+ * }} ThemeManagerDeps
+ */
+/**
+ * @typedef {{
+ *   applyTheme: (theme: string) => void,
+ *   initFromState: () => void,
+ *   startSystemThemeListener: () => void,
+ *   stopSystemThemeListener: () => void
+ * }} ThemeManagerApi
+ */
+/**
+ * @typedef {MediaQueryList & {
+ *   addListener?: (listener: (event: MediaQueryListEvent) => void) => void,
+ *   removeListener?: (listener: (event: MediaQueryListEvent) => void) => void
+ * }} LegacyThemeMediaQueryList
+ */
+
+const ALLOWED_THEMES = /** @type {const} */ ([
+  "system", "dark", "light",
+  "purple", "teal", "green", "blue", "red", "red-gold", "rose", "beige",
+  "slate", "forest", "ember", "sepia", "arcane", "arcane-gold"
+]);
+
+/** @type {Set<string>} */
+const ALLOWED_THEME_SET = new Set(ALLOWED_THEMES);
+
+/**
+ * @param {ThemeManagerDeps} [deps]
+ * @returns {ThemeManagerApi}
+ */
+export function createThemeManager(deps) {
+  const { state, redraw } = deps || {};
+  if (!state) throw new Error("createThemeManager: state is required");
+
+  /** @type {LegacyThemeMediaQueryList | null} */
   let _systemThemeMql = null;
+  /** @type {((event: MediaQueryListEvent) => void) | null} */
   let _systemThemeHandler = null;
 
+  /**
+   * @returns {"dark" | "light"}
+   */
   function resolveSystemTheme() {
     const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
     return prefersDark ? "dark" : "light";
   }
 
+  /**
+   * @returns {void}
+   */
   function stopSystemThemeListener() {
     if (_systemThemeMql && _systemThemeHandler) {
       try {
@@ -22,11 +72,14 @@ export function createThemeManager({ state, redraw } = {}) {
     _systemThemeHandler = null;
   }
 
+  /**
+   * @returns {void}
+   */
   function startSystemThemeListener() {
     stopSystemThemeListener();
     if (!window.matchMedia) return;
 
-    _systemThemeMql = window.matchMedia("(prefers-color-scheme: dark)");
+    _systemThemeMql = /** @type {LegacyThemeMediaQueryList} */ (window.matchMedia("(prefers-color-scheme: dark)"));
     _systemThemeHandler = () => {
       if ((state?.ui?.theme || "system") !== "system") return;
       document.documentElement.dataset.theme = resolveSystemTheme();
@@ -39,15 +92,19 @@ export function createThemeManager({ state, redraw } = {}) {
     }
   }
 
+  /**
+   * @param {string} theme
+   * @returns {void}
+   */
   function applyTheme(theme) {
-    const allowed = new Set([
-      "system", "dark", "light",
-      "purple", "teal", "green", "blue", "red", "red-gold", "rose", "beige",
-      "slate", "forest", "ember", "sepia", "arcane", "arcane-gold"
-    ]);
-
-    const t = allowed.has(theme) ? theme : "system";
-    if (!state.ui) state.ui = {};
+    const t = /** @type {ThemeChoice} */ (ALLOWED_THEME_SET.has(theme) ? theme : "system");
+    if (!state.ui) {
+      state.ui = {
+        theme: "system",
+        textareaHeights: {},
+        panelCollapsed: {}
+      };
+    }
     state.ui.theme = t;
 
     const resolved = (t === "system") ? resolveSystemTheme() : t;
@@ -59,6 +116,9 @@ export function createThemeManager({ state, redraw } = {}) {
     try { redraw?.(); } catch (_) { }
   }
 
+  /**
+   * @returns {void}
+   */
   function initFromState() {
     applyTheme(state?.ui?.theme || "system");
   }

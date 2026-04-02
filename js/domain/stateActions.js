@@ -1,7 +1,37 @@
-// @ts-nocheck
+// @ts-check
 // Centralized, lightweight state mutation helpers.
 import { withAllowedStateMutation } from "../utils/dev.js";
 
+/** @typedef {import("../state.js").State} State */
+/** @typedef {typeof import("../state.js").state["tracker"]["npcs"][number]} TrackerCard */
+/** @typedef {"party" | "npcs" | "locationsList"} TrackerCardListKey */
+/** @typedef {"party" | "npc" | "npcs" | "location" | "locations" | "locationslist"} TrackerCardType */
+/** @typedef {{ queueSave?: boolean, atStart?: boolean }} MutationOptions */
+/** @typedef {{ markDirty?: () => void }} SaveManagerLike */
+/**
+ * @typedef {{
+ *   state?: State,
+ *   SaveManager?: SaveManagerLike
+ * }} CreateStateActionsDeps
+ */
+/**
+ * @typedef {{
+ *   mutateState: (mutator: (state: State) => unknown, options?: MutationOptions) => unknown,
+ *   mutateCharacter: (mutator: (character: State["character"], state: State) => unknown, options?: MutationOptions) => unknown,
+ *   mutateTracker: (mutator: (tracker: State["tracker"], state: State) => unknown, options?: MutationOptions) => unknown,
+ *   setPath: (path: string | readonly unknown[], value: unknown, options?: MutationOptions) => boolean,
+ *   updateCharacterField: (path: string | readonly unknown[], value: unknown, options?: MutationOptions) => boolean,
+ *   updateTrackerField: (path: string | readonly unknown[], value: unknown, options?: MutationOptions) => boolean,
+ *   updateMapField: (path: string | readonly unknown[], value: unknown, options?: MutationOptions) => boolean,
+ *   updateTrackerCardField: (type: TrackerCardType, id: string, field: string | readonly unknown[], value: unknown, options?: MutationOptions) => boolean,
+ *   setCardPortraitHidden: (type: TrackerCardType, id: string, hidden: unknown, options?: MutationOptions) => boolean,
+ *   addTrackerCard: (type: TrackerCardType, card: TrackerCard, options?: MutationOptions) => boolean,
+ *   removeTrackerCard: (type: TrackerCardType, id: string, options?: MutationOptions) => TrackerCard | null,
+ *   swapTrackerCards: (type: TrackerCardType, aId: string, bId: string, options?: MutationOptions) => boolean
+ * }} StateActions
+ */
+
+/** @type {Readonly<Record<TrackerCardType, TrackerCardListKey>>} */
 const TRACKER_CARD_LIST_BY_TYPE = Object.freeze({
   party: "party",
   npc: "npcs",
@@ -19,6 +49,10 @@ const BLOCKED_PATH_SEGMENTS = new Set([
   "__defineSetter__",
 ]);
 
+/**
+ * @param {string | readonly unknown[] | null | undefined} path
+ * @returns {string[]}
+ */
 function toPathSegments(path) {
   if (Array.isArray(path)) {
     const segments = path
@@ -46,43 +80,76 @@ function toPathSegments(path) {
   return segments;
 }
 
+/**
+ * @param {unknown} target
+ * @param {string | readonly unknown[]} path
+ * @param {unknown} value
+ * @returns {boolean}
+ */
 function setPathValue(target, path, value) {
   const segments = toPathSegments(path);
   if (!target || typeof target !== "object" || segments.length === 0) return false;
 
-  let cur = target;
+  /** @type {Record<string, unknown>} */
+  let cur = /** @type {Record<string, unknown>} */ (target);
   for (let i = 0; i < segments.length - 1; i++) {
     const key = segments[i];
-    if (!cur[key] || typeof cur[key] !== "object") cur[key] = {};
-    cur = cur[key];
+    const next = cur[key];
+    if (!next || typeof next !== "object") cur[key] = {};
+    cur = /** @type {Record<string, unknown>} */ (cur[key]);
   }
 
   cur[segments[segments.length - 1]] = value;
   return true;
 }
 
+/**
+ * @param {unknown} type
+ * @returns {TrackerCardListKey | null}
+ */
 function resolveTrackerListKey(type) {
   const normalized = String(type || "").trim().toLowerCase();
   return TRACKER_CARD_LIST_BY_TYPE[normalized] || null;
 }
 
+/**
+ * @param {State} state
+ * @param {TrackerCardListKey} listKey
+ * @returns {TrackerCard[]}
+ */
 function ensureTrackerList(state, listKey) {
-  if (!state.tracker || typeof state.tracker !== "object") state.tracker = {};
+  if (!state.tracker || typeof state.tracker !== "object") {
+    state.tracker = /** @type {State["tracker"]} */ ({});
+  }
   if (!Array.isArray(state.tracker[listKey])) state.tracker[listKey] = [];
-  return state.tracker[listKey];
+  return /** @type {TrackerCard[]} */ (state.tracker[listKey]);
 }
 
+/**
+ * @param {SaveManagerLike | undefined} SaveManager
+ * @param {MutationOptions | undefined} options
+ * @returns {void}
+ */
 function maybeQueueSave(SaveManager, options) {
   if (options?.queueSave === false) return;
   // SaveManager.markDirty() is this app's queue-save mechanism.
   SaveManager?.markDirty?.();
 }
 
+/**
+ * @param {CreateStateActionsDeps} [deps]
+ * @returns {StateActions}
+ */
 export function createStateActions({ state, SaveManager } = {}) {
   if (!state || typeof state !== "object") {
     throw new Error("createStateActions: state is required");
   }
 
+  /**
+   * @param {(state: State) => unknown} mutator
+   * @param {MutationOptions} [options]
+   * @returns {unknown}
+   */
   function mutateState(mutator, options = {}) {
     if (typeof mutator !== "function") return false;
     const result = withAllowedStateMutation(() => {
@@ -93,10 +160,17 @@ export function createStateActions({ state, SaveManager } = {}) {
     return result;
   }
 
+  /**
+   * @param {(character: State["character"], state: State) => unknown} mutator
+   * @param {MutationOptions} [options]
+   * @returns {unknown}
+   */
   function mutateCharacter(mutator, options = {}) {
     if (typeof mutator !== "function") return false;
     const result = withAllowedStateMutation(() => {
-      if (!state.character || typeof state.character !== "object") state.character = {};
+      if (!state.character || typeof state.character !== "object") {
+        state.character = /** @type {State["character"]} */ ({});
+      }
       return mutator(state.character, state);
     });
     if (result === false) return false;
@@ -104,10 +178,17 @@ export function createStateActions({ state, SaveManager } = {}) {
     return result;
   }
 
+  /**
+   * @param {(tracker: State["tracker"], state: State) => unknown} mutator
+   * @param {MutationOptions} [options]
+   * @returns {unknown}
+   */
   function mutateTracker(mutator, options = {}) {
     if (typeof mutator !== "function") return false;
     const result = withAllowedStateMutation(() => {
-      if (!state.tracker || typeof state.tracker !== "object") state.tracker = {};
+      if (!state.tracker || typeof state.tracker !== "object") {
+        state.tracker = /** @type {State["tracker"]} */ ({});
+      }
       return mutator(state.tracker, state);
     });
     if (result === false) return false;
@@ -115,6 +196,12 @@ export function createStateActions({ state, SaveManager } = {}) {
     return result;
   }
 
+  /**
+   * @param {string | readonly unknown[]} path
+   * @param {unknown} value
+   * @param {MutationOptions} [options]
+   * @returns {boolean}
+   */
   function setPath(path, value, options = {}) {
     const updated = withAllowedStateMutation(() => {
       return setPathValue(state, path, value);
@@ -124,9 +211,17 @@ export function createStateActions({ state, SaveManager } = {}) {
     return true;
   }
 
+  /**
+   * @param {string | readonly unknown[]} path
+   * @param {unknown} value
+   * @param {MutationOptions} [options]
+   * @returns {boolean}
+   */
   function updateCharacterField(path, value, options = {}) {
     const updated = withAllowedStateMutation(() => {
-      if (!state.character || typeof state.character !== "object") state.character = {};
+      if (!state.character || typeof state.character !== "object") {
+        state.character = /** @type {State["character"]} */ ({});
+      }
       return setPathValue(state.character, path, value);
     });
     if (!updated) return false;
@@ -134,9 +229,17 @@ export function createStateActions({ state, SaveManager } = {}) {
     return true;
   }
 
+  /**
+   * @param {string | readonly unknown[]} path
+   * @param {unknown} value
+   * @param {MutationOptions} [options]
+   * @returns {boolean}
+   */
   function updateTrackerField(path, value, options = {}) {
     const updated = withAllowedStateMutation(() => {
-      if (!state.tracker || typeof state.tracker !== "object") state.tracker = {};
+      if (!state.tracker || typeof state.tracker !== "object") {
+        state.tracker = /** @type {State["tracker"]} */ ({});
+      }
       return setPathValue(state.tracker, path, value);
     });
     if (!updated) return false;
@@ -144,9 +247,17 @@ export function createStateActions({ state, SaveManager } = {}) {
     return true;
   }
 
+  /**
+   * @param {string | readonly unknown[]} path
+   * @param {unknown} value
+   * @param {MutationOptions} [options]
+   * @returns {boolean}
+   */
   function updateMapField(path, value, options = {}) {
     const updated = withAllowedStateMutation(() => {
-      if (!state.map || typeof state.map !== "object") state.map = {};
+      if (!state.map || typeof state.map !== "object") {
+        state.map = /** @type {State["map"]} */ ({});
+      }
       return setPathValue(state.map, path, value);
     });
     if (!updated) return false;
@@ -154,6 +265,14 @@ export function createStateActions({ state, SaveManager } = {}) {
     return true;
   }
 
+  /**
+   * @param {TrackerCardType} type
+   * @param {string} id
+   * @param {string | readonly unknown[]} field
+   * @param {unknown} value
+   * @param {MutationOptions} [options]
+   * @returns {boolean}
+   */
   function updateTrackerCardField(type, id, field, value, options = {}) {
     const listKey = resolveTrackerListKey(type);
     if (!listKey) return false;
@@ -169,6 +288,12 @@ export function createStateActions({ state, SaveManager } = {}) {
     return true;
   }
 
+  /**
+   * @param {TrackerCardType} type
+   * @param {TrackerCard} card
+   * @param {MutationOptions} [options]
+   * @returns {boolean}
+   */
   function addTrackerCard(type, card, options = {}) {
     const listKey = resolveTrackerListKey(type);
     if (!listKey) return false;
@@ -183,6 +308,12 @@ export function createStateActions({ state, SaveManager } = {}) {
     return true;
   }
 
+  /**
+   * @param {TrackerCardType} type
+   * @param {string} id
+   * @param {MutationOptions} [options]
+   * @returns {TrackerCard | null}
+   */
   function removeTrackerCard(type, id, options = {}) {
     const listKey = resolveTrackerListKey(type);
     if (!listKey) return null;
@@ -199,6 +330,13 @@ export function createStateActions({ state, SaveManager } = {}) {
     return removed;
   }
 
+  /**
+   * @param {TrackerCardType} type
+   * @param {string} aId
+   * @param {string} bId
+   * @param {MutationOptions} [options]
+   * @returns {boolean}
+   */
   function swapTrackerCards(type, aId, bId, options = {}) {
     const listKey = resolveTrackerListKey(type);
     if (!listKey) return false;
@@ -219,6 +357,13 @@ export function createStateActions({ state, SaveManager } = {}) {
     return true;
   }
 
+  /**
+   * @param {TrackerCardType} type
+   * @param {string} id
+   * @param {unknown} hidden
+   * @param {MutationOptions} [options]
+   * @returns {boolean}
+   */
   function setCardPortraitHidden(type, id, hidden, options = {}) {
     return updateTrackerCardField(type, id, "portraitHidden", !!hidden, options);
   }

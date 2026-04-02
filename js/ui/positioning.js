@@ -1,5 +1,19 @@
-// @ts-nocheck
+// @ts-check
 
+/**
+ * @typedef {{
+ *   pad?: number,
+ *   gap?: number,
+ *   preferRight?: boolean
+ * }} PositionMenuOptions
+ */
+
+/**
+ * @param {HTMLElement | null | undefined} menuEl
+ * @param {HTMLElement | null | undefined} anchorEl
+ * @param {PositionMenuOptions} [opts]
+ * @returns {void}
+ */
 export function positionMenuOnScreen(menuEl, anchorEl, opts = {}) {
   if (!menuEl || !anchorEl) return;
 

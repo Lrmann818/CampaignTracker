@@ -1,8 +1,33 @@
+// @ts-check
 // js/pages/map/mapDrawing.js
 
 import { colorFromKey } from "./mapUtils.js";
 import { renderMap } from "./mapCanvas.js";
 
+/** @typedef {import("../../state.js").MapState} MapState */
+/** @typedef {import("../../state.js").MapEntry} MapEntry */
+/**
+ * @typedef {{ x: number, y: number }} MapCanvasPoint
+ */
+/**
+ * @typedef {{
+ *   canvas: HTMLCanvasElement,
+ *   ctx: CanvasRenderingContext2D,
+ *   drawLayer: HTMLCanvasElement,
+ *   bgImg: HTMLImageElement | null
+ * }} MapRenderArgs
+ */
+
+/**
+ * @param {{
+ *   pt: MapCanvasPoint,
+ *   mapState: MapState,
+ *   getActiveMap: () => MapEntry,
+ *   drawCtx: CanvasRenderingContext2D,
+ *   renderArgs: MapRenderArgs
+ * }} options
+ * @returns {void}
+ */
 export function drawDot({
   pt,
   mapState,
@@ -31,6 +56,17 @@ export function drawDot({
   renderMap(renderArgs);
 }
 
+/**
+ * @param {{
+ *   a: MapCanvasPoint,
+ *   b: MapCanvasPoint,
+ *   mapState: MapState,
+ *   getActiveMap: () => MapEntry,
+ *   drawCtx: CanvasRenderingContext2D,
+ *   renderArgs: MapRenderArgs
+ * }} options
+ * @returns {void}
+ */
 export function drawLine({
   a,
   b,
@@ -63,6 +99,16 @@ export function drawLine({
   renderMap(renderArgs);
 }
 
+/**
+ * @param {{
+ *   url: string,
+ *   drawCtx: CanvasRenderingContext2D,
+ *   drawLayer: HTMLCanvasElement,
+ *   renderArgs: MapRenderArgs,
+ *   commitDrawing: () => Promise<void> | void
+ * }} options
+ * @returns {void}
+ */
 export function restoreFromDataUrl({
   url,
   drawCtx,
@@ -80,6 +126,17 @@ export function restoreFromDataUrl({
   img.src = url;
 }
 
+/**
+ * @param {{
+ *   uiConfirm: (message: string, opts?: { title?: string, okText?: string }) => Promise<boolean> | boolean,
+ *   snapshotForUndoFn: () => void,
+ *   drawCtx: CanvasRenderingContext2D,
+ *   drawLayer: HTMLCanvasElement,
+ *   renderArgs: MapRenderArgs,
+ *   commitDrawing: () => Promise<void> | void
+ * }} options
+ * @returns {Promise<void>}
+ */
 export async function clearDrawing({
   uiConfirm,
   snapshotForUndoFn,

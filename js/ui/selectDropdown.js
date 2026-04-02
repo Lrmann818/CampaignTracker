@@ -175,7 +175,9 @@ export function enhanceSelectDropdown(args) {
       syncButton();
 
       // Native-like: focus the active option when opened (or first option).
-      const active = menu.querySelector("button.active:not([disabled])") || menu.querySelector("button:not([disabled])");
+      const active = /** @type {HTMLButtonElement | null} */ (
+        menu.querySelector("button.active:not([disabled])") || menu.querySelector("button:not([disabled])")
+      );
       try { active?.focus?.({ preventScroll: true }); } catch { active?.focus?.(); }
     }
   });
@@ -203,11 +205,12 @@ export function enhanceSelectDropdown(args) {
     const opts = Array.from(menu.querySelectorAll("button:not([disabled])"));
     if (!opts.length) return;
     const i = Math.max(0, Math.min(idx, opts.length - 1));
-    try { opts[i].focus({ preventScroll: true }); } catch { opts[i].focus(); }
+    const target = /** @type {HTMLButtonElement} */ (opts[i]);
+    try { target.focus({ preventScroll: true }); } catch { target.focus(); }
   };
 
   const focusSelectedOrFirst = () => {
-    const opts = Array.from(menu.querySelectorAll("button:not([disabled])"));
+    const opts = /** @type {HTMLButtonElement[]} */ (Array.from(menu.querySelectorAll("button:not([disabled])")));
     if (!opts.length) return;
     const selectedIdx = opts.findIndex(b => b.dataset.value === select.value);
     focusOptionAt(selectedIdx >= 0 ? selectedIdx : 0);
@@ -227,9 +230,10 @@ export function enhanceSelectDropdown(args) {
       if (api?.reg) {
         Popovers.open(api.reg, { exclusive });
         // focus last enabled
-        const opts = Array.from(menu.querySelectorAll("button:not([disabled])"));
+        const opts = /** @type {HTMLButtonElement[]} */ (Array.from(menu.querySelectorAll("button:not([disabled])")));
         if (opts.length) {
-          try { opts[opts.length - 1].focus({ preventScroll: true }); } catch { opts[opts.length - 1].focus(); }
+          const target = opts[opts.length - 1];
+          try { target.focus({ preventScroll: true }); } catch { target.focus(); }
         }
       }
     } else if (k === "Escape") {

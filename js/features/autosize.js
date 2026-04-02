@@ -1,5 +1,29 @@
+// @ts-check
 // Autosize helpers for number inputs and persisted textarea sizing.
 import { createStateActions } from "../domain/stateActions.js";
+
+/** @typedef {import("../state.js").State} State */
+/**
+ * @typedef {{
+ *   min?: number,
+ *   max?: number,
+ *   extra?: number
+ * }} AutosizeInputOptions
+ */
+/**
+ * @typedef {{
+ *   state?: State,
+ *   markDirty?: () => void,
+ *   saveAll?: () => unknown,
+ *   setStatus?: (message: string, opts?: { stickyMs?: number }) => void,
+ *   maxHeight?: number
+ * }} TextareaSizingDeps
+ */
+/**
+ * @typedef {Window & {
+ *   __applyTextareaSize?: (el: HTMLTextAreaElement | null | undefined) => void
+ * }} TextareaSizingWindow
+ */
 
 // NOTE: many inputs are created *before* being inserted into the DOM.
 // getComputedStyle() returns incomplete values for disconnected elements, so we defer measuring
@@ -16,12 +40,18 @@ const __autosizeInputMeasurer = (() => {
   return span;
 })();
 
+/**
+ * @param {HTMLInputElement | null | undefined} el
+ * @param {AutosizeInputOptions} [options]
+ * @returns {void}
+ */
 export function autoSizeInput(el, { min = 0, max = 300, extra = 0 } = {}) {
   if (!el) return;
 
   // Ensure the measurer is in the DOM (only once)
   if (!__autosizeInputMeasurer.isConnected) document.body.appendChild(__autosizeInputMeasurer);
 
+  /** @returns {void} */
   const measure = () => {
     if (!el.isConnected) return; // wait until inserted into DOM
     const cs = getComputedStyle(el);
@@ -61,6 +91,7 @@ export function autoSizeInput(el, { min = 0, max = 300, extra = 0 } = {}) {
 
   // Small scheduler so we measure after layout/styles apply.
   // (requestAnimationFrame also handles the "created then appended" case cleanly.)
+  /** @returns {number} */
   const schedule = () => requestAnimationFrame(measure);
 
   el.addEventListener("input", schedule);
@@ -70,8 +101,10 @@ export function autoSizeInput(el, { min = 0, max = 300, extra = 0 } = {}) {
   if (window.ResizeObserver) {
     const ro = new ResizeObserver(() => schedule());
 
+    /** @type {HTMLElement | HTMLInputElement | null} */
     let observed = null;
 
+    /** @returns {void} */
     const ensureObserved = () => {
       if (!el.isConnected) return;
 
@@ -107,14 +140,24 @@ export function autoSizeInput(el, { min = 0, max = 300, extra = 0 } = {}) {
   window.addEventListener("load", schedule, { once: true });
 }
 
+/**
+ * @param {Document | Element} [root]
+ * @returns {void}
+ */
 export function autosizeAllNumbers(root = document) {
-  root.querySelectorAll('input[type="number"]').forEach(el => {
+  root.querySelectorAll('input[type="number"]').forEach((el) => {
+    if (!(el instanceof HTMLInputElement)) return;
     el.classList.add("autosize");
     autoSizeInput(el, { min: 30, max: 80 });
   });
 }
 
+/**
+ * @param {HTMLTextAreaElement | null | undefined} el
+ * @returns {void}
+ */
 export function applyAutosize(el) {
+  if (!el) return;
   el.style.height = "auto";
   el.style.height = el.scrollHeight + "px";
 }
@@ -123,6 +166,10 @@ export function applyAutosize(el) {
  * Textarea sizing: autosize + persisted height
  *
  * Pass dependencies so this module stays pure-ish and doesn't rely on globals.
+ */
+/**
+ * @param {TextareaSizingDeps} [deps]
+ * @returns {void}
  */
 export function setupTextareaSizing({
   state,
@@ -156,10 +203,13 @@ export function setupTextareaSizing({
     }, { queueSave: false });
   }
 
+  /** @type {WeakSet<HTMLTextAreaElement>} */
   const seen = new WeakSet();
 
   // Debounced save (so we don't spam saveAll)
+  /** @type {ReturnType<typeof setTimeout> | null} */
   let saveTimer = null;
+  /** @returns {void} */
   function scheduleSave() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
@@ -173,8 +223,12 @@ export function setupTextareaSizing({
     }, 150);
   }
 
+  /**
+   * @param {Element | null | undefined} el
+   * @returns {void}
+   */
   function applySize(el) {
-    if (!el || el.tagName !== "TEXTAREA") return;
+    if (!(el instanceof HTMLTextAreaElement)) return;
     if (!el.hasAttribute("data-persist-size")) return;
     if (!el.id) return;
 
@@ -194,10 +248,15 @@ export function setupTextareaSizing({
 
   // Expose a tiny hook so async text loads can trigger a re-measure without faking input events.
   // (Closes over `store`, so it uses the same persisted sizes.)
-  window.__applyTextareaSize = (el) => {
+  const autosizeWindow = /** @type {TextareaSizingWindow} */ (window);
+  autosizeWindow.__applyTextareaSize = (el) => {
     try { applySize(el); } catch (_) { }
   };
 
+  /**
+   * @param {HTMLTextAreaElement} el
+   * @returns {void}
+   */
   function bind(el) {
     if (seen.has(el)) return;
     seen.add(el);
@@ -209,6 +268,7 @@ export function setupTextareaSizing({
     // When we switch between top-level pages, some CSS/layout changes can briefly
     // resize textareas and would otherwise trigger a save even though the user
     // didn't edit anything.
+    /** @returns {boolean} */
     function isInHiddenUI() {
       // If the element (or any ancestor) is explicitly hidden, treat it as not user-driven.
       if (el.closest?.('[hidden]')) return true;
@@ -246,8 +306,14 @@ export function setupTextareaSizing({
     }
   }
 
+  /**
+   * @param {Document | Element} [root]
+   * @returns {void}
+   */
   function scan(root = document) {
-    root.querySelectorAll("textarea[data-persist-size]").forEach(bind);
+    root.querySelectorAll("textarea[data-persist-size]").forEach((el) => {
+      if (el instanceof HTMLTextAreaElement) bind(el);
+    });
   }
 
   // Initial pass
@@ -260,11 +326,11 @@ export function setupTextareaSizing({
   }
 
   // Catch textareas created later (spells/npcs/party/locations renders, etc.)
-  const mo = new MutationObserver(muts => {
+  const mo = new MutationObserver((muts) => {
     for (const m of muts) {
-      for (const node of m.addedNodes) {
+      for (const node of Array.from(m.addedNodes)) {
         if (!(node instanceof Element)) continue;
-        if (node.matches?.("textarea[data-persist-size]")) bind(node);
+        if (node.matches("textarea[data-persist-size]") && node instanceof HTMLTextAreaElement) bind(node);
         scan(node);
       }
     }

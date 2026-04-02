@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-check
 // js/storage/idb.js — shared IndexedDB opener + store names
 
 export const DB_NAME = "localCampaignTracker_db";
@@ -6,8 +6,12 @@ export const DB_VERSION = 2;
 export const BLOB_STORE = "blobs";
 export const TEXT_STORE = "texts";
 
+/** @type {Promise<IDBDatabase> | null} */
 let _dbPromise = null;
 
+/**
+ * @returns {Promise<IDBDatabase>}
+ */
 export function openDb() {
   if (_dbPromise) return _dbPromise;
 

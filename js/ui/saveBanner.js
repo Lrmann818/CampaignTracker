@@ -1,8 +1,23 @@
+// @ts-check
+
+/**
+ * @typedef {{
+ *   onExport?: () => Promise<unknown> | unknown,
+ *   onDismiss?: () => void
+ * }} SaveBannerOptions
+ */
+
+/** @type {HTMLDivElement | null} */
 let bannerEl = null;
+/** @type {HTMLButtonElement | null} */
 let refreshBtnEl = null;
+/** @type {HTMLButtonElement | null} */
 let laterBtnEl = null;
 let isVisible = false;
 
+/**
+ * @returns {void}
+ */
 function ensureBanner() {
   if (bannerEl) return;
 
@@ -33,6 +48,10 @@ function ensureBanner() {
   document.body.appendChild(bannerEl);
 }
 
+/**
+ * @param {SaveBannerOptions} [options]
+ * @returns {void}
+ */
 export function showSaveBanner({ onExport, onDismiss } = {}) {
   if (isVisible) return;
   isVisible = true;
@@ -59,6 +78,9 @@ export function showSaveBanner({ onExport, onDismiss } = {}) {
   bannerEl.style.display = "";
 }
 
+/**
+ * @returns {void}
+ */
 export function hideSaveBanner() {
   isVisible = false;
   if (!bannerEl) return;

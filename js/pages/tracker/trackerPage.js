@@ -15,17 +15,23 @@ import { requireMany, getNoopDestroyApi } from "../../utils/domGuards.js";
 import { DEV_MODE } from "../../utils/dev.js";
 
 /** @typedef {import("../../state.js").State} State */
-/**
- * SaveManager.markDirty() is this app's queue-save mechanism.
- * `queueSave` is an optional compatibility alias in some callers/docs.
- * @typedef {{
- *   markDirty: () => void,
- *   queueSave?: () => void,
- *   flush?: () => Promise<boolean>,
- *   init?: () => void,
- *   getStatus?: () => { stateNow: string, dirty: boolean, saving: boolean }
- * }} SaveManagerLike
- */
+/** @typedef {import("../../storage/saveManager.js").SaveManager} SaveManagerLike */
+/** @typedef {typeof import("../../ui/dialogs.js").uiPrompt} UiPromptFn */
+/** @typedef {typeof import("../../ui/dialogs.js").uiAlert} UiAlertFn */
+/** @typedef {typeof import("../../ui/dialogs.js").uiConfirm} UiConfirmFn */
+/** @typedef {typeof import("../../domain/factories.js").makeNpc} MakeNpcFn */
+/** @typedef {typeof import("../../domain/factories.js").makePartyMember} MakePartyMemberFn */
+/** @typedef {typeof import("../../domain/factories.js").makeLocation} MakeLocationFn */
+/** @typedef {typeof import("../../utils/number.js").numberOrNull} NumberOrNullFn */
+/** @typedef {typeof import("../../storage/blobs.js").deleteBlob} DeleteBlobFn */
+/** @typedef {typeof import("../../storage/blobs.js").putBlob} PutBlobFn */
+/** @typedef {typeof import("../../storage/blobs.js").blobIdToObjectUrl} BlobIdToObjectUrlFn */
+/** @typedef {typeof import("../../storage/texts-idb.js").textKey_spellNotes} TextKeySpellNotesFn */
+/** @typedef {typeof import("../../storage/texts-idb.js").putText} PutTextFn */
+/** @typedef {typeof import("../../storage/texts-idb.js").getText} GetTextFn */
+/** @typedef {typeof import("../../storage/texts-idb.js").deleteText} DeleteTextFn */
+/** @typedef {typeof import("../../features/autosize.js").autoSizeInput} AutoSizeInputFn */
+/** @typedef {(message: string, opts?: { stickyMs?: number }) => void} TrackerPageStatusFn */
 /**
  * @typedef {{
  *   register?: (...args: unknown[]) => unknown,
@@ -45,32 +51,34 @@ import { DEV_MODE } from "../../utils/dev.js";
  *   state?: State,
  *   SaveManager?: SaveManagerLike,
  *   Popovers?: PopoversApi,
- *   uiPrompt?: unknown,
- *   uiAlert?: unknown,
- *   uiConfirm?: unknown,
- *   setStatus?: (message: string, opts?: { stickyMs?: number }) => void,
- *   makeNpc?: unknown,
- *   makePartyMember?: unknown,
- *   makeLocation?: unknown,
+ *   uiPrompt?: UiPromptFn,
+ *   uiAlert?: UiAlertFn,
+ *   uiConfirm?: UiConfirmFn,
+ *   setStatus?: TrackerPageStatusFn,
+ *   makeNpc?: MakeNpcFn,
+ *   makePartyMember?: MakePartyMemberFn,
+ *   makeLocation?: MakeLocationFn,
  *   enhanceNumberSteppers?: unknown,
- *   numberOrNull?: unknown,
+ *   numberOrNull?: NumberOrNullFn,
  *   pickCropStorePortrait?: unknown,
  *   ImagePicker?: unknown,
- *   deleteBlob?: unknown,
- *   putBlob?: unknown,
+ *   deleteBlob?: DeleteBlobFn,
+ *   putBlob?: PutBlobFn,
  *   cropImageModal?: unknown,
  *   getPortraitAspect?: unknown,
- *   blobIdToObjectUrl?: unknown,
- *   textKey_spellNotes?: unknown,
- *   putText?: unknown,
- *   getText?: unknown,
- *   deleteText?: unknown,
- *   autoSizeInput?: unknown,
+ *   blobIdToObjectUrl?: BlobIdToObjectUrlFn,
+ *   textKey_spellNotes?: TextKeySpellNotesFn,
+ *   putText?: PutTextFn,
+ *   getText?: GetTextFn,
+ *   deleteText?: DeleteTextFn,
+ *   autoSizeInput?: AutoSizeInputFn,
  *   [key: string]: unknown
  * }} TrackerPageDeps
  */
 /** @typedef {{ destroy: () => void }} TrackerPageApi */
 /** @typedef {"npcs" | "party" | "locations"} TrackerSingletonKey */
+/** @typedef {"misc"} TrackerTextFieldKey */
+/** @typedef {{ destroy?: () => void } | Record<string, unknown> | void} TrackerPanelInitResult */
 
 /** @type {TrackerPageApi | null} */
 let _activeTrackerPageController = null;
@@ -147,6 +155,10 @@ export function initTrackerPage(deps = {}) {
 
   /** @type {Array<() => void>} */
   const destroyFns = [];
+  /**
+   * @param {(() => void) | undefined} destroyFn
+   * @returns {void}
+   */
   const addDestroy = (destroyFn) => {
     if (typeof destroyFn === "function") destroyFns.push(destroyFn);
   };
@@ -171,7 +183,7 @@ export function initTrackerPage(deps = {}) {
 
   /**
    * @param {string} panelName
-   * @param {() => ({ destroy?: () => void } | void)} initFn
+   * @param {() => TrackerPanelInitResult} initFn
    * @param {{ singletonKey?: TrackerSingletonKey }} [opts]
    */
   const runPanelInit = (panelName, initFn, { singletonKey } = {}) => {
@@ -181,7 +193,13 @@ export function initTrackerPage(deps = {}) {
 
     try {
       const panelApi = initFn();
-      if (panelApi?.destroy) addDestroy(() => panelApi.destroy());
+      const panelDestroy =
+        panelApi && typeof panelApi === "object"
+          ? panelApi.destroy
+          : null;
+      if (typeof panelDestroy === "function") {
+        addDestroy(() => panelDestroy());
+      }
       else if (singletonKey) _singletonTrackerPanelInits[singletonKey] = true;
       return panelApi || getNoopDestroyApi();
     } catch (err) {
@@ -209,10 +227,12 @@ export function initTrackerPage(deps = {}) {
   }
 
   // ----- Simple textareas -----
-  ["misc"].forEach((id) => {
+  /** @type {TrackerTextFieldKey[]} */
+  const trackerTextFields = ["misc"];
+  trackerTextFields.forEach((id) => {
     const el = /** @type {HTMLTextAreaElement | HTMLInputElement | null} */ (document.getElementById(id));
     if (!el) return;
-    el.value = state.tracker[id] ?? "";
+    el.value = typeof state.tracker[id] === "string" ? state.tracker[id] : "";
     addListener(el, "input", () => {
       state.tracker[id] = el.value;
       SaveManager.markDirty();

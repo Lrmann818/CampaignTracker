@@ -1,10 +1,39 @@
+// @ts-check
 import { registerSW } from "virtual:pwa-register";
 
-let registerPromise = null;
-let updateServiceWorker = null;
-const needRefreshHandlers = new Set();
-const offlineReadyHandlers = new Set();
+/**
+ * @typedef {() => void | Promise<void>} PwaUpdateCallback
+ */
+/**
+ * @typedef {{
+ *   onNeedRefresh?: PwaUpdateCallback,
+ *   onOfflineReady?: PwaUpdateCallback
+ * }} PwaUpdatesOptions
+ */
+/**
+ * @typedef {{
+ *   checkForUpdates: () => Promise<boolean>,
+ *   applyUpdate: () => Promise<boolean>
+ * }} PwaUpdatesApi
+ */
+/**
+ * @typedef {(reloadPage?: boolean) => Promise<void>} UpdateServiceWorker
+ */
 
+/** @type {Promise<UpdateServiceWorker | null> | null} */
+let registerPromise = null;
+/** @type {UpdateServiceWorker | null} */
+let updateServiceWorker = null;
+/** @type {Set<PwaUpdateCallback>} */
+const needRefreshHandlers = new Set();
+/** @type {Set<PwaUpdateCallback>} */
+const offlineReadyHandlers = new Set();
+const appMeta = /** @type {ImportMeta & { env?: { PROD?: boolean } }} */ (import.meta);
+
+/**
+ * @param {Iterable<PwaUpdateCallback>} handlers
+ * @returns {void}
+ */
 function notifyHandlers(handlers) {
   for (const handler of handlers) {
     try {
@@ -15,12 +44,15 @@ function notifyHandlers(handlers) {
   }
 }
 
+/**
+ * @returns {Promise<UpdateServiceWorker | null>}
+ */
 function ensureRegistration() {
   if (registerPromise) return registerPromise;
 
   registerPromise = Promise.resolve().then(() => {
-    if (!import.meta.env.PROD) return null;
-    updateServiceWorker = registerSW({
+    if (!appMeta.env?.PROD) return null;
+    updateServiceWorker = /** @type {UpdateServiceWorker} */ (registerSW({
       immediate: true,
       onNeedRefresh() {
         notifyHandlers(needRefreshHandlers);
@@ -28,13 +60,17 @@ function ensureRegistration() {
       onOfflineReady() {
         notifyHandlers(offlineReadyHandlers);
       }
-    });
+    }));
     return updateServiceWorker;
   });
 
   return registerPromise;
 }
 
+/**
+ * @param {PwaUpdatesOptions} [options]
+ * @returns {PwaUpdatesApi}
+ */
 export function initPwaUpdates({ onNeedRefresh, onOfflineReady } = {}) {
   if (typeof onNeedRefresh === "function") {
     needRefreshHandlers.add(onNeedRefresh);
@@ -57,13 +93,13 @@ export function initPwaUpdates({ onNeedRefresh, onOfflineReady } = {}) {
   return {
     checkForUpdates: async () => {
       await ensureRegistration();
-      if (typeof updateServiceWorker !== "function") return false;
+      if (!updateServiceWorker) return false;
       await updateServiceWorker(false);
       return true;
     },
     applyUpdate: async () => {
       await ensureRegistration();
-      if (typeof updateServiceWorker !== "function") return false;
+      if (!updateServiceWorker) return false;
       await updateServiceWorker(true);
       return true;
     }

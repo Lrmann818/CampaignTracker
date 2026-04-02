@@ -2,6 +2,15 @@
 
 const DEFAULT_MAX_HISTORY = 50;
 
+/**
+ * @typedef {{
+ *   undo?: unknown[],
+ *   redo?: unknown[],
+ *   maxLen?: number,
+ *   getCurrentSnapshot?: () => unknown
+ * }} MapHistoryOptions
+ */
+
 function sanitizeSnapshot(snapshot) {
   if (typeof snapshot !== "string") return null;
 
@@ -26,6 +35,9 @@ function sanitizeHistoryStack(value, maxLen) {
   return out.slice(out.length - maxLen);
 }
 
+/**
+ * @param {MapHistoryOptions} [options]
+ */
 export function createMapHistory({
   undo,
   redo,
@@ -72,6 +84,10 @@ export function createMapHistory({
     redoStack = [];
   };
 
+  /**
+   * @param {{ undo?: unknown[], redo?: unknown[] }} [options]
+   * @returns {void}
+   */
   const replace = ({ undo: nextUndo, redo: nextRedo } = {}) => {
     undoStack = sanitizeHistoryStack(nextUndo, limit);
     redoStack = sanitizeHistoryStack(nextRedo, limit);

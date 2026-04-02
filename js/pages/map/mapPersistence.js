@@ -1,5 +1,22 @@
+// @ts-check
 // js/pages/map/mapPersistence.js
 
+/** @typedef {import("../../state.js").MapEntry} MapEntry */
+/** @typedef {typeof import("../../storage/blobs.js").blobIdToObjectUrl} BlobIdToObjectUrlFn */
+/** @typedef {typeof import("../../storage/blobs.js").putBlob} PutBlobFn */
+/** @typedef {typeof import("../../storage/blobs.js").deleteBlob} DeleteBlobFn */
+/** @typedef {import("../../storage/saveManager.js").SaveManager} SaveManager */
+
+/**
+ * @param {{
+ *   drawLayer: HTMLCanvasElement,
+ *   getActiveMap: () => MapEntry,
+ *   putBlob?: PutBlobFn,
+ *   deleteBlob?: DeleteBlobFn,
+ *   SaveManager: SaveManager
+ * }} options
+ * @returns {Promise<void>}
+ */
 export function persistDrawingSnapshot({
   drawLayer,
   getActiveMap,
@@ -14,10 +31,14 @@ export function persistDrawingSnapshot({
       if (!blob) { resolve(); return; }
 
       if (mp.drawingBlobId) {
-        try { await deleteBlob(mp.drawingBlobId); }
+        try { await deleteBlob?.(mp.drawingBlobId); }
         catch (err) { console.warn("Failed to delete map drawing blob:", err); }
       }
 
+      if (!putBlob) {
+        resolve();
+        return;
+      }
       mp.drawingBlobId = await putBlob(blob);
       SaveManager.markDirty();
       resolve();
@@ -25,8 +46,12 @@ export function persistDrawingSnapshot({
   });
 }
 
+/**
+ * @param {{ mp?: MapEntry | null, blobIdToObjectUrl?: BlobIdToObjectUrlFn }} options
+ * @returns {Promise<HTMLImageElement | null>}
+ */
 export async function loadMapBackgroundImage({ mp, blobIdToObjectUrl }) {
-  if (!mp?.bgBlobId) return null;
+  if (!mp?.bgBlobId || !blobIdToObjectUrl) return null;
 
   let url = null;
   try { url = await blobIdToObjectUrl(mp.bgBlobId); }
@@ -43,9 +68,18 @@ export async function loadMapBackgroundImage({ mp, blobIdToObjectUrl }) {
   return img;
 }
 
+/**
+ * @param {{
+ *   mp?: MapEntry | null,
+ *   blobIdToObjectUrl?: BlobIdToObjectUrlFn,
+ *   drawCtx: CanvasRenderingContext2D,
+ *   drawLayer: HTMLCanvasElement
+ * }} options
+ * @returns {Promise<void>}
+ */
 export async function loadMapDrawingLayer({ mp, blobIdToObjectUrl, drawCtx, drawLayer }) {
   drawCtx.clearRect(0, 0, drawLayer.width, drawLayer.height);
-  if (!mp?.drawingBlobId) return;
+  if (!mp?.drawingBlobId || !blobIdToObjectUrl) return;
 
   let url = null;
   try { url = await blobIdToObjectUrl(mp.drawingBlobId); }

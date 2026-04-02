@@ -1,3 +1,4 @@
+// @ts-check
 // js/pages/map/mapController.js
 
 import { createMapCanvases, renderMap } from "./mapCanvas.js";
@@ -16,6 +17,152 @@ import { initMapToolbarUI } from "./mapToolbarUI.js";
 import { safeAsync } from "../../ui/safeAsync.js";
 import { createStateActions } from "../../domain/stateActions.js";
 
+/** @typedef {import("../../state.js").State} State */
+/** @typedef {import("../../state.js").MapState} MapState */
+/** @typedef {import("../../state.js").MapEntry} MapEntry */
+/** @typedef {import("../../storage/saveManager.js").SaveManager} SaveManager */
+/** @typedef {typeof import("../../state.js").ensureMapManager} EnsureMapManagerFn */
+/** @typedef {typeof import("../../state.js").getActiveMap} GetActiveMapFn */
+/** @typedef {typeof import("../../state.js").newMapEntry} NewMapEntryFn */
+/** @typedef {typeof import("../../storage/blobs.js").blobIdToObjectUrl} BlobIdToObjectUrlFn */
+/** @typedef {typeof import("../../storage/blobs.js").putBlob} PutBlobFn */
+/** @typedef {typeof import("../../storage/blobs.js").deleteBlob} DeleteBlobFn */
+/** @typedef {typeof import("../../ui/dialogs.js").uiPrompt} UiPromptFn */
+/** @typedef {typeof import("../../ui/dialogs.js").uiAlert} UiAlertFn */
+/** @typedef {typeof import("../../ui/dialogs.js").uiConfirm} UiConfirmFn */
+/** @typedef {null | boolean | number | string | unknown[] | Record<string, unknown>} JsonSafeValue */
+/**
+ * @typedef {{
+ *   canvas: HTMLCanvasElement,
+ *   ctx: CanvasRenderingContext2D,
+ *   drawLayer: HTMLCanvasElement,
+ *   drawCtx: CanvasRenderingContext2D,
+ *   canvasWrap: HTMLElement | null
+ * }} MapCanvasRefs
+ */
+/**
+ * @typedef {{
+ *   canvas: HTMLCanvasElement,
+ *   ctx: CanvasRenderingContext2D,
+ *   drawLayer: HTMLCanvasElement,
+ *   bgImg: HTMLImageElement | null
+ * }} MapRenderArgs
+ */
+/**
+ * @typedef {{
+ *   initScale: (opts: { canvas: HTMLCanvasElement, canvasWrap: HTMLElement | null }) => void,
+ *   onPointerDown: (opts: { e: PointerEvent, canvasWrap: HTMLElement | null }) => { startedPanZoom: boolean },
+ *   onPointerMove: (opts: { e: PointerEvent, canvas: HTMLCanvasElement, canvasWrap: HTMLElement | null }) => { handled: boolean },
+ *   onPointerUp: (opts: { e: PointerEvent, canvasWrap: HTMLElement | null }) => { endedPanZoom: boolean },
+ *   destroy: () => void
+ * }} MapGesturesApi
+ */
+/**
+ * @typedef {{
+ *   onPointerDown: (event: Event) => void,
+ *   onPointerMove: (event: Event) => void,
+ *   onPointerUp: (event: Event) => void
+ * }} MapPointerHandlersApi
+ */
+/**
+ * @typedef {{
+ *   setMapImage: (event: Event) => void,
+ *   removeMapImage: () => Promise<void>
+ * }} MapBackgroundActionsApi
+ */
+/**
+ * @typedef {{
+ *   setActiveToolUI: (tool: string) => void,
+ *   setActiveColorUI: (colorKey: string) => void,
+ *   destroy: () => void
+ * }} MapToolbarUiApi
+ */
+/**
+ * @typedef {{
+ *   refreshMapSelect: () => void,
+ *   loadActiveMapIntoCanvas: () => Promise<void>,
+ *   switchMap: (newId: string) => Promise<void>,
+ *   destroy: () => void
+ * }} MapListUiApi
+ */
+/**
+ * @typedef {{
+ *   activePointers: Map<number, { x: number, y: number }>,
+ *   gestureMode: "panzoom" | null,
+ *   panStart: { cx: number, cy: number, scrollLeft: number, scrollTop: number } | null,
+ *   pinchStart: { dist: number, scale: number } | null,
+ *   viewScale: number,
+ *   initScaleRaf: number,
+ *   activeGestureWrap: HTMLElement | null
+ * }} MapGestureRuntimeState
+ */
+/**
+ * @typedef {{
+ *   drawing: boolean,
+ *   lastPt: { x: number, y: number } | null,
+ *   pendingDraw: boolean,
+ *   pendingPointerId: number | null,
+ *   pendingStartClient: { x: number, y: number } | null,
+ *   pendingStartCanvas: { x: number, y: number } | null
+ * }} MapPointerRuntimeState
+ */
+/**
+ * @typedef {{
+ *   canvas: HTMLCanvasElement | null,
+ *   ctx: CanvasRenderingContext2D | null,
+ *   drawLayer: HTMLCanvasElement | null,
+ *   drawCtx: CanvasRenderingContext2D | null,
+ *   canvasWrap: HTMLElement | null,
+ *   bgImg: HTMLImageElement | null,
+ *   gestures: MapGesturesApi | null,
+ *   toolbarUI: MapToolbarUiApi | null,
+ *   listUI: MapListUiApi | null,
+ *   initialized: boolean,
+ *   destroyed: boolean,
+ *   listenerController: AbortController | null,
+ *   listenerSignal: AbortSignal | null,
+ *   gestureSession: MapGestureRuntimeState,
+ *   pointerSession: MapPointerRuntimeState
+ * }} MapControllerRuntimeState
+ */
+/**
+ * @typedef {{
+ *   state?: State,
+ *   SaveManager?: SaveManager,
+ *   setStatus?: (message: string, opts?: { stickyMs?: number }) => void,
+ *   positionMenuOnScreen?: (menuEl: HTMLElement, anchorEl: HTMLElement, opts?: { preferRight?: boolean }) => void,
+ *   Popovers?: {
+ *     register?: (...args: unknown[]) => unknown,
+ *     trackDynamic?: (...args: unknown[]) => unknown,
+ *     open?: (...args: unknown[]) => void,
+ *     close?: (...args: unknown[]) => void,
+ *     toggle?: (...args: unknown[]) => void,
+ *     reposition?: (...args: unknown[]) => void,
+ *     closeAll?: () => void,
+ *     closeAllExcept?: (...args: unknown[]) => void,
+ *     isOpen?: (...args: unknown[]) => boolean,
+ *     destroy?: () => void
+ *   },
+ *   ensureMapManager?: EnsureMapManagerFn,
+ *   getActiveMap?: GetActiveMapFn,
+ *   newMapEntry?: NewMapEntryFn,
+ *   blobIdToObjectUrl?: BlobIdToObjectUrlFn,
+ *   putBlob?: PutBlobFn,
+ *   deleteBlob?: DeleteBlobFn,
+ *   uiPrompt?: UiPromptFn,
+ *   uiAlert?: UiAlertFn,
+ *   uiConfirm?: UiConfirmFn
+ * }} MapControllerDeps
+ */
+/**
+ * @typedef {{
+ *   state: State,
+ *   ensureMapManager: EnsureMapManagerFn,
+ *   incomingMapState?: JsonSafeValue | null,
+ *   newMapEntry?: NewMapEntryFn
+ * }} NormalizeMapStateOptions
+ */
+
 const MAP_HISTORY_MAX_LEN = 50;
 
 /**
@@ -24,19 +171,23 @@ const MAP_HISTORY_MAX_LEN = 50;
  *   destroy: () => void,
  *   render: () => void,
  *   load: (incomingMapState?: unknown) => void,
- *   serialize: () => unknown
+ *   serialize: () => JsonSafeValue | null
  * }} MapController
  */
 
+/**
+ * @param {unknown} value
+ * @param {WeakSet<object>} [seen]
+ * @returns {JsonSafeValue | null}
+ */
 function toJsonSafe(value, seen = new WeakSet()) {
   if (value === null) return null;
 
-  const t = typeof value;
-  if (t === "string" || t === "boolean") return value;
-  if (t === "number") return Number.isFinite(value) ? value : null;
-  if (t === "undefined" || t === "function" || t === "symbol") return null;
-  if (t === "bigint") return String(value);
-  if (t !== "object") return null;
+  if (typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "undefined" || typeof value === "function" || typeof value === "symbol") return null;
+  if (typeof value === "bigint") return String(value);
+  if (typeof value !== "object") return null;
 
   if (seen.has(value)) return null;
   seen.add(value);
@@ -47,35 +198,42 @@ function toJsonSafe(value, seen = new WeakSet()) {
     return out;
   }
 
+  /** @type {{ [key: string]: JsonSafeValue }} */
   const out = {};
   for (const [key, inner] of Object.entries(value)) {
     const innerType = typeof inner;
     if (innerType === "undefined" || innerType === "function" || innerType === "symbol") continue;
-    out[key] = toJsonSafe(inner, seen);
+    out[key] = /** @type {JsonSafeValue} */ (toJsonSafe(inner, seen));
   }
 
   seen.delete(value);
   return out;
 }
 
+/**
+ * @param {NormalizeMapStateOptions} options
+ * @returns {MapState}
+ */
 function normalizeMapState({ state, ensureMapManager, incomingMapState, newMapEntry }) {
   if (incomingMapState && typeof incomingMapState === "object" && !Array.isArray(incomingMapState)) {
-    state.map = incomingMapState;
+    state.map = /** @type {MapState} */ (incomingMapState);
   } else if (!state.map || typeof state.map !== "object") {
-    state.map = {};
+    state.map = /** @type {MapState} */ ({});
   }
 
   ensureMapManager();
 
-  const mapState = state.map;
+  const mapState = /** @type {MapState} */ (state.map);
   if (!Array.isArray(mapState.maps)) mapState.maps = [];
   if (!mapState.maps.length) {
-    const defaultMapEntry = {
+    const defaultMapEntry = /** @type {MapEntry} */ ({
       id: `map_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`,
       name: "World Map",
       bgBlobId: null,
-      drawingBlobId: null
-    };
+      drawingBlobId: null,
+      brushSize: 6,
+      colorKey: "grey"
+    });
     if (typeof newMapEntry === "function") {
       const mapEntry = newMapEntry();
       if (mapEntry && typeof mapEntry === "object") {
@@ -92,7 +250,9 @@ function normalizeMapState({ state, ensureMapManager, incomingMapState, newMapEn
     mapState.activeMapId = mapState.maps[0]?.id ?? null;
   }
 
-  mapState.ui ||= {};
+  if (!mapState.ui || typeof mapState.ui !== "object") {
+    mapState.ui = { activeTool: "brush", brushSize: 6, viewScale: 1 };
+  }
   if (typeof mapState.ui.activeTool !== "string") mapState.ui.activeTool = "brush";
   if (!Number.isFinite(mapState.ui.brushSize)) mapState.ui.brushSize = 6;
   const viewScale = Number(mapState.ui.viewScale);
@@ -103,6 +263,9 @@ function normalizeMapState({ state, ensureMapManager, incomingMapState, newMapEn
   return mapState;
 }
 
+/**
+ * @returns {MapControllerRuntimeState}
+ */
 function createRuntimeState() {
   return {
     canvas: null,
@@ -139,6 +302,7 @@ function createRuntimeState() {
 }
 
 /**
+ * @param {MapControllerDeps} [deps]
  * @returns {MapController}
  */
 export function createMapController({
@@ -167,7 +331,7 @@ export function createMapController({
 
   const safePositionMenuOnScreen =
     typeof positionMenuOnScreen === "function" ? positionMenuOnScreen : () => { };
-  const safeUiConfirm = typeof uiConfirm === "function" ? uiConfirm : () => false;
+  const safeUiConfirm = typeof uiConfirm === "function" ? uiConfirm : async () => false;
   const { updateMapField } = createStateActions({ state, SaveManager });
   const runtime = createRuntimeState();
   let mapState = normalizeMapState({ state, ensureMapManager, incomingMapState: state.map, newMapEntry });
@@ -189,9 +353,20 @@ export function createMapController({
 
   syncHistoryToMapState();
 
+  /**
+   * @param {{ addEventListener?: EventTarget["addEventListener"] } | null | undefined} target
+   * @param {string} type
+   * @param {(event: Event) => void} handler
+   * @param {AddEventListenerOptions | boolean} [options]
+   * @returns {void}
+   */
   const addListener = (target, type, handler, options) => {
     if (!target || typeof target.addEventListener !== "function" || !runtime.listenerSignal) return;
-    target.addEventListener(type, handler, { ...(options || {}), signal: runtime.listenerSignal });
+    const listenerOptions =
+      typeof options === "boolean"
+        ? { capture: options }
+        : (options || {});
+    target.addEventListener(type, handler, { ...listenerOptions, signal: runtime.listenerSignal });
   };
 
   const snapshotForUndoFn = () => {
@@ -205,21 +380,34 @@ export function createMapController({
     return persistDrawingSnapshot({ drawLayer: runtime.drawLayer, getActiveMap, putBlob, deleteBlob, SaveManager });
   };
 
-  const renderArgs = () => ({
-    canvas: runtime.canvas,
-    ctx: runtime.ctx,
-    drawLayer: runtime.drawLayer,
-    bgImg: runtime.bgImg
-  });
+  /**
+   * @returns {MapRenderArgs | null}
+   */
+  const renderArgs = () => {
+    if (!runtime.canvas || !runtime.ctx || !runtime.drawLayer) return null;
+    return {
+      canvas: runtime.canvas,
+      ctx: runtime.ctx,
+      drawLayer: runtime.drawLayer,
+      bgImg: runtime.bgImg
+    };
+  };
 
-  const restoreFromDataUrlFn = (url) =>
+  /**
+   * @param {string} url
+   * @returns {void}
+   */
+  const restoreFromDataUrlFn = (url) => {
+    const args = renderArgs();
+    if (!args || !runtime.drawCtx || !runtime.drawLayer) return;
     restoreFromDataUrl({
       url,
       drawCtx: runtime.drawCtx,
       drawLayer: runtime.drawLayer,
-      renderArgs: renderArgs(),
+      renderArgs: args,
       commitDrawing: commitDrawingSnapshot
     });
+  };
 
   const undo = () => {
     if (!runtime.drawLayer) return;
@@ -237,15 +425,18 @@ export function createMapController({
     restoreFromDataUrlFn(next);
   };
 
-  const clearDrawing = async () =>
-    clearDrawingAction({
+  const clearDrawing = async () => {
+    const args = renderArgs();
+    if (!args || !runtime.drawCtx || !runtime.drawLayer) return;
+    return clearDrawingAction({
       uiConfirm: safeUiConfirm,
       snapshotForUndoFn,
       drawCtx: runtime.drawCtx,
       drawLayer: runtime.drawLayer,
-      renderArgs: renderArgs(),
+      renderArgs: args,
       commitDrawing: commitDrawingSnapshot
     });
+  };
 
   const render = () => {
     if (runtime.destroyed || !runtime.canvas || !runtime.ctx || !runtime.drawLayer) return;
@@ -257,6 +448,10 @@ export function createMapController({
     });
   };
 
+  /**
+   * @param {unknown} incomingMapState
+   * @returns {void}
+   */
   const load = (incomingMapState) => {
     if (runtime.destroyed) return;
     // Sanitize external map payloads before install so non-serializable values/prototypes never enter controller state.
@@ -283,22 +478,22 @@ export function createMapController({
     runtime.listenerController = new AbortController();
     runtime.listenerSignal = runtime.listenerController.signal;
 
-    const can = createMapCanvases({ canvasId: "mapCanvas" });
+    const can = /** @type {MapCanvasRefs} */ (createMapCanvases({ canvasId: "mapCanvas" }));
     runtime.canvas = can.canvas;
     runtime.ctx = can.ctx;
     runtime.drawLayer = can.drawLayer;
     runtime.drawCtx = can.drawCtx;
     runtime.canvasWrap = can.canvasWrap;
 
-    runtime.gestures = createMapGestures({
+    runtime.gestures = /** @type {MapGesturesApi} */ (createMapGestures({
       mapState,
       runtimeState: runtime.gestureSession,
       SaveManager,
       updateMapField,
-    });
+    }));
     runtime.gestures.initScale({ canvas: runtime.canvas, canvasWrap: runtime.canvasWrap });
 
-    const pointerHandlers = createMapPointerHandlers({
+    const pointerHandlers = /** @type {MapPointerHandlersApi} */ (createMapPointerHandlers({
       mapState,
       runtimeState: runtime.pointerSession,
       canvas: runtime.canvas,
@@ -310,9 +505,9 @@ export function createMapController({
       renderArgs,
       drawCtx: runtime.drawCtx,
       drawLayer: runtime.drawLayer
-    });
+    }));
 
-    const bgActions = createMapBackgroundActions({
+    const bgActions = /** @type {MapBackgroundActionsApi} */ (createMapBackgroundActions({
       setStatus,
       uiAlert,
       SaveManager,
@@ -327,13 +522,13 @@ export function createMapController({
       drawLayer: runtime.drawLayer,
       getBgImg: () => runtime.bgImg,
       setBgImg: (v) => { runtime.bgImg = v; }
-    });
+    }));
 
     if (window.matchMedia("(max-width: 600px)").matches) {
       if (!mapState.ui.activeTool) mapState.ui.activeTool = "brush";
     }
 
-    runtime.toolbarUI = initMapToolbarUI({
+    runtime.toolbarUI = /** @type {MapToolbarUiApi} */ (initMapToolbarUI({
       mapState,
       SaveManager,
       Popovers,
@@ -347,10 +542,10 @@ export function createMapController({
       redo,
       clearDrawing,
       setStatus
-    });
+    }));
     const { setActiveToolUI, setActiveColorUI } = runtime.toolbarUI;
 
-    runtime.listUI = initMapListUI({
+    runtime.listUI = /** @type {MapListUiApi} */ (initMapListUI({
       mapState,
       SaveManager,
       Popovers,
@@ -378,7 +573,7 @@ export function createMapController({
       setActiveColorUI,
       renderMap,
       setStatus
-    });
+    }));
 
     addListener(document.getElementById("mapImageInput"), "change", bgActions.setMapImage);
     addListener(
