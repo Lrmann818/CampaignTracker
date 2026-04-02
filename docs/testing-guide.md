@@ -30,7 +30,7 @@ Treat any data-loss, restore, offline-shell, or CSP regression as a merge/releas
 
 ## 2. Current automated coverage
 
-Vitest is the current unit test runner.
+Vitest is the current unit test runner, and Playwright now provides a tiny local browser smoke layer.
 
 Canonical local verification commands:
 
@@ -40,6 +40,8 @@ Canonical local verification commands:
   Expected: runs the canonical automated local gate: `npm run test:run` and `npm run build`.
 - `npm run preview`
   Expected: serves the production build for browser-only validation that CI does not cover.
+- `npm run test:smoke`
+  Expected: starts a controlled Vite server in production mode on the repo's GitHub Pages base path and runs the 4-test local Chromium smoke suite for app boot, map-shell rendering, reload persistence, backup export/import in a fresh browser context, and invalid import feedback.
 
 Focused dev commands:
 
@@ -56,6 +58,8 @@ Current automated scope is intentionally targeted:
 - `tests/storage.persistence.test.js` covers `saveAllLocal(...)` sanitized writes plus `loadAll(...)` behavior for missing storage, corrupt storage, stale-bucket replacement, legacy `imgDataUrl` migration, and default-map repair.
 - `tests/storage.saveManager.test.js` covers the local save lifecycle: dirty-delay timing, debounce behavior, `flush()` results, failure banner behavior, retry after failure, repeated dirty cycles, and `init()` reset behavior.
 - `tests/storage.backup.test.js` covers backup export shape, referenced blob/text collection, import validation failures, staged blob/text writes before state swap, rollback when save fails, cleanup of staged assets after pre-swap failures, and blob-ID remap fallback when an import collides with an existing blob id.
+- `tests/smoke/app.smoke.js` covers top-level shell boot in Chromium, opening the Map workspace, and a campaign-title reload-persistence check against the dedicated production-mode Vite server.
+- `tests/smoke/backup.smoke.js` covers backup export to a real download, import of that backup into a fresh Chromium browser context, and visible failure handling for invalid JSON import input.
 
 Critical paths currently protected by automation:
 
@@ -64,11 +68,13 @@ Critical paths currently protected by automation:
 - startup load behavior when stored data is missing, partial, malformed, or legacy-shaped
 - save-manager failure handling that keeps unsaved-state warnings and recovery behavior honest
 - backup import/export invariants, including failure rollback and imported asset preservation
+- one real-browser boot path through a Vite production-mode server plus one simple reload-persistence check
+- one real file download/upload backup round trip in Chromium using the production base path
 
-Intentional gaps still left for later phases:
+Important browser gaps still left for manual verification:
 
-- UI rendering, event wiring, and page-level interaction flows across Tracker, Character, and Map
-- real browser `IndexedDB` behavior and full browser-level backup/restore runs using actual files and reloads
+- Character-page rendering and deeper Tracker/Map interaction flows
+- `Reset Everything` plus full browser restore runs that include images, drawings, and text-backed assets
 - PWA install, offline shell, update-banner, cache, and service-worker behavior
 - touch gestures, mobile layout behavior, and cross-browser UI differences
 - end-to-end CSP/startup verification in a real browser session
@@ -81,7 +87,8 @@ Intentional differences between local verification and CI:
 
 - CI always starts from a clean Ubuntu runner with Node `20` and runs `npm ci` before the automated gate.
 - Local verification can reuse an existing install; run `npm ci && npm run verify` when you want the closest local CI match.
-- CI stops after the automated gate. Local release validation must continue with `npm run preview` and the manual browser checks below.
+- CI stops after the automated gate. The Pages workflow does not currently install Chromium or run `npm run test:smoke`.
+- Local release validation should still include `npm run test:smoke` when browser-level behavior changed, plus the manual browser checks below.
 
 ### Conventions for future automated tests
 
@@ -144,6 +151,7 @@ Before any release candidate or production deploy, run the full set below in a c
 Intentional difference from CI:
 
 - CI runs `npm ci`, then the same automated gate as `npm run verify`, and stops before any browser-level validation.
+- The current browser smoke suite is local-only for now; CI does not yet provision Chromium or run `npm run test:smoke`.
 - Local release validation must continue with the preview/manual sections because CI does not exercise real browser persistence, offline/PWA behavior, or cross-browser interaction flows.
 
 ## 5. Persistence regression checks

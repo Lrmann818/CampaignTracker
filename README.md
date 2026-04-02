@@ -105,12 +105,14 @@ __APP_STATE__.tracker.campaignTitle = "Guard test"
 
 ## 7. Automated tests
 
-The repo now includes a targeted Vitest-based automated suite for the highest-risk local-data flows:
+The repo now includes targeted automation in two layers:
 
 - `tests/state.migrate.test.js` covers `migrateState(...)` in `js/state.js`, including supported legacy upgrade paths, current-schema normalization, and malformed or partial inputs.
 - `tests/storage.persistence.test.js` covers `loadAll(...)` and `saveAllLocal(...)`, including sanitized saves, legacy image migration, stale-bucket replacement, and corrupt-storage fallback behavior.
 - `tests/storage.saveManager.test.js` covers the local save manager lifecycle, including dirty/saving/saved transitions, debounce behavior, retries after failure, and reset behavior.
 - `tests/storage.backup.test.js` covers backup export/import validation, staged blob/text writes, rollback on failure, and blob-ID remap behavior during import.
+- `tests/smoke/app.smoke.js` covers app shell boot, opening the Map workspace, and a simple reload-persistence check in Chromium.
+- `tests/smoke/backup.smoke.js` covers backup export, import into a fresh browser context, and visible failure handling for invalid backup files in Chromium.
 
 Run the test suite in watch mode:
 
@@ -130,17 +132,31 @@ Run the same automated verification CI uses:
 npm run verify
 ```
 
+Run the local browser smoke suite:
+
+```bash
+npm run test:smoke
+```
+
+If Playwright Chromium is not installed yet on this machine, install it once first:
+
+```bash
+npx playwright install chromium
+```
+
 Run one suite directly:
 
 ```bash
 npm run test:run -- tests/state.migrate.test.js
 ```
 
-This is intentionally targeted coverage, not full-app automation. The automated suite protects migration, local save/load, save-manager, and backup/import logic, but UI behavior, real browser storage integration, full backup/restore flows, and PWA/offline behavior still rely on the manual checks documented under `docs/`.
+`npm run test:smoke` runs the 4-test Playwright suite against a controlled Vite server started in production mode on the repo's GitHub Pages base path. It is intentionally local-only today and does not replace preview-based PWA/offline validation.
+
+This is intentionally targeted coverage, not full-app automation. Automation now covers migration, local save/load, save-manager behavior, backup/import logic, basic browser boot, one reload-persistence path, and a file-based backup round trip into a fresh browser context. It still does not replace the manual checks for `Reset Everything`, image-backed flows, map drawing behavior, Character-page coverage, PWA/offline behavior, touch interactions, or cross-browser validation documented under `docs/`.
 
 `npm run verify` is the canonical local readiness check. It runs `npm run test:run` and `npm run build`, matching the automated checks in CI. It does not replace `npm run preview` or the browser-level manual checks needed for release validation.
 
-For the closest local match to CI, start from a clean install with `npm ci`, then run `npm run verify`.
+For the closest local match to CI, start from a clean install with `npm ci`, then run `npm run verify`. CI does not currently run `npm run test:smoke`.
 
 Static validation is also in progress for the vanilla-JS codebase via `tsconfig.checkjs.json`. That repo-wide CheckJS path is useful for diagnostics, but it still has known gaps in older Character-panel and Tracker card/panel surfaces and is not yet documented as a must-pass project gate.
 

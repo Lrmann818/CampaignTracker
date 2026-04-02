@@ -55,12 +55,14 @@ Useful local commands:
 npm run verify
 npm run build
 npm run preview
+npm run test:smoke
 ```
 
 Working expectations:
 
 - Serve the app through Vite or another local server. Do not test from `file://`.
 - Use `npm run verify` before merge for any app change. Run `npm ci` first when you want the closest local match to CI.
+- Use `npm run test:smoke` for the small local Chromium browser suite when you change browser-level boot, reload persistence, or backup/import behavior. If Playwright Chromium is missing locally, install it once with `npx playwright install chromium`.
 - Use `npm run preview` or a deployed build for PWA and offline validation. Dev mode does not register the production service worker.
 - For persistence-sensitive work, prefer a clean browser profile and seed realistic data before testing.
 

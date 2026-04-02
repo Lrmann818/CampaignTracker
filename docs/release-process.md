@@ -106,7 +106,7 @@ Use preview or a deployed production build for PWA and offline checks. `npm run 
 
 ## 6. Required smoke/testing steps
 
-The repository now defines a targeted automated suite in [`package.json`](/home/lrdunn301/DnDWebApps/CampaignTracker/CampaignTracker/package.json), and the Pages workflow runs that suite plus the production build before deploy. Release validation still requires the manual checklist in addition to those automated checks.
+The repository now defines targeted automated checks in [`package.json`](/home/lrdunn301/DnDWebApps/CampaignTracker/CampaignTracker/package.json). The Pages workflow currently runs `npm run test:run` plus the production build before deploy. A 4-test Playwright browser smoke suite also exists locally in `tests/smoke/*.smoke.js`, but it is not yet part of CI. Release validation still requires the manual checklist in addition to those automated checks.
 
 Primary sources:
 
@@ -118,11 +118,15 @@ Primary sources:
 Minimum pre-release expectation:
 
 1. Run `npm run verify`.
-2. Use a clean browser profile.
-3. Run the full pre-release checklist in [`docs/testing-guide.md`](/home/lrdunn301/DnDWebApps/CampaignTracker/CampaignTracker/docs/testing-guide.md).
+2. Run `npm run test:smoke`.
+3. Use a clean browser profile.
+4. Run the full pre-release checklist in [`docs/testing-guide.md`](/home/lrdunn301/DnDWebApps/CampaignTracker/CampaignTracker/docs/testing-guide.md).
+
+If Chromium is not installed for Playwright on that machine yet, run `npx playwright install chromium` once before `npm run test:smoke`.
 
 That means covering at least:
 
+- local Chromium browser smoke for app shell boot, one reload-persistence path, backup export/import in a fresh browser context, and invalid import feedback
 - persistence durability across refresh
 - Tracker, Character, and Map baseline flows
 - backup export, `Reset Everything`, and backup import
@@ -136,7 +140,8 @@ Any data-loss, restore, offline-shell, or CSP regression should block release.
 Intentional difference from CI:
 
 - CI runs `npm ci`, then `npm run test:run`, then `npm run build`, uploads `dist/`, and only then deploys.
-- Local release validation must continue with `npm run preview` and the manual checklist because CI does not validate browser-only persistence, backup/restore, PWA/offline, or cross-browser behavior.
+- CI does not yet provision Chromium or run `npm run test:smoke`.
+- Local release validation must continue with `npm run preview`, `npm run test:smoke`, and the manual checklist because CI does not validate browser-only persistence, backup/restore, PWA/offline, or cross-browser behavior.
 
 ## 7. Packaging steps
 
