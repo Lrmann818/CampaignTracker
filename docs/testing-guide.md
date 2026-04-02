@@ -48,26 +48,42 @@ Current automated scope is intentionally narrow:
 
 Those tests improve confidence in saved-state integrity, backup/import safety, and future schema evolution, but they do not replace manual checks for UI rendering, IndexedDB-backed asset flows, full backup/restore behavior, or PWA/offline behavior.
 
+### CheckJS / JSDoc validation status
+
+The repo also has an in-progress static-validation path for vanilla JS:
+
+- `tsconfig.checkjs.json` enables `allowJs` + `checkJs` for `app.js`, `boot.js`, `vite.config.js`, `js/**/*.js`, and `types/**/*.d.ts`.
+- The currently hardened `@ts-check` surface is narrower than that repo-wide include set and is concentrated in `app.js`, `js/state.js`, all current `js/domain/*` and `js/storage/*` modules, tracker/map orchestration modules, several shared UI primitives, and focused utility/feature modules.
+- The broad pass is useful as a diagnostic when touching typing work, dependency boundaries, or JSDoc contracts.
+- It is not yet a must-pass release gate. The full repo pass still reports known errors in older Character-panel and Tracker card/panel modules.
+- There is currently no dedicated `package.json` script for this. When maintainers want the broad diagnostic run, the current command is:
+
+```bash
+npm exec --yes --package typescript@5.9.3 -- tsc -p tsconfig.checkjs.json
+```
+
 ## 3. Pre-merge minimum checks
 
 Run these before merging any user-visible change:
 
 1. If the change touched `js/state.js`, schema history, import validation, or migration semantics, run `npm run test:run -- tests/state.migrate.test.js`.
    Expected: the migration suite passes and any behavior changes are intentional.
-2. `npm run build`
+2. If the change touched an existing `@ts-check` module, JSDoc typedefs, `types/*.d.ts`, or module boundary contracts, run the CheckJS command from section 2 when practical.
+   Expected: no new typing regressions are introduced in the area you touched, even though the full repo pass is not yet globally clean.
+3. `npm run build`
    Expected: production build succeeds with no unexpected errors.
-3. Open the app in `npm run dev` or another local served environment.
+4. Open the app in `npm run dev` or another local served environment.
    Expected: the changed area loads cleanly and normal interaction does not produce unexpected console errors.
-4. Reload the relevant top-level route.
+5. Reload the relevant top-level route.
    Expected: `#tracker`, `#character`, and `#map` continue to restore the same page after reload when that area was touched.
-5. Run the detailed checks for the affected surface:
+6. Run the detailed checks for the affected surface:
    - Persistence or storage change: sections 5 and 9
    - Tracker change: section 6
    - Character change: section 7
    - Map, drawing, or image change: section 8
    - PWA, assets, routing base path, or build-output change: section 10
    - CSP, boot, startup, or asset-loading change: section 11
-6. If the change touched themes or boot-time styling, reload once with a non-default theme selected.
+7. If the change touched themes or boot-time styling, reload once with a non-default theme selected.
    Expected: the saved theme applies immediately with no obvious flash to the wrong theme.
 
 ## 4. Pre-release minimum checks

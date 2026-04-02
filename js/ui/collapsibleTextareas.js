@@ -1,9 +1,30 @@
+/**
+ * @typedef {{
+ *   character?: {
+ *     ui?: {
+ *       textareaCollapse?: Record<string, boolean>
+ *     }
+ *   }
+ * }} CollapsibleTextareasState
+ */
+
+/**
+ * @typedef {{
+ *   state?: CollapsibleTextareasState,
+ *   SaveManager?: { markDirty?: () => void },
+ *   root?: Document | HTMLElement
+ * }} CollapsibleTextareasDeps
+ */
+
+/**
+ * @param {CollapsibleTextareasDeps} [deps]
+ */
 export function initCollapsibleTextareas({ state, SaveManager, root = document } = {}) {
     if (!state?.character) state.character = {};
     if (!state.character.ui) state.character.ui = {};
     if (!state.character.ui.textareaCollapse) state.character.ui.textareaCollapse = {};
 
-    const btns = Array.from(root.querySelectorAll("button[data-collapse-target]"));
+    const btns = /** @type {HTMLButtonElement[]} */ (Array.from(root.querySelectorAll("button[data-collapse-target]")));
     btns.forEach((btn) => {
         const id = btn.getAttribute("data-collapse-target");
         const target = document.getElementById(id);

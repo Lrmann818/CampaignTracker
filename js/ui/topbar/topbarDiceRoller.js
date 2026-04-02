@@ -5,9 +5,24 @@ import { createTopbarPopover } from "./topbarPopover.js";
 import { requireEl, requireMany, getNoopDestroyApi } from "../../utils/domGuards.js";
 import { createStateActions } from "../../domain/stateActions.js";
 
+/** @typedef {import("../../state.js").State} State */
+/** @typedef {{ markDirty?: () => void }} SaveManagerLike */
+/**
+ * @typedef {{
+ *   state?: State,
+ *   SaveManager?: SaveManagerLike,
+ *   Popovers?: unknown,
+ *   positionMenuOnScreen?: unknown,
+ *   setStatus?: (message: string, opts?: { stickyMs?: number }) => void
+ * }} TopbarDiceRollerDeps
+ */
+
 let _activeTopbarDiceRoller = null;
 
-export function initTopbarDiceRoller(deps) {
+/**
+ * @param {TopbarDiceRollerDeps} [deps]
+ */
+export function initTopbarDiceRoller(deps = {}) {
     _activeTopbarDiceRoller?.destroy?.();
     _activeTopbarDiceRoller = null;
 
@@ -73,7 +88,13 @@ export function initTopbarDiceRoller(deps) {
 
     // Runtime state bucket.
     actions.mutateState((s) => {
-        if (!s.ui) s.ui = {};
+        if (!s.ui) {
+            s.ui = {
+                theme: "system",
+                textareaHeights: {},
+                panelCollapsed: {}
+            };
+        }
         if (!s.ui.dice) s.ui.dice = { history: [], last: { count: 1, sides: 20, mod: 0, mode: "normal" } };
         if (!Array.isArray(s.ui.dice.history)) s.ui.dice.history = [];
         if (!s.ui.dice.last) s.ui.dice.last = { count: 1, sides: 20, mod: 0, mode: "normal" };
@@ -129,9 +150,9 @@ export function initTopbarDiceRoller(deps) {
     const readUi = () => {
         const count = clampInt(countEl.value, 1, 100, 1);
         const mod = clampInt(modEl.value, -999, 999, 0);
-        const last = state.ui?.dice?.last || {};
-        const sides = clampInt(last.sides ?? 20, 2, 1000, 20);
-        const mode = (last.mode === "adv" || last.mode === "dis") ? last.mode : "normal";
+        const last = state.ui?.dice?.last;
+        const sides = clampInt(last?.sides ?? 20, 2, 1000, 20);
+        const mode = (last?.mode === "adv" || last?.mode === "dis") ? last.mode : "normal";
         return { count, sides, mod, mode };
     };
 

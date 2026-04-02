@@ -1,27 +1,39 @@
 // Shared "pick → crop → store" helper for portrait-style images.
 // Keeps app.js handlers tiny and consistent.
 
-/**
 import { uiAlert } from "../ui/dialogs.js";
+/**
  * Picks one image file, crops it via the shared crop modal, stores it in the blobs DB,
  * and (optionally) deletes a previous blob.
  *
- * @param {Object} opts
- * @param {Object} opts.picker - createFilePicker() instance (must expose pickOne()).
- * @param {string|null|undefined} opts.currentBlobId - existing blob id to delete when replacing.
- * @param {Function} opts.deleteBlob - async (blobId) => void
- * @param {Function} opts.putBlob - async (blob) => blobId
- * @param {Function} opts.cropImageModal - async (file, {aspect,outSize,mime,quality}) => Blob|null
- * @param {Function} opts.getPortraitAspect - (selector) => number
- * @param {string} opts.aspectSelector - DOM selector for the portrait box (for aspect).
- * @param {Function} opts.setStatus - (msg) => void
- * @param {number} [opts.outSize=512]
- * @param {string} [opts.mime="image/webp"]
- * @param {number} [opts.quality=0.9]
- * @param {Function} [opts.onError] - (err) => void
+ * @typedef {{
+ *   picker?: { pickOne?: (options?: { accept?: string }) => Promise<File | null> },
+ *   currentBlobId?: string | null,
+ *   deleteBlob?: (blobId: string) => Promise<unknown>,
+ *   putBlob?: (blob: Blob) => Promise<string>,
+ *   cropImageModal?: (
+ *     file: File,
+ *     options?: {
+ *       aspect?: number,
+ *       outSize?: number,
+ *       mime?: string,
+ *       quality?: number,
+ *       setStatus?: (message: string) => void
+ *     }
+ *   ) => Promise<Blob | null>,
+ *   getPortraitAspect?: (selector: string) => number,
+ *   aspectSelector?: string,
+ *   setStatus?: (message: string) => void,
+ *   outSize?: number,
+ *   mime?: string,
+ *   quality?: number,
+ *   onError?: (err: unknown) => void
+ * }} PickCropStorePortraitOptions
+ *
+ * @param {PickCropStorePortraitOptions} [opts]
  * @returns {Promise<string|null>} new blob id, or null if cancelled/failed
  */
-export async function pickCropStorePortrait(opts) {
+export async function pickCropStorePortrait(opts = {}) {
   const {
     picker,
     currentBlobId,

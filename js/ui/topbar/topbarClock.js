@@ -4,6 +4,9 @@ import { requireMany, getNoopDestroyApi } from "../../utils/domGuards.js";
 
 let _activeTopbarClock = null;
 
+/**
+ * @param {{ setStatus?: (message: string, opts?: { stickyMs?: number }) => void }} [deps]
+ */
 export function initTopbarClock({ setStatus } = {}) {
     _activeTopbarClock?.destroy?.();
     _activeTopbarClock = null;

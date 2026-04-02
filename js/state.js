@@ -174,6 +174,7 @@ export const SCHEMA_MIGRATION_HISTORY = Object.freeze([
  * @typedef {{
  *   textareaHeights: NumberLookup,
  *   textareaHeigts?: NumberLookup,
+ *   sectionOrder?: string[],
  *   theme?: string,
  *   [key: string]: unknown
  * }} TrackerUiState
@@ -232,7 +233,15 @@ export const SCHEMA_MIGRATION_HISTORY = Object.freeze([
 
 /**
  * @typedef {{
- *   history: unknown[],
+ *   t?: number,
+ *   text: string,
+ *   [key: string]: unknown
+ * }} DiceHistoryEntry
+ */
+
+/**
+ * @typedef {{
+ *   history: DiceHistoryEntry[],
  *   last?: DiceLastState,
  *   [key: string]: unknown
  * }} DiceUiState

@@ -125,7 +125,35 @@ Placement rules:
 
 When in doubt, match the closest existing pattern instead of inventing a new structure.
 
-## 5. Persistence and backward-compatibility rules
+## 5. Type safety and boundary-hardening rules
+
+This repo is still plain JavaScript. The current type-safety approach is incremental boundary hardening, not a TypeScript rewrite.
+
+Current model:
+
+- `tsconfig.checkjs.json` enables `allowJs` + `checkJs` across `app.js`, `boot.js`, `vite.config.js`, `js/**/*.js`, and `types/**/*.d.ts`.
+- Hardened modules opt into file-level `// @ts-check` and use JSDoc typedefs/imports to describe inputs, outputs, and `deps` contracts.
+- Ambient declarations for globals, virtual modules, and Node-side config helpers live in `types/*.d.ts`.
+
+Current `@ts-check` coverage is concentrated in:
+
+- `app.js`
+- `js/state.js`
+- all current `js/domain/*` and `js/storage/*`
+- tracker and map orchestration modules
+- shared UI boundary modules such as `dataPanel`, `navigation`, `pagePanelReorder`, `panelHeaderCollapse`, `popovers`, `positioning`, `saveBanner`, `settingsPanel`, `status`, `theme`, and `topbar`
+- focused utility/feature modules such as `autosize`, `numberSteppers`, `updates`, `updateBanner`, and `utils/dev`
+
+Rules:
+
+- For new shared infrastructure, state/domain helpers, persistence code, and page-orchestration modules, start with `// @ts-check`.
+- Prefer reusing owner-defined typedefs from `js/state.js`, `js/domain/*`, or the nearest boundary module instead of re-declaring wide anonymous objects.
+- Keep `deps` objects narrow and explicit. Use `import(...)`, `ReturnType<>`, and `Parameters<>` when they describe the real contract.
+- Keep ambient/global types in `types/*.d.ts`; do not scatter duplicate global declarations through app modules.
+- Keep runtime validation at persistence, import/export, DOM, and file boundaries. Static typing helps document contracts but does not replace guards or migration logic.
+- Do not describe the whole repo as fully CheckJS-clean. The broader pass still has known issues in older Character-panel and Tracker card/panel code.
+
+## 6. Persistence and backward-compatibility rules
 
 This is a compatibility-first project. Changes to saved state must be designed to preserve old user data.
 
@@ -164,7 +192,7 @@ Rules for compatibility-sensitive surfaces:
 
 If a change alters storage behavior, schema behavior, import/export behavior, or migration behavior, update the storage/schema docs in the same change.
 
-## 6. Documentation update expectations
+## 7. Documentation update expectations
 
 Documentation should change alongside the code when contributor understanding or release safety depends on it.
 
@@ -176,6 +204,7 @@ Update these files when their source-of-truth area changes:
 - `docs/storage-and-backups.md`: persistence layers, save lifecycle, backup/import/export behavior, blob/text storage
 - `docs/testing-guide.md`: pre-merge or pre-release validation expectations
 - `docs/release-process.md`: versioning, tagging, deploy flow, release evidence, packaging workflow
+- typing and boundary-hardening docs: update `README.md`, `docs/architecture.md`, `docs/testing-guide.md`, `CONTRIBUTING.md`, and `AI_RULES.md` when the current `@ts-check` surface or contributor guardrails change
 - `AI_RULES.md`: only when the AI-agent editing contract itself changes
 
 Documentation rules:
@@ -185,9 +214,9 @@ Documentation rules:
 - If behavior changed intentionally, say what changed and what stayed compatible.
 - If behavior stayed the same but module ownership moved, update the ownership docs anyway.
 
-## 7. Testing expectations before merge
+## 8. Testing expectations before merge
 
-This repository does not currently define an automated test suite in `package.json`. Pre-merge validation is therefore manual and should be proportionate to risk.
+This repository now has targeted automated tests in `package.json` and an in-progress CheckJS static-validation path. Pre-merge validation is still mostly manual and should be proportionate to risk.
 
 Minimum expectation for any app change:
 
@@ -198,6 +227,8 @@ Minimum expectation for any app change:
 
 Additional required checks by change type:
 
+- `@ts-check`, JSDoc, `types/*.d.ts`, or boundary-contract changes:
+  Run the current CheckJS command from [docs/testing-guide.md](docs/testing-guide.md) when practical, and avoid introducing new typing regressions in the touched area.
 - Persistence, schema, storage, image, or save-timing changes:
   Run the persistence and backup flows in [docs/testing-guide.md](docs/testing-guide.md).
 - Tracker changes:
@@ -213,7 +244,7 @@ Additional required checks by change type:
 
 Release-sensitive changes should be validated in a clean browser profile with realistic seeded data. Any data-loss, restore, offline-shell, or CSP regression should block merge.
 
-## 8. Guidance for AI-assisted edits
+## 9. Guidance for AI-assisted edits
 
 AI assistance is allowed, but human reviewers remain responsible for correctness, compatibility, and maintainability.
 
@@ -235,7 +266,7 @@ When submitting AI-assisted work, include:
 
 AI should accelerate repetitive work and documentation, not replace architectural judgment.
 
-## 9. Safe vs risky refactors
+## 10. Safe vs risky refactors
 
 Safe refactors are usually local, behavior-preserving, and easy to verify:
 
@@ -265,7 +296,7 @@ For risky refactors:
 - update the relevant maintainer docs in the same branch
 - test the real user flows, not just the code path you touched
 
-## 10. Contributor checklist
+## 11. Contributor checklist
 
 Before merging, confirm all of the following are true:
 

@@ -40,6 +40,7 @@ That direction is visible in the current structure:
 - Vanilla `HTML`, `CSS`, and ES module `JavaScript`
 - [`Vite`](https://vitejs.dev/) for local development, production builds, and preview
 - [`Vitest`](https://vitest.dev/) for targeted unit tests around state migration behavior
+- Vanilla-JS type safety through `tsconfig.checkjs.json`, file-level `// @ts-check`, JSDoc typedefs/imports, and repo-local `.d.ts` shims under `types/`
 - [`vite-plugin-pwa`](https://vite-pwa-org.netlify.app/) / Workbox for service worker registration, precaching, and update prompts
 - Browser persistence via `localStorage` and `IndexedDB`
 - GitHub Actions and GitHub Pages for production deployment
@@ -62,6 +63,15 @@ At a high level, the app is wired as a modular vanilla JS application:
 - `js/domain/*` contains explicit state action helpers and entity factories
 
 For a deeper maintainer view, see [`docs/architecture.md`](docs/architecture.md).
+
+## 5.1 Type safety in vanilla JS
+
+The repo is still plain JavaScript. Current type safety comes from `tsconfig.checkjs.json` plus JSDoc, not from a TypeScript rewrite.
+
+- File-level `// @ts-check` is now in use for the composition root (`app.js`), `js/state.js`, all current `js/domain/*` and `js/storage/*` modules, map page orchestration/persistence modules, tracker page orchestration modules, several shared UI primitives, and focused utility/feature modules such as `js/features/autosize.js`, `js/features/numberSteppers.js`, and `js/utils/dev.js`.
+- Shared typedefs mostly live beside the code that owns them. The main persisted-state and migration types live in `js/state.js`; ambient browser/build shims live in `types/*.d.ts`.
+- `tsconfig.checkjs.json` includes `app.js`, `boot.js`, `vite.config.js`, `js/**/*.js`, and `types/**/*.d.ts`, so the broader repo can be checked with CheckJS even where file-level hardening is still in progress.
+- That broader pass is not fully clean yet, so maintainers should not treat repo-wide CheckJS as a fully green merge gate today.
 
 ## 6. Local development
 
@@ -119,6 +129,8 @@ npm run test:run -- tests/state.migrate.test.js
 ```
 
 This is intentionally targeted coverage, not full-app automation. UI behavior, browser storage flows, backup/restore end-to-end behavior, and PWA/offline behavior still rely on the manual checks documented under `docs/`.
+
+Static validation is also in progress for the vanilla-JS codebase via `tsconfig.checkjs.json`. That repo-wide CheckJS path is useful for diagnostics, but it still has known gaps in older Character-panel and Tracker card/panel surfaces and is not yet documented as a must-pass project gate.
 
 ## 8. Build and preview
 

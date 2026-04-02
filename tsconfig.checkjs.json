@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "skipLibCheck": true,
+    "typeRoots": ["./types", "./node_modules/@types"]
+  },
+  "include": [
+    "app.js",
+    "boot.js",
+    "vite.config.js",
+    "js/**/*.js",
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
+}

@@ -9,10 +9,56 @@ This document is the architecture source of truth for the current Lore Ledger / 
 - **Local-first and offline-capable**: the app must function without a backend or live network connection.
 - **Single composition root**: shared services and startup order are wired in one place (`app.js`), not scattered across page modules.
 - **Explicit mutation and save awareness**: application state changes should be visible in code and should participate in the save lifecycle intentionally.
+- **Type-safe vanilla JS at module boundaries**: the app hardens JavaScript with `@ts-check`, JSDoc, and narrow dependency contracts instead of a TypeScript rewrite.
 - **Clear page ownership**: tracker, character, and map logic should live in their own page folders, with shared behavior extracted only when it is truly cross-page.
 - **CSP-friendly UI**: dialogs, menus, and rendering paths must work under the strict `index.html` CSP without inline handlers or `eval`.
 - **Backward-compatible persistence**: saved data, backups, legacy images, and old field names are migrated forward instead of silently discarded.
 - **Fail-soft production behavior**: missing DOM anchors or partial init failures should degrade to no-op APIs and status messages instead of white-screening the whole app.
+
+## Type safety and boundary hardening
+
+Lore Ledger remains a vanilla-JS codebase. The current typing model is:
+
+- repo-wide CheckJS configuration in `tsconfig.checkjs.json` with `allowJs` + `checkJs`
+- file-level `// @ts-check` on modules that have already been hardened
+- JSDoc typedefs, `import(...)` type references, and utility types such as `ReturnType<>` / `Parameters<>`
+- ambient declaration files in `types/*.d.ts` for globals, virtual modules, and Node-side Vite config shims
+
+### Where `@ts-check` is currently in use
+
+Current Phase 1 coverage is concentrated in boundary and orchestration modules:
+
+- Composition root: `app.js`
+- Canonical state model: `js/state.js`
+- Domain layer: all current `js/domain/*`
+- Storage layer: all current `js/storage/*`
+- Tracker orchestration: `js/pages/tracker/trackerPage.js`, `js/pages/tracker/trackerSectionReorder.js`
+- Map orchestration/persistence: `js/pages/map/mapPage.js`, `js/pages/map/mapController.js`, `js/pages/map/mapDrawing.js`, `js/pages/map/mapCanvas.js`, `js/pages/map/mapPersistence.js`
+- Character boundary helper: `js/pages/character/characterSectionReorder.js`
+- Shared UI primitives: `js/ui/dataPanel.js`, `js/ui/navigation.js`, `js/ui/pagePanelReorder.js`, `js/ui/panelHeaderCollapse.js`, `js/ui/popovers.js`, `js/ui/positioning.js`, `js/ui/safeAsync.js`, `js/ui/saveBanner.js`, `js/ui/settingsPanel.js`, `js/ui/status.js`, `js/ui/theme.js`, `js/ui/topbar/topbar.js`
+- Focused shared features/utilities: `js/features/autosize.js`, `js/features/numberSteppers.js`, `js/pwa/updateBanner.js`, `js/pwa/updates.js`, `js/utils/dev.js`
+
+This list is intentionally narrower than the files included by `tsconfig.checkjs.json`. The config covers `app.js`, `boot.js`, `vite.config.js`, `js/**/*.js`, and `types/**/*.d.ts`, but not every included file has been hardened to the same standard yet.
+
+### Where typedefs live
+
+- `js/state.js` is the canonical source for persisted app-state, migration, and map-state typedefs used across the app.
+- Domain-specific entity shapes live close to their owners, for example `js/domain/factories.js`.
+- Boundary modules usually define their own local dependency/result typedefs beside the functions that consume them.
+- Global/build/module declarations live in `types/app-globals.d.ts`, `types/node-shims.d.ts`, and `types/virtual-pwa-register.d.ts`.
+
+### Expectations for future modules
+
+- New shared infrastructure, persistence code, state/domain helpers, and page-orchestration modules should start with `// @ts-check`.
+- Prefer importing existing typedefs from the owning module over recreating broad inline object shapes.
+- Type dependency objects narrowly. `deps` contracts should describe the real functions and options being passed, not broad placeholder records.
+- Keep runtime validation at persistence and import boundaries. Static typing complements `migrateState(...)`, backup validation, and DOM/file guards; it does not replace them.
+
+### Current exceptions
+
+- The repo-wide CheckJS pass is not yet fully green. Current errors are still concentrated in older Character-panel code and Tracker card/panel surfaces.
+- Some included files already have partial JSDoc typing but do not yet carry file-level `// @ts-check`.
+- `boot.js`, `vite.config.js`, and other supporting modules are included in the broader config, but they should not be described as fully boundary-hardened unless that work has actually landed.
 
 ## Top-level entrypoints
 

@@ -1,50 +1,108 @@
-// @ts-nocheck
+// @ts-check
 // js/ui/panelHeaderCollapse.js
 // Click a panel's header to collapse/expand its body (header stays visible).
 import { createStateActions } from "../domain/stateActions.js";
 import { getNoopDestroyApi } from "../utils/domGuards.js";
 
+/** @typedef {import("../state.js").State} PanelCollapseState */
+/** @typedef {{ markDirty?: () => void }} SaveManagerLike */
+/** @typedef {(message: string, opts?: { stickyMs?: number }) => void} SetStatusFn */
+/** @typedef {(path: string | readonly unknown[], value: unknown, options?: unknown) => boolean} SetPathFn */
+/** @typedef {{ setPath?: SetPathFn | undefined } | null | undefined} PanelCollapseActions */
+/**
+ * @typedef {{
+ *   state?: PanelCollapseState,
+ *   SaveManager?: SaveManagerLike,
+ *   setStatus?: SetStatusFn,
+ *   actions?: PanelCollapseActions,
+ *   setPath?: SetPathFn | null
+ * }} PanelHeaderCollapseDeps
+ */
+/** @typedef {{ destroy: () => void }} PanelHeaderCollapseApi */
+
 /** @type {(() => void) | null} */
 let activePanelHeaderCollapseDestroy = null;
 
+/**
+ * @param {unknown} value
+ * @returns {value is HTMLElement}
+ */
+function isHtmlElement(value) {
+  return value instanceof HTMLElement;
+}
+
+/**
+ * @param {Element | null | undefined} value
+ * @returns {value is HTMLElement}
+ */
+function isPanelSection(value) {
+  return isHtmlElement(value) && value.matches("section.panel");
+}
+
+/**
+ * @param {EventTarget | null} target
+ * @returns {boolean}
+ */
 function isInteractive(target) {
-  return !!target?.closest?.(
+  return target instanceof Element && !!target.closest(
     "button, input, select, textarea, a, label, summary, [role='button'], [role='link']"
   );
 }
 
+/**
+ * @param {HTMLElement | null | undefined} panelEl
+ * @returns {string | null}
+ */
 function getPanelKey(panelEl) {
   return panelEl?.id || panelEl?.dataset?.panel || null;
 }
 
+/**
+ * @param {HTMLElement} panelEl
+ * @returns {HTMLElement | null}
+ */
 function findHeader(panelEl) {
   // Prefer explicit marker.
   const explicit = panelEl.querySelector(":scope > [data-panel-header]");
-  if (explicit) return explicit;
+  if (isHtmlElement(explicit)) return explicit;
 
   // Common pattern: header bar div containing an H2 and controls.
   const first = panelEl.firstElementChild;
-  if (first && first.matches(".row, .panelHeader, .panelTop")) {
+  if (isHtmlElement(first) && first.matches(".row, .panelHeader, .panelTop")) {
     if (first.querySelector("h2")) return first;
   }
 
   // Fallback: first H2 in the panel.
   const h2 = panelEl.querySelector(":scope > h2") || panelEl.querySelector("h2");
-  if (h2) return h2;
+  if (isHtmlElement(h2)) return h2;
 
   return null;
 }
 
+/**
+ * @param {PanelCollapseState | undefined} state
+ * @param {string} key
+ * @returns {boolean}
+ */
 function isCollapsedState(state, key) {
   return state?.ui?.panelCollapsed?.[key] === true;
 }
 
+/**
+ * @param {HTMLElement} panelEl
+ * @param {boolean} next
+ * @returns {void}
+ */
 function applyCollapsedUi(panelEl, next) {
   panelEl.dataset.collapsed = next ? "true" : "false";
   // Nice-to-have for accessibility; harmless if header isn't a button.
   panelEl.setAttribute("aria-expanded", next ? "false" : "true");
 }
 
+/**
+ * @param {PanelHeaderCollapseDeps} deps
+ * @returns {SetPathFn | null}
+ */
 function resolveSetPathHelper({ state, SaveManager, actions, setPath }) {
   if (actions && typeof actions.setPath === "function") return actions.setPath.bind(actions);
   if (typeof setPath === "function") return setPath;
@@ -55,32 +113,45 @@ function resolveSetPathHelper({ state, SaveManager, actions, setPath }) {
   return null;
 }
 
+/**
+ * @param {{ key: string | null, headerEl: HTMLElement | null, fallbackPanelEl: HTMLElement | null }} params
+ * @returns {HTMLElement | null}
+ */
 function resolveTargetPanelElement({ key, headerEl, fallbackPanelEl }) {
   if (key) {
     const byId = document.getElementById(key);
-    if (byId && byId.matches?.("section.panel")) return byId;
+    if (isPanelSection(byId)) return byId;
 
     const byDataPanel = Array
       .from(document.querySelectorAll("section.panel[data-panel]"))
-      .find((el) => el.dataset?.panel === key);
-    if (byDataPanel) return byDataPanel;
+      .find((el) => isPanelSection(el) && el.dataset.panel === key);
+    if (isPanelSection(byDataPanel)) return byDataPanel;
   }
 
   const byHeaderAncestor = headerEl?.closest?.("section.panel");
-  if (byHeaderAncestor) return byHeaderAncestor;
+  if (isPanelSection(byHeaderAncestor)) return byHeaderAncestor;
 
-  if (fallbackPanelEl && document.contains(fallbackPanelEl)) return fallbackPanelEl;
+  if (isPanelSection(fallbackPanelEl) && document.contains(fallbackPanelEl)) return fallbackPanelEl;
   return null;
 }
 
+/**
+ * @param {{ key: string | null, headerEl: HTMLElement | null, fallbackPanelEl: HTMLElement | null }} params
+ * @returns {string}
+ */
 function getPanelLabel({ key, headerEl, fallbackPanelEl }) {
   if (key) return key;
-  const fromHeaderText = headerEl?.querySelector?.("h2")?.textContent;
+  const fromHeaderHeading = headerEl?.querySelector?.("h2");
+  const fromHeaderText = fromHeaderHeading instanceof HTMLElement ? fromHeaderHeading.textContent : null;
   const fromPanel = fallbackPanelEl?.id || fallbackPanelEl?.dataset?.panel;
   const label = String(fromHeaderText || fromPanel || "").trim();
   return label || "<unknown panel>";
 }
 
+/**
+ * @param {PanelHeaderCollapseDeps} [deps]
+ * @returns {PanelHeaderCollapseApi}
+ */
 export function initPanelHeaderCollapse({ state, SaveManager, setStatus, actions, setPath } = {}) {
   if (!state) throw new Error("initPanelHeaderCollapse: state is required");
   const setPathAction = resolveSetPathHelper({ state, SaveManager, actions, setPath });
@@ -97,10 +168,10 @@ export function initPanelHeaderCollapse({ state, SaveManager, setStatus, actions
   /** @type {HTMLElement[]} */
   const boundHeaders = [];
 
-  const panels = Array.from(document.querySelectorAll("section.panel"));
+  const panels = Array.from(document.querySelectorAll("section.panel")).filter(isPanelSection);
   if (!panels.length) {
     setStatus?.("Panel collapse controls unavailable (no .panel sections found).", { stickyMs: 5000 });
-    return getNoopDestroyApi();
+    return /** @type {PanelHeaderCollapseApi} */ (getNoopDestroyApi());
   }
   panels.forEach((panelEl) => {
     const key = getPanelKey(panelEl);

@@ -1,7 +1,14 @@
-// @ts-nocheck
+// @ts-check
 
+/** @typedef {Document | Element | DocumentFragment} StepperRoot */
+
+/**
+ * @param {StepperRoot} [root]
+ * @returns {Promise<void>}
+ */
 export async function enhanceNumberSteppers(root = document) {
-  const inputs = Array.from(root.querySelectorAll('input[type="number"]'));
+  const inputs = Array.from(root.querySelectorAll('input[type="number"]'))
+    .filter((input) => input instanceof HTMLInputElement);
 
   inputs.forEach((input) => {
     // Don't double-wrap
@@ -33,10 +40,13 @@ export async function enhanceNumberSteppers(root = document) {
     stepper.appendChild(down);
 
     // Insert wrap around input (without losing listeners)
-    input.parentNode.insertBefore(wrap, input);
+    const parent = input.parentNode;
+    if (!parent) return;
+    parent.insertBefore(wrap, input);
     wrap.appendChild(input);
     wrap.appendChild(stepper);
 
+    /** @returns {void} */
     const pokeInput = () => {
       // Trigger the same input listeners used by bindNumber/save wiring.
       input.dispatchEvent(new Event("input", { bubbles: true }));

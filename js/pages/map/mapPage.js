@@ -4,6 +4,8 @@
 import { createMapController } from "./mapController.js";
 import { getNoopDestroyApi } from "../../utils/domGuards.js";
 
+/** @typedef {import("../../state.js").State} State */
+
 /**
  * @typedef {{
  *   init: () => void,
@@ -16,7 +18,7 @@ import { getNoopDestroyApi } from "../../utils/domGuards.js";
 
 /**
  * @typedef {{
- *   state?: { map?: unknown },
+ *   state?: State,
  *   setStatus?: (message: string, opts?: { stickyMs?: number }) => void,
  *   [key: string]: unknown
  * }} MapPageDeps
