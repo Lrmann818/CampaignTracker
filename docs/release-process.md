@@ -9,7 +9,7 @@ The standard shipping path is:
 3. merge or push the release commit to `main`
 4. let GitHub Pages deploy the built `dist/` output through [`.github/workflows/pages.yml`](/home/lrdunn301/DnDWebApps/CampaignTracker/CampaignTracker/.github/workflows/pages.yml)
 
-There is no dedicated release automation beyond the GitHub Pages workflow, and there is no automated test suite in `package.json` today. Releases are therefore evidence-driven and rely on manual validation.
+There is no dedicated release automation beyond the GitHub Pages workflow. Today that workflow runs `npm ci`, `npm run test:run`, and `npm run build` in its `Verify and build` job before any Pages deploy, but releases still remain evidence-driven and still rely on manual validation alongside automated checks.
 
 ## 1. Release philosophy
 
@@ -68,14 +68,17 @@ Use Node `20` for release builds when possible so local behavior matches the Pag
 npm ci
 ```
 
-4. Build production output:
+4. Run the canonical automated release gate:
 
 ```bash
-npm run build
+npm run verify
 ```
+
+For the closest local match to CI, run `npm ci` first, then `npm run verify`.
 
 Expected result:
 
+- `npm run test:run` passes.
 - Vite writes the production artifact to `dist/`.
 - The build includes hashed JS/CSS assets plus PWA files such as `manifest.json`, `manifest.webmanifest`, `sw.js`, and Workbox output.
 - Production base path is `/CampaignTracker/`.
@@ -103,7 +106,7 @@ Use preview or a deployed production build for PWA and offline checks. `npm run 
 
 ## 6. Required smoke/testing steps
 
-The repository does not currently define automated tests in [`package.json`](/home/lrdunn301/DnDWebApps/CampaignTracker/CampaignTracker/package.json), and the Pages workflow does not run a test suite. Required release validation is therefore manual.
+The repository now defines targeted automated checks in [`package.json`](/home/lrdunn301/DnDWebApps/CampaignTracker/CampaignTracker/package.json). The Pages workflow currently runs `npm run test:run` plus the production build before deploy. A 4-test Playwright browser smoke suite also exists locally in `tests/smoke/*.smoke.js`, but it is not yet part of CI. Release validation still requires the manual checklist in addition to those automated checks.
 
 Primary sources:
 
@@ -114,12 +117,16 @@ Primary sources:
 
 Minimum pre-release expectation:
 
-1. Run `npm run build`.
-2. Use a clean browser profile.
-3. Run the full pre-release checklist in [`docs/testing-guide.md`](/home/lrdunn301/DnDWebApps/CampaignTracker/CampaignTracker/docs/testing-guide.md).
+1. Run `npm run verify`.
+2. Run `npm run test:smoke`.
+3. Use a clean browser profile.
+4. Run the full pre-release checklist in [`docs/testing-guide.md`](/home/lrdunn301/DnDWebApps/CampaignTracker/CampaignTracker/docs/testing-guide.md).
+
+If Chromium is not installed for Playwright on that machine yet, run `npx playwright install chromium` once before `npm run test:smoke`.
 
 That means covering at least:
 
+- local Chromium browser smoke for app shell boot, one reload-persistence path, backup export/import in a fresh browser context, and invalid import feedback
 - persistence durability across refresh
 - Tracker, Character, and Map baseline flows
 - backup export, `Reset Everything`, and backup import
@@ -129,6 +136,12 @@ That means covering at least:
 - touch-device coverage when map, drawing, gestures, image picking, or mobile layout changed
 
 Any data-loss, restore, offline-shell, or CSP regression should block release.
+
+Intentional difference from CI:
+
+- CI runs `npm ci`, then `npm run test:run`, then `npm run build`, uploads `dist/`, and only then deploys.
+- CI does not yet provision Chromium or run `npm run test:smoke`.
+- Local release validation must continue with `npm run preview`, `npm run test:smoke`, and the manual checklist because CI does not validate browser-only persistence, backup/restore, PWA/offline, or cross-browser behavior.
 
 ## 7. Packaging steps
 
@@ -202,18 +215,29 @@ What it does today:
 
 - triggers on pushes to `main`
 - also supports manual `workflow_dispatch`
-- checks out the repository with full history and tags
-- uses Node `20`
-- runs `npm ci`
-- runs `npm run build`
-- uploads `dist/`
-- deploys that Pages artifact
+- runs a `Verify and build` job first
+- in that job, checks out the repository with full history and tags
+- in that job, uses Node `20`
+- in that job, runs `npm ci`
+- in that job, runs `npm run test:run`
+- in that job, runs `npm run build`
+- in that job, uploads `dist/`
+- runs a separate `Deploy` job only after `Verify and build` succeeds
 
 Release-specific implications:
 
+- a failing automated check blocks deploy because the `build` job stops before artifact upload
+- local release validation should still run `npm ci` and `npm run verify` so failures are caught before pushing or manually dispatching
 - pushing a tag does not deploy on its own
 - the built version depends on which tags are available when the workflow runs
 - if version metadata is wrong because the tag arrived late, rerun the workflow manually
+
+Manual GitHub-side protections not encoded in repo files:
+
+- branch protection, pull request requirements, and required status checks for `main` are GitHub settings, not repository files
+- the repo cannot tell you whether those settings are currently enabled
+- if you configure a required status check, the relevant job name is `Verify and build` from the `Deploy to GitHub Pages` workflow
+- the workflow targets the `github-pages` environment, but any environment protection rules also live in GitHub settings rather than this repo
 
 Path/base assumptions:
 
@@ -235,7 +259,7 @@ Capture and keep the following evidence for each production release:
 
 - release commit SHA
 - release tag name
-- successful `npm run build` output
+- successful `npm run verify` output
 - preview or deployed URL used for validation
 - browser coverage used for the release check
 - confirmation that backup export, reset, and import all worked

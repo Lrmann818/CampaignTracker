@@ -20,6 +20,17 @@ export function getPortraitAspect(selector = ".npcPortraitTop") {
 /**
  * Opens a modal that lets the user zoom + pan an uploaded image, then returns a cropped Blob.
  * Returns null if cancelled.
+ *
+ * @typedef {{
+ *   aspect?: number,
+ *   outSize?: number,
+ *   mime?: string,
+ *   quality?: number,
+ *   setStatus?: (message: string) => void
+ * }} CropImageModalOptions
+ *
+ * @param {File | Blob} file
+ * @param {CropImageModalOptions} [options]
  */
 export async function cropImageModal(
   file,
@@ -29,7 +40,7 @@ export async function cropImageModal(
     mime = "image/webp",
     quality = 0.9,
     setStatus
-  } = {}
+  } = /** @type {CropImageModalOptions} */ ({})
 ) {
   if (!setStatus) throw new Error("cropImageModal requires setStatus");
 

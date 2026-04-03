@@ -1,10 +1,10 @@
 # Testing Guide
 
-This is the authoritative manual testing guide for Campaign Tracker / Lore Ledger. It consolidates the current guidance from `docs/SMOKE_TEST.md`, `SMOKE_TEST.md`, and `docs/CSP_AUDIT.md` into one release-quality checklist, while also pointing to the current automated Vitest coverage for state migration behavior.
+This is the authoritative manual testing guide for Campaign Tracker / Lore Ledger. It consolidates the current guidance from `docs/SMOKE_TEST.md`, `SMOKE_TEST.md`, and `docs/CSP_AUDIT.md` into one release-quality checklist, while also pointing to the current automated Vitest coverage for migration, persistence, backup/import, and save-lifecycle behavior.
 
 ## 1. Testing philosophy
 
-The project is currently validated primarily through manual testing. There is now targeted automated coverage for `js/state.js`, but most user-facing behavior still needs browser-level verification. Because the app is local-first and splits persistence across `localStorage`, IndexedDB blobs, IndexedDB texts, and PWA caches, the highest-risk regressions are:
+The project is currently validated primarily through manual testing. There is now targeted automated coverage for the main data-integrity paths, but most user-facing behavior still needs browser-level verification. Because the app is local-first and splits persistence across `localStorage`, IndexedDB blobs, IndexedDB texts, and PWA caches, the highest-risk regressions are:
 
 - data loss after refresh
 - broken image or drawing persistence
@@ -30,9 +30,20 @@ Treat any data-loss, restore, offline-shell, or CSP regression as a merge/releas
 
 ## 2. Current automated coverage
 
-Vitest is the current unit test runner.
+Vitest is the current unit test runner, and Playwright now provides a tiny local browser smoke layer.
 
-Current commands:
+Canonical local verification commands:
+
+- `npm ci`
+  Expected: installs dependencies the same way CI does on a clean runner. Use this when you want the closest local match to GitHub Actions, especially after dependency or lockfile changes.
+- `npm run verify`
+  Expected: runs the canonical automated local gate: `npm run test:run` and `npm run build`.
+- `npm run preview`
+  Expected: serves the production build for browser-only validation that CI does not cover.
+- `npm run test:smoke`
+  Expected: starts a controlled Vite server in production mode on the repo's GitHub Pages base path and runs the 4-test local Chromium smoke suite for app boot, map-shell rendering, reload persistence, backup export/import in a fresh browser context, and invalid import feedback.
+
+Focused dev commands:
 
 - `npm test`
   Expected: starts Vitest in watch mode for local development.
@@ -41,21 +52,75 @@ Current commands:
 - `npm run test:run -- tests/state.migrate.test.js`
   Expected: runs only the migration-focused suite for `migrateState(...)`.
 
-Current automated scope is intentionally narrow:
+Current automated scope is intentionally targeted:
 
-- `tests/state.smoke.test.js` is a runner smoke test that confirms the app state module loads under Vitest.
-- `tests/state.migrate.test.js` covers valid historical migration paths, already-current schema normalization behavior, and malformed or partial inputs that `migrateState(...)` currently accepts, repairs, preserves, or rejects.
+- `tests/state.migrate.test.js` covers supported legacy migration paths, current-schema normalization, malformed or partial payload repair, inventory backfill, active-inventory clamping, and idempotence.
+- `tests/storage.persistence.test.js` covers `saveAllLocal(...)` sanitized writes plus `loadAll(...)` behavior for missing storage, corrupt storage, stale-bucket replacement, legacy `imgDataUrl` migration, and default-map repair.
+- `tests/storage.saveManager.test.js` covers the local save lifecycle: dirty-delay timing, debounce behavior, `flush()` results, failure banner behavior, retry after failure, repeated dirty cycles, and `init()` reset behavior.
+- `tests/storage.backup.test.js` covers backup export shape, referenced blob/text collection, import validation failures, staged blob/text writes before state swap, rollback when save fails, cleanup of staged assets after pre-swap failures, and blob-ID remap fallback when an import collides with an existing blob id.
+- `tests/smoke/app.smoke.js` covers top-level shell boot in Chromium, opening the Map workspace, and a campaign-title reload-persistence check against the dedicated production-mode Vite server.
+- `tests/smoke/backup.smoke.js` covers backup export to a real download, import of that backup into a fresh Chromium browser context, and visible failure handling for invalid JSON import input.
 
-Those tests improve confidence in saved-state integrity, backup/import safety, and future schema evolution, but they do not replace manual checks for UI rendering, IndexedDB-backed asset flows, full backup/restore behavior, or PWA/offline behavior.
+Critical paths currently protected by automation:
+
+- schema upgrades and load-time normalization for saved state
+- local save serialization that strips runtime-only fields
+- startup load behavior when stored data is missing, partial, malformed, or legacy-shaped
+- save-manager failure handling that keeps unsaved-state warnings and recovery behavior honest
+- backup import/export invariants, including failure rollback and imported asset preservation
+- one real-browser boot path through a Vite production-mode server plus one simple reload-persistence check
+- one real file download/upload backup round trip in Chromium using the production base path
+
+Important browser gaps still left for manual verification:
+
+- Character-page rendering and deeper Tracker/Map interaction flows
+- `Reset Everything` plus full browser restore runs that include images, drawings, and text-backed assets
+- PWA install, offline shell, update-banner, cache, and service-worker behavior
+- touch gestures, mobile layout behavior, and cross-browser UI differences
+- end-to-end CSP/startup verification in a real browser session
+
+Those gaps are why the manual sections below remain release-critical.
+
+Use `npm run verify` as the default automated pre-merge and pre-release check. The narrower Vitest commands are for faster iteration when you already know which area you are changing.
+
+Intentional differences between local verification and CI:
+
+- CI always starts from a clean Ubuntu runner with Node `20` and runs `npm ci` before the automated gate.
+- Local verification can reuse an existing install; run `npm ci && npm run verify` when you want the closest local CI match.
+- CI stops after the automated gate. The Pages workflow does not currently install Chromium or run `npm run test:smoke`.
+- Local release validation should still include `npm run test:smoke` when browser-level behavior changed, plus the manual browser checks below.
+
+### Conventions for future automated tests
+
+- Keep tests behavior-focused and tied to real exported module APIs such as `migrateState(...)`, `loadAll(...)`, `createSaveManager(...)`, and `importBackup(...)`.
+- Prefer one test file per module or critical flow under `tests/*.test.js`, named after the area under test.
+- Lock in current compatibility behavior before refactoring persistence or migration code, even when the current behavior is permissive or a little odd.
+- Mock browser-only surfaces explicitly in the test so the expectation stays about Lore Ledger behavior, not Vitest environment quirks.
+- Assert user-safety outcomes first: preserved data, rejected bad input, rollback on failure, stripped runtime-only state, and stable state after retries.
+- When a storage or migration change adds a new supported legacy path or failure mode, add or update tests in the same change.
+
+### CheckJS / JSDoc validation status
+
+The repo also has an in-progress static-validation path for vanilla JS:
+
+- `tsconfig.checkjs.json` enables `allowJs` + `checkJs` for `app.js`, `boot.js`, `vite.config.js`, `js/**/*.js`, and `types/**/*.d.ts`.
+- The currently hardened `@ts-check` surface is narrower than that repo-wide include set and is concentrated in `app.js`, `js/state.js`, all current `js/domain/*` and `js/storage/*` modules, tracker/map orchestration modules, several shared UI primitives, and focused utility/feature modules.
+- The broad pass is useful as a diagnostic when touching typing work, dependency boundaries, or JSDoc contracts.
+- It is not yet a must-pass release gate. The full repo pass still reports known errors in older Character-panel and Tracker card/panel modules.
+- There is currently no dedicated `package.json` script for this. When maintainers want the broad diagnostic run, the current command is:
+
+```bash
+npm exec --yes --package typescript@5.9.3 -- tsc -p tsconfig.checkjs.json
+```
 
 ## 3. Pre-merge minimum checks
 
 Run these before merging any user-visible change:
 
-1. If the change touched `js/state.js`, schema history, import validation, or migration semantics, run `npm run test:run -- tests/state.migrate.test.js`.
-   Expected: the migration suite passes and any behavior changes are intentional.
-2. `npm run build`
-   Expected: production build succeeds with no unexpected errors.
+1. Run `npm run verify`.
+   Expected: the same automated gate CI uses passes locally.
+2. If the change touched an existing `@ts-check` module, JSDoc typedefs, `types/*.d.ts`, or module boundary contracts, run the CheckJS command from section 2 when practical.
+   Expected: no new typing regressions are introduced in the area you touched, even though the full repo pass is not yet globally clean.
 3. Open the app in `npm run dev` or another local served environment.
    Expected: the changed area loads cleanly and normal interaction does not produce unexpected console errors.
 4. Reload the relevant top-level route.
@@ -74,14 +139,20 @@ Run these before merging any user-visible change:
 
 Before any release candidate or production deploy, run the full set below in a clean browser profile:
 
-1. Run `npm run test:run`.
+1. Run `npm run verify`.
 2. Complete section 5, including refresh durability and intentional non-persistence checks.
 3. Complete sections 6, 7, and 8 for Tracker, Character, and Map.
 4. Complete section 9 using a real exported backup file and `Reset Everything`.
-5. Complete section 10 against a production build or deployed site.
+5. Complete section 10 against the built preview or deployed site.
 6. Complete section 11 with `?dev=1`, then repeat a quick normal flow without the dev flag.
 7. Cover the browser/device matrix in section 12.
 8. Capture failure evidence using section 13.
+
+Intentional difference from CI:
+
+- CI runs `npm ci`, then the same automated gate as `npm run verify`, and stops before any browser-level validation.
+- The current browser smoke suite is local-only for now; CI does not yet provision Chromium or run `npm run test:smoke`.
+- Local release validation must continue with the preview/manual sections because CI does not exercise real browser persistence, offline/PWA behavior, or cross-browser interaction flows.
 
 ## 5. Persistence regression checks
 

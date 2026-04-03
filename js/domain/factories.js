@@ -1,10 +1,78 @@
-// @ts-nocheck
+// @ts-check
 
+/** @typedef {"npc" | "party" | "loc"} IdPrefix */
+/**
+ * @typedef {{
+ *   sectionId?: string,
+ *   notes?: string
+ * }} SectionNotesInit
+ */
+/**
+ * @typedef {{
+ *   id: string,
+ *   sectionId: string,
+ *   notes: string,
+ *   imgBlobId: string | null,
+ *   portraitHidden: boolean,
+ *   collapsed: boolean
+ * }} TrackerCardBase
+ */
+/**
+ * @typedef {{
+ *   status: string,
+ *   className: string,
+ *   hpMax: number | null,
+ *   hpCurrent: number | null
+ * }} TrackerVitals
+ */
+/**
+ * @typedef {SectionNotesInit & {
+ *   group?: string,
+ *   name?: string
+ * }} NpcInit
+ */
+/**
+ * @typedef {TrackerCardBase & TrackerVitals & {
+ *   group: string,
+ *   name: string
+ * }} NpcCard
+ */
+/**
+ * @typedef {SectionNotesInit & {
+ *   name?: string
+ * }} PartyMemberInit
+ */
+/**
+ * @typedef {TrackerCardBase & TrackerVitals & {
+ *   name: string
+ * }} PartyMemberCard
+ */
+/**
+ * @typedef {SectionNotesInit & {
+ *   title?: string,
+ *   type?: string
+ * }} LocationInit
+ */
+/**
+ * @typedef {TrackerCardBase & {
+ *   title: string,
+ *   type: string
+ * }} LocationCard
+ */
+
+/**
+ * @param {IdPrefix} prefix
+ * @returns {string}
+ */
 export function makeId(prefix) {
   // Short, readable id good enough for local use.
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * @param {NpcInit} [input]
+ * @returns {NpcCard}
+ */
 export function makeNpc({ sectionId = "", group = "undecided", name = "", notes = "" } = {}) {
   return {
     id: makeId("npc"),
@@ -24,6 +92,10 @@ export function makeNpc({ sectionId = "", group = "undecided", name = "", notes 
   };
 }
 
+/**
+ * @param {PartyMemberInit} [input]
+ * @returns {PartyMemberCard}
+ */
 export function makePartyMember({ sectionId = "party", name = "", notes = "" } = {}) {
   return {
     id: makeId("party"),
@@ -40,6 +112,10 @@ export function makePartyMember({ sectionId = "party", name = "", notes = "" } =
   };
 }
 
+/**
+ * @param {LocationInit} [input]
+ * @returns {LocationCard}
+ */
 export function makeLocation({ sectionId = "", title = "", notes = "", type = "town" } = {}) {
   return {
     id: makeId("loc"),

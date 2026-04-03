@@ -19,6 +19,7 @@ const _singletonCharacterPanelInits = {
   spells: false,
   equipment: false
 };
+/** @typedef {"spells" | "equipment"} CharacterSingletonKey */
 
 export function initCharacterPageUI(deps) {
   _activeCharacterPageController?.destroy?.();
@@ -81,8 +82,14 @@ export function initCharacterPageUI(deps) {
     target.addEventListener(type, handler, { ...listenerOptions, signal: listenerSignal });
   };
 
+  /**
+   * @param {string} id
+   * @param {(() => string | null | undefined) | undefined} getter
+   * @param {((value: string) => void) | undefined} setter
+   * @returns {HTMLInputElement | HTMLTextAreaElement | null}
+   */
   const bindText = (id, getter, setter) => {
-    const target = document.getElementById(id);
+    const target = /** @type {HTMLInputElement | HTMLTextAreaElement | null} */ (document.getElementById(id));
     if (!target) return null;
 
     target.value = getter?.() ?? "";
@@ -94,8 +101,15 @@ export function initCharacterPageUI(deps) {
     return target;
   };
 
+  /**
+   * @param {string} id
+   * @param {(() => number | string | null | undefined) | undefined} getter
+   * @param {((value: number | null) => void) | undefined} setter
+   * @param {{ min: number, max: number } | undefined} autosizeOpts
+   * @returns {HTMLInputElement | HTMLTextAreaElement | null}
+   */
   const bindNumber = (id, getter, setter, autosizeOpts) => {
-    const target = document.getElementById(id);
+    const target = /** @type {HTMLInputElement | HTMLTextAreaElement | null} */ (document.getElementById(id));
     if (!target) return null;
 
     const sizeOpts = autosizeOpts || { min: 30, max: 80 };
@@ -120,6 +134,11 @@ export function initCharacterPageUI(deps) {
     return target;
   };
 
+  /**
+   * @param {string} panelName
+   * @param {() => ({ destroy?: () => void } | null | undefined | void)} initFn
+   * @param {{ singletonKey?: CharacterSingletonKey }} [options]
+   */
   const runPanelInit = (panelName, initFn, { singletonKey } = {}) => {
     if (singletonKey && _singletonCharacterPanelInits[singletonKey]) {
       return getNoopDestroyApi();
@@ -127,7 +146,9 @@ export function initCharacterPageUI(deps) {
 
     try {
       const panelApi = initFn();
-      if (panelApi?.destroy) addDestroy(() => panelApi.destroy());
+      if (panelApi && typeof panelApi === "object" && typeof panelApi.destroy === "function") {
+        addDestroy(() => panelApi.destroy());
+      }
       else if (singletonKey) _singletonCharacterPanelInits[singletonKey] = true;
       return panelApi || getNoopDestroyApi();
     } catch (err) {

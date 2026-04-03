@@ -4,6 +4,14 @@
 import { initCollapsibleTextareas } from "../../../ui/collapsibleTextareas.js";
 import { requireMany } from "../../../utils/domGuards.js";
 
+/**
+ * @typedef {{
+ *   state?: unknown,
+ *   SaveManager?: { markDirty?: () => void },
+ *   root?: Document | HTMLElement
+ * }} CharacterCollapsibleTextareaDeps
+ */
+
 function ensureStringField(obj, key) {
   if (typeof obj[key] !== "string") obj[key] = "";
 }
@@ -42,6 +50,9 @@ export function initPersonalityPanel(deps = {}) {
   bindText("charCharNotes", () => p.notes, (v) => p.notes = v);
 }
 
+/**
+ * @param {CharacterCollapsibleTextareaDeps} [deps]
+ */
 export function setupCharacterCollapsibleTextareas({ state, SaveManager, root } = {}) {
   initCollapsibleTextareas({ state, SaveManager, root });
 }

@@ -459,15 +459,15 @@ export function renderLocationCard(loc) {
 footer.className = "npcCardFooter";
 
 // "Move between sections" dropdown (matches Party/NPC cards).
-const { sectionWrap } = createSectionSelectRow({
-  sections: _state.tracker.locSections || [],
-  value: loc.sectionId || _state.tracker.locActiveSectionId,
-  onChange: (newVal) => {
-    _updateLoc(loc.id, { sectionId: newVal }, true);
-    if (typeof window.renderLocationTabs === "function") window.renderLocationTabs();
-  },
-  enhanceSelectOnce,
-  Popovers: _Popovers,
+  const { sectionWrap } = createSectionSelectRow({
+    sections: _state.tracker.locSections || [],
+    value: loc.sectionId || _state.tracker.locActiveSectionId,
+    onChange: (newVal) => {
+      _updateLoc(loc.id, { sectionId: newVal }, true);
+      renderLocTabs();
+    },
+    enhanceSelectOnce,
+    Popovers: _Popovers,
   enhanceSelectDropdown,
   buttonClass: "cardSelectBtn",
   optionClass: "swatchOption",
@@ -767,9 +767,6 @@ export function initLocationsPanel(deps = {}) {
       onSelect: (id) => setActiveSection(id),
     });
   }
-
-  // Allow cards/actions to refresh tabs if needed.
-  window.renderLocTabs = renderLocTabs;
 
   // Section buttons
   wireSectionCrud({

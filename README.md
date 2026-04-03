@@ -39,7 +39,8 @@ That direction is visible in the current structure:
 
 - Vanilla `HTML`, `CSS`, and ES module `JavaScript`
 - [`Vite`](https://vitejs.dev/) for local development, production builds, and preview
-- [`Vitest`](https://vitest.dev/) for targeted unit tests around state migration behavior
+- [`Vitest`](https://vitest.dev/) for targeted unit tests around state migration, persistence, backup/import, and save lifecycle behavior
+- Vanilla-JS type safety through `tsconfig.checkjs.json`, file-level `// @ts-check`, JSDoc typedefs/imports, and repo-local `.d.ts` shims under `types/`
 - [`vite-plugin-pwa`](https://vite-pwa-org.netlify.app/) / Workbox for service worker registration, precaching, and update prompts
 - Browser persistence via `localStorage` and `IndexedDB`
 - GitHub Actions and GitHub Pages for production deployment
@@ -62,6 +63,15 @@ At a high level, the app is wired as a modular vanilla JS application:
 - `js/domain/*` contains explicit state action helpers and entity factories
 
 For a deeper maintainer view, see [`docs/architecture.md`](docs/architecture.md).
+
+## 5.1 Type safety in vanilla JS
+
+The repo is still plain JavaScript. Current type safety comes from `tsconfig.checkjs.json` plus JSDoc, not from a TypeScript rewrite.
+
+- File-level `// @ts-check` is now in use for the composition root (`app.js`), `js/state.js`, all current `js/domain/*` and `js/storage/*` modules, map page orchestration/persistence modules, tracker page orchestration modules, several shared UI primitives, and focused utility/feature modules such as `js/features/autosize.js`, `js/features/numberSteppers.js`, and `js/utils/dev.js`.
+- Shared typedefs mostly live beside the code that owns them. The main persisted-state and migration types live in `js/state.js`; ambient browser/build shims live in `types/*.d.ts`.
+- `tsconfig.checkjs.json` includes `app.js`, `boot.js`, `vite.config.js`, `js/**/*.js`, and `types/**/*.d.ts`, so the broader repo can be checked with CheckJS even where file-level hardening is still in progress.
+- That broader pass is not fully clean yet, so maintainers should not treat repo-wide CheckJS as a fully green merge gate today.
 
 ## 6. Local development
 
@@ -95,10 +105,14 @@ __APP_STATE__.tracker.campaignTitle = "Guard test"
 
 ## 7. Automated tests
 
-The repo now includes a small Vitest-based automated test surface:
+The repo now includes targeted automation in two layers:
 
-- `tests/state.smoke.test.js` confirms the test runner can import the app's state module.
-- `tests/state.migrate.test.js` covers `migrateState(...)` behavior in `js/state.js`, including valid schema upgrades, already-current normalization behavior, and malformed or partial inputs that the app currently accepts or rejects.
+- `tests/state.migrate.test.js` covers `migrateState(...)` in `js/state.js`, including supported legacy upgrade paths, current-schema normalization, and malformed or partial inputs.
+- `tests/storage.persistence.test.js` covers `loadAll(...)` and `saveAllLocal(...)`, including sanitized saves, legacy image migration, stale-bucket replacement, and corrupt-storage fallback behavior.
+- `tests/storage.saveManager.test.js` covers the local save manager lifecycle, including dirty/saving/saved transitions, debounce behavior, retries after failure, and reset behavior.
+- `tests/storage.backup.test.js` covers backup export/import validation, staged blob/text writes, rollback on failure, and blob-ID remap behavior during import.
+- `tests/smoke/app.smoke.js` covers app shell boot, opening the Map workspace, and a simple reload-persistence check in Chromium.
+- `tests/smoke/backup.smoke.js` covers backup export, import into a fresh browser context, and visible failure handling for invalid backup files in Chromium.
 
 Run the test suite in watch mode:
 
@@ -112,13 +126,39 @@ Run the suite once:
 npm run test:run
 ```
 
-Run only the migration suite:
+Run the same automated verification CI uses:
+
+```bash
+npm run verify
+```
+
+Run the local browser smoke suite:
+
+```bash
+npm run test:smoke
+```
+
+If Playwright Chromium is not installed yet on this machine, install it once first:
+
+```bash
+npx playwright install chromium
+```
+
+Run one suite directly:
 
 ```bash
 npm run test:run -- tests/state.migrate.test.js
 ```
 
-This is intentionally targeted coverage, not full-app automation. UI behavior, browser storage flows, backup/restore end-to-end behavior, and PWA/offline behavior still rely on the manual checks documented under `docs/`.
+`npm run test:smoke` runs the 4-test Playwright suite against a controlled Vite server started in production mode on the repo's GitHub Pages base path. It is intentionally local-only today and does not replace preview-based PWA/offline validation.
+
+This is intentionally targeted coverage, not full-app automation. Automation now covers migration, local save/load, save-manager behavior, backup/import logic, basic browser boot, one reload-persistence path, and a file-based backup round trip into a fresh browser context. It still does not replace the manual checks for `Reset Everything`, image-backed flows, map drawing behavior, Character-page coverage, PWA/offline behavior, touch interactions, or cross-browser validation documented under `docs/`.
+
+`npm run verify` is the canonical local readiness check. It runs `npm run test:run` and `npm run build`, matching the automated checks in CI. It does not replace `npm run preview` or the browser-level manual checks needed for release validation.
+
+For the closest local match to CI, start from a clean install with `npm ci`, then run `npm run verify`. CI does not currently run `npm run test:smoke`.
+
+Static validation is also in progress for the vanilla-JS codebase via `tsconfig.checkjs.json`. That repo-wide CheckJS path is useful for diagnostics, but it still has known gaps in older Character-panel and Tracker card/panel surfaces and is not yet documented as a must-pass project gate.
 
 ## 8. Build and preview
 
@@ -208,7 +248,8 @@ git push origin v0.4.0
 - Production base path is `/CampaignTracker/` in [`vite.config.js`](vite.config.js)
 - Hash-based navigation is preserved for `#tracker`, `#character`, and `#map`
 - The Pages workflow is defined in [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
-- On pushes to `main` and on manual dispatch, the workflow checks out tags, runs `npm ci`, runs `npm run build`, and deploys `dist/`
+- On pushes to `main` and on manual dispatch, the workflow runs a `Verify and build` job that does `npm ci`, `npm run test:run`, and `npm run build`, uploads `dist/`, and only then runs `Deploy`
+- Local equivalent: `npm ci`, then `npm run verify`; release validation still also needs `npm run preview` plus the manual checks in [`docs/testing-guide.md`](docs/testing-guide.md)
 - If you deploy manually, publish the contents of `dist/`, not the repository root
 
 If the GitHub Pages path ever changes, update the following together:
@@ -228,7 +269,7 @@ The app is local-first and stores data in the browser:
 - Spell notes are stored separately in IndexedDB text storage
 - `loadAll()` migrates older saved shapes and legacy image data URLs into the current schema/storage model during startup
 - Backup export bundles sanitized state, stored images, and stored text into a JSON file; backup import validates, migrates, restores, and then reloads the app
-- Vitest migration coverage currently protects `migrateState(...)` schema upgrades and normalization behavior, which improves confidence in saved-state integrity and import/backward-compatibility work without replacing manual browser-level verification
+- Vitest coverage now protects `migrateState(...)`, startup load/save behavior, backup import/export logic, and the local save lifecycle, which improves confidence in saved-state integrity without replacing manual browser-level verification
 
 Intentionally non-persistent runtime state:
 
@@ -269,7 +310,7 @@ Existing documentation:
 Planned documentation placeholders:
 
 - [`docs/storage.md`](docs/storage.md) - TODO: persistent data model, storage keys, IndexedDB stores, and backup format
-- [`docs/release-process.md`](docs/release-process.md) - TODO: tagging, build verification, packaging scripts, and release checklist
+- [`docs/release-process.md`](docs/release-process.md) - current tagging, verification, packaging, deploy, and release checklist
 - [`docs/maintainer-guide.md`](docs/maintainer-guide.md) - TODO: common change paths, module entrypoints, and troubleshooting notes
 
 ## 14. Current status / known limitations
@@ -279,4 +320,4 @@ Planned documentation placeholders:
 - Offline support is a production-build feature; `npm run dev` does not exercise the service worker path.
 - Map undo/redo is intentionally in-memory only and resets on refresh.
 - GitHub Pages deployment assumes the `/CampaignTracker/` base path today.
-- Automated tests currently cover the Vitest smoke check and `js/state.js` migration behavior only; broader UI, browser-storage, backup/restore, and PWA validation is still manual.
+- Automated tests now cover migration, local persistence, backup/import, and save-manager behavior; broader UI, real browser-storage, backup/restore end-to-end, and PWA validation is still manual.

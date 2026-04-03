@@ -229,6 +229,13 @@ Rules:
 
 Never break existing saved data.
 
+### Vanilla JS typing & boundaries
+- This repo uses `@ts-check`, JSDoc, and `types/*.d.ts`, not a TypeScript rewrite.
+- For new shared modules or edits inside already-hardened files, preserve or add `// @ts-check` and keep boundary typedefs narrow.
+- Reuse owner-defined types from `js/state.js`, `js/domain/*`, or nearby boundary modules instead of inventing broad anonymous object shapes.
+- Keep runtime validation for persisted data, imports, files, and DOM lookups. Static types support those guards; they do not replace them.
+- Do not claim repo-wide CheckJS is fully clean unless that has actually been verified in the codebase.
+
 ---
 
 ### Rendering & events
