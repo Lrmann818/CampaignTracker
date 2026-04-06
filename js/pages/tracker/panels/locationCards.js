@@ -11,6 +11,7 @@ import { createMoveButton, createCollapseButton } from "./cards/shared/cardHeade
 import { enhanceSelectOnce } from "./cards/shared/cardSelectShared.js";
 import { createDeleteButton, createSectionSelectRow } from "./cards/shared/cardFooterShared.js";
 import { renderCardPortrait } from "./cards/shared/cardPortraitRenderShared.js";
+import { createCardIncrementalDomPatcher } from "./cards/shared/cardIncrementalPatchShared.js";
 import { createStateActions } from "../../../domain/stateActions.js";
 import { requireMany } from "../../../utils/domGuards.js";
 import { startJumpDebugRun, queueJumpDebugCheckpoints } from "../../../ui/jumpDebug.js";
@@ -93,157 +94,24 @@ function createLocationCardsController(deps = {}) {
       .filter((location) => typeFilter === "all" ? true : ((location.type || "town") === typeFilter))
       .filter((location) => matchesSearch(location, query));
   };
-
-  function findLocationCardElById(cardId) {
-    return cardsEl?.querySelector(`.trackerCard[data-card-id="${cardId}"]`) || null;
-  }
-
-  function scheduleLocationMasonryRelayout() {
-    if (!cardsEl) return;
-    requestAnimationFrame(() => masonry.relayout(cardsEl));
-  }
-
-  function focusLocationCardCollapseButton(cardId, fallbackEl = null) {
-    requestAnimationFrame(() => {
-      const btn = findLocationCardElById(cardId)?.querySelector(".cardCollapseBtn") || fallbackEl;
-      try { btn?.focus({ preventScroll: true }); } catch { btn?.focus?.(); }
-    });
-  }
-
-  function focusLocationCardMoveButton(cardId, dir) {
-    requestAnimationFrame(() => {
-      const card = findLocationCardElById(cardId);
-      if (!card) return;
-      const buttons = card.querySelectorAll(".moveBtn");
-      const btn = buttons[dir < 0 ? 0 : 1] || buttons[0] || null;
-      try { btn?.focus({ preventScroll: true }); } catch { btn?.focus?.(); }
-    });
-  }
-
-  function patchLocationCardReorder(cardId, adjacentId, dir) {
-    if (!cardsEl) return false;
-    const cardEl = findLocationCardElById(cardId);
-    const adjacentEl = findLocationCardElById(adjacentId);
-    if (!cardEl || !adjacentEl) return false;
-    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
-
-    const firstRectA = cardEl.getBoundingClientRect();
-    const firstRectB = adjacentEl.getBoundingClientRect();
-
-    const prevScroll = cardsEl.scrollTop;
-    if (dir < 0) cardsEl.insertBefore(cardEl, adjacentEl);
-    else cardsEl.insertBefore(adjacentEl, cardEl);
-    cardsEl.scrollTop = prevScroll;
-
-    masonry.relayout(cardsEl);
-    if (!prefersReducedMotion) {
-      const lastRectA = cardEl.getBoundingClientRect();
-      const lastRectB = adjacentEl.getBoundingClientRect();
-      const baseA = cardEl.style.transform || "";
-      const baseB = adjacentEl.style.transform || "";
-      const deltaAX = firstRectA.left - lastRectA.left;
-      const deltaAY = firstRectA.top - lastRectA.top;
-      const deltaBX = firstRectB.left - lastRectB.left;
-      const deltaBY = firstRectB.top - lastRectB.top;
-
-      cardEl.style.transform = baseA
-        ? `${baseA} translate(${deltaAX}px, ${deltaAY}px)`
-        : `translate(${deltaAX}px, ${deltaAY}px)`;
-      adjacentEl.style.transform = baseB
-        ? `${baseB} translate(${deltaBX}px, ${deltaBY}px)`
-        : `translate(${deltaBX}px, ${deltaBY}px)`;
-      cardEl.offsetHeight; // Force reflow so FLIP transition starts from inverted position.
-
-      cardEl.style.transition = "transform 260ms cubic-bezier(.2,.8,.2,1)";
-      adjacentEl.style.transition = "transform 260ms cubic-bezier(.2,.8,.2,1)";
-      cardEl.style.transform = baseA;
-      adjacentEl.style.transform = baseB;
-
-      let cleaned = false;
-      const cleanup = () => {
-        if (cleaned) return;
-        cleaned = true;
-        cardEl.style.transition = "";
-        adjacentEl.style.transition = "";
-        cardEl.removeEventListener("transitionend", onEndA);
-        adjacentEl.removeEventListener("transitionend", onEndB);
-      };
-      const onEndA = (evt) => { if (evt.propertyName === "transform") cleanup(); };
-      const onEndB = (evt) => { if (evt.propertyName === "transform") cleanup(); };
-      cardEl.addEventListener("transitionend", onEndA);
-      adjacentEl.addEventListener("transitionend", onEndB);
-      setTimeout(cleanup, 260);
-    }
-
-    focusLocationCardMoveButton(cardId, dir);
-    return true;
-  }
-
-  function patchLocationCardCollapsed(cardId, collapsed, focusEl = null) {
-    const card = findLocationCardElById(cardId);
-    if (!card) return false;
-
-    card.classList.toggle("collapsed", !!collapsed);
-    const collapsible = card.querySelector(".npcCollapsible");
-    if (collapsible) collapsible.hidden = !!collapsed;
-    const footer = card.querySelector(".npcCardFooter");
-    if (footer) footer.hidden = !!collapsed;
-
-    const toggle = card.querySelector(".cardCollapseBtn");
-    if (toggle) {
-      toggle.setAttribute("aria-label", collapsed ? "Expand card" : "Collapse card");
-      toggle.setAttribute("aria-expanded", (!collapsed).toString());
-      toggle.textContent = collapsed ? "\u25bc" : "\u25b2";
-    }
-
-    scheduleLocationMasonryRelayout();
-    focusLocationCardCollapseButton(cardId, focusEl || toggle);
-    return true;
-  }
-
-  function focusElementWithoutScroll(el) {
-    if (!el) return;
-    requestAnimationFrame(() => {
-      try { el.focus({ preventScroll: true }); } catch { el.focus?.(); }
-    });
-  }
-
-  function patchLocationCardPortrait(cardId, hidden, focusEl = null) {
-    const card = findLocationCardElById(cardId);
-    if (!card) return false;
-
-    const location = getLocationById(cardId);
-    if (!location) return false;
-
-    const headerRow = card.querySelector(".npcHeaderRow");
-    const body = card.querySelector(".npcCardBodyStack");
-    if (!headerRow || !body) return false;
-
-    headerRow.querySelectorAll(".cardPortraitToggleBtnHeader").forEach((btn) => btn.remove());
-    card.querySelector(".npcPortraitTop")?.remove();
-
-    const portrait = renderCardPortrait({
-      blobId: location.imgBlobId,
-      altText: location.title || "Location Image",
-      blobIdToObjectUrl,
-      onPick: () => pickLocImage(location.id),
-      isHidden: !!hidden,
-      onToggleHidden: (nextHidden) => setLocPortraitHidden(location.id, nextHidden),
-      headerControlsEl: headerRow,
-      onImageLoad: scheduleLocationMasonryRelayout,
-    });
-    if (portrait) card.insertBefore(portrait, body);
-
-    const nextFocusEl = focusEl && focusEl.isConnected
-      ? focusEl
-      : (hidden
-        ? headerRow.querySelector(".cardPortraitToggleBtnHeader")
-        : card.querySelector(".npcPortraitTop .cardPortraitToggleBtnOverlay"));
-
-    scheduleLocationMasonryRelayout();
-    focusElementWithoutScroll(nextFocusEl);
-    return true;
-  }
+  const cardDomPatcher = createCardIncrementalDomPatcher({
+    cardsEl,
+    blobIdToObjectUrl,
+  });
+  const scheduleLocationMasonryRelayout = () => cardDomPatcher.scheduleMasonryRelayout();
+  const focusLocationCardCollapseButton = (cardId, fallbackEl = null) => cardDomPatcher.focusCollapseButton(cardId, fallbackEl);
+  const patchLocationCardReorder = (cardId, adjacentId, dir) => cardDomPatcher.patchReorder(cardId, adjacentId, dir);
+  const patchLocationCardCollapsed = (cardId, collapsed, focusEl = null) => cardDomPatcher.patchCollapsed(cardId, collapsed, focusEl);
+  const patchLocationCardPortrait = (cardId, hidden, focusEl = null) => cardDomPatcher.patchPortrait({
+    cardId,
+    hidden,
+    focusEl,
+    getItemById: getLocationById,
+    getBlobId: (location) => location.imgBlobId,
+    getAltText: (location) => location.title || "Location Image",
+    onPick: (location) => pickLocImage(location.id),
+    onToggleHidden: (location, nextHidden) => setLocPortraitHidden(location.id, nextHidden),
+  });
 
   function renderLocationCards() {
     if (!state) return;

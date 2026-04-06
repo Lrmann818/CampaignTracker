@@ -35,12 +35,47 @@ async function getCardNames(panelCards) {
   return panelCards.locator(".npcNameBig").evaluateAll((els) => els.map((el) => el.value));
 }
 
+/**
+ * @param {import("@playwright/test").Page} page
+ * @param {{ cardId: string, className: string, title?: string }} expected
+ */
+async function expectActiveControlInCard(page, { cardId, className, title } = {}) {
+  await expect.poll(() => page.evaluate(({ cardId, className, title }) => {
+    const active = document.activeElement;
+    const activeCardId = active?.closest(".trackerCard")?.dataset.cardId || null;
+    const matchesClass = !!active?.classList?.contains(className);
+    const matchesTitle = title ? active?.getAttribute?.("title") === title : true;
+    return activeCardId === cardId && matchesClass && matchesTitle;
+  }, { cardId, className, title })).toBe(true);
+}
+
 test("party panel keeps portrait, search, section, reorder, and collapse behavior after controller scoping", async ({ page }) => {
   const fatalSignals = await openSmokeApp(page);
 
   await page.locator("#addPartyBtn").click();
   await expect(page.locator("#partyCards .trackerCard")).toHaveCount(1);
   await expect(page.locator("#partyCards .npcPortraitTop")).toContainText("Click to add image");
+  const firstPartyCard = page.locator("#partyCards .trackerCard").first();
+  const firstPartyCardId = await firstPartyCard.getAttribute("data-card-id");
+  if (!firstPartyCardId) throw new Error("Expected first party card id");
+
+  await firstPartyCard.locator(".cardPortraitToggleBtnOverlay").click();
+  await expect(firstPartyCard.locator(".npcPortraitTop")).toHaveCount(0);
+  await expect(firstPartyCard.locator(".cardPortraitToggleBtnHeader")).toHaveCount(1);
+  await expectActiveControlInCard(page, {
+    cardId: firstPartyCardId,
+    className: "cardPortraitToggleBtnHeader",
+    title: "Show image",
+  });
+
+  await firstPartyCard.locator(".cardPortraitToggleBtnHeader").click();
+  await expect(firstPartyCard.locator(".npcPortraitTop")).toHaveCount(1);
+  await expect(firstPartyCard.locator(".cardPortraitToggleBtnOverlay")).toHaveCount(1);
+  await expectActiveControlInCard(page, {
+    cardId: firstPartyCardId,
+    className: "cardPortraitToggleBtnOverlay",
+    title: "Hide image",
+  });
 
   const cancelChooser = await openPortraitChooser(page, "#partyCards");
   await cancelChooser.setFiles(FIXTURE_IMAGE);
@@ -63,9 +98,9 @@ test("party panel keeps portrait, search, section, reorder, and collapse behavio
   await expect(page.locator("#partyCards .trackerCard")).toHaveCount(1);
   await expect(page.locator("#partyCards .npcPortraitTop img")).toHaveCount(1);
 
-  const firstPartyCard = page.locator("#partyCards .trackerCard").first();
-  await firstPartyCard.locator(".npcNameBig").fill("Alpha");
-  await expect(firstPartyCard.locator(".npcNameBig")).toHaveValue("Alpha");
+  const reloadedFirstPartyCard = page.locator("#partyCards .trackerCard").first();
+  await reloadedFirstPartyCard.locator(".npcNameBig").fill("Alpha");
+  await expect(reloadedFirstPartyCard.locator(".npcNameBig")).toHaveValue("Alpha");
 
   await page.locator("#addPartyBtn").click();
   await expect(page.locator("#partyCards .trackerCard")).toHaveCount(2);
@@ -78,16 +113,34 @@ test("party panel keeps portrait, search, section, reorder, and collapse behavio
   await page.locator("#partySearch").fill("");
   await expect(page.locator("#partyCards .trackerCard")).toHaveCount(2);
 
-  await page.locator("#partyCards .trackerCard").first().getByTitle("Move card down").click();
+  const movedPartyCard = page.locator("#partyCards .trackerCard").first();
+  const movedPartyCardId = await movedPartyCard.getAttribute("data-card-id");
+  if (!movedPartyCardId) throw new Error("Expected moved party card id");
+  await movedPartyCard.getByTitle("Move card down").click();
   await expect.poll(() => getCardNames(page.locator("#partyCards"))).toEqual(["Alpha", "Beta"]);
+  await expectActiveControlInCard(page, {
+    cardId: movedPartyCardId,
+    className: "moveBtn",
+    title: "Move card down",
+  });
 
   const topPartyCard = page.locator("#partyCards .trackerCard").first();
+  const topPartyCardId = await topPartyCard.getAttribute("data-card-id");
+  if (!topPartyCardId) throw new Error("Expected top party card id");
   await topPartyCard.locator(".cardCollapseBtn").click();
   await expect(topPartyCard.locator(".npcCollapsible")).toBeHidden();
   await expect(topPartyCard.locator(".npcCardFooter")).toBeHidden();
+  await expectActiveControlInCard(page, {
+    cardId: topPartyCardId,
+    className: "cardCollapseBtn",
+  });
   await topPartyCard.locator(".cardCollapseBtn").click();
   await expect(topPartyCard.locator(".npcCollapsible")).toBeVisible();
   await expect(topPartyCard.locator(".npcCardFooter")).toBeVisible();
+  await expectActiveControlInCard(page, {
+    cardId: topPartyCardId,
+    className: "cardCollapseBtn",
+  });
 
   await addSection(page, "#addPartySectionBtn", "Travel");
   await expect(page.locator("#partyTabs")).toContainText("Travel");
@@ -107,6 +160,27 @@ test("location panel keeps portrait, filter, section, reorder, and collapse beha
   await page.locator("#addLocBtn").click();
   await expect(page.locator("#locCards .trackerCard")).toHaveCount(1);
   await expect(page.locator("#locCards .npcPortraitTop")).toContainText("Click to add image");
+  const firstLocCard = page.locator("#locCards .trackerCard").first();
+  const firstLocCardId = await firstLocCard.getAttribute("data-card-id");
+  if (!firstLocCardId) throw new Error("Expected first location card id");
+
+  await firstLocCard.locator(".cardPortraitToggleBtnOverlay").click();
+  await expect(firstLocCard.locator(".npcPortraitTop")).toHaveCount(0);
+  await expect(firstLocCard.locator(".cardPortraitToggleBtnHeader")).toHaveCount(1);
+  await expectActiveControlInCard(page, {
+    cardId: firstLocCardId,
+    className: "cardPortraitToggleBtnHeader",
+    title: "Show image",
+  });
+
+  await firstLocCard.locator(".cardPortraitToggleBtnHeader").click();
+  await expect(firstLocCard.locator(".npcPortraitTop")).toHaveCount(1);
+  await expect(firstLocCard.locator(".cardPortraitToggleBtnOverlay")).toHaveCount(1);
+  await expectActiveControlInCard(page, {
+    cardId: firstLocCardId,
+    className: "cardPortraitToggleBtnOverlay",
+    title: "Hide image",
+  });
 
   const cancelChooser = await openPortraitChooser(page, "#locCards");
   await cancelChooser.setFiles(FIXTURE_IMAGE);
@@ -129,9 +203,9 @@ test("location panel keeps portrait, filter, section, reorder, and collapse beha
   await expect(page.locator("#locCards .trackerCard")).toHaveCount(1);
   await expect(page.locator("#locCards .npcPortraitTop img")).toHaveCount(1);
 
-  const firstLocCard = page.locator("#locCards .trackerCard").first();
-  await firstLocCard.locator(".npcNameBig").fill("Harbor");
-  await expect(firstLocCard.locator(".npcNameBig")).toHaveValue("Harbor");
+  const reloadedFirstLocCard = page.locator("#locCards .trackerCard").first();
+  await reloadedFirstLocCard.locator(".npcNameBig").fill("Harbor");
+  await expect(reloadedFirstLocCard.locator(".npcNameBig")).toHaveValue("Harbor");
 
   await page.locator("#addLocBtn").click();
   await expect(page.locator("#locCards .trackerCard")).toHaveCount(2);
@@ -152,16 +226,34 @@ test("location panel keeps portrait, filter, section, reorder, and collapse beha
   await page.locator("#locFilter").selectOption("all");
   await expect(page.locator("#locCards .trackerCard")).toHaveCount(2);
 
-  await page.locator("#locCards .trackerCard").first().getByTitle("Move card down").click();
+  const movedLocCard = page.locator("#locCards .trackerCard").first();
+  const movedLocCardId = await movedLocCard.getAttribute("data-card-id");
+  if (!movedLocCardId) throw new Error("Expected moved location card id");
+  await movedLocCard.getByTitle("Move card down").click();
   await expect.poll(() => getCardNames(page.locator("#locCards"))).toEqual(["Harbor", "Ruins"]);
+  await expectActiveControlInCard(page, {
+    cardId: movedLocCardId,
+    className: "moveBtn",
+    title: "Move card down",
+  });
 
   const topLocCard = page.locator("#locCards .trackerCard").first();
+  const topLocCardId = await topLocCard.getAttribute("data-card-id");
+  if (!topLocCardId) throw new Error("Expected top location card id");
   await topLocCard.locator(".cardCollapseBtn").click();
   await expect(topLocCard.locator(".npcCollapsible")).toBeHidden();
   await expect(topLocCard.locator(".npcCardFooter")).toBeHidden();
+  await expectActiveControlInCard(page, {
+    cardId: topLocCardId,
+    className: "cardCollapseBtn",
+  });
   await topLocCard.locator(".cardCollapseBtn").click();
   await expect(topLocCard.locator(".npcCollapsible")).toBeVisible();
   await expect(topLocCard.locator(".npcCardFooter")).toBeVisible();
+  await expectActiveControlInCard(page, {
+    cardId: topLocCardId,
+    className: "cardCollapseBtn",
+  });
 
   await addSection(page, "#addLocSectionBtn", "Travel");
   await expect(page.locator("#locTabs")).toContainText("Travel");
