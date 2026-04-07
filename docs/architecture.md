@@ -56,8 +56,8 @@ This list is intentionally narrower than the files included by `tsconfig.checkjs
 
 ### Current exceptions
 
-- The repo-wide CheckJS pass is diagnostic only for the current app/version, not a release gate. Current errors are still concentrated in older Character-panel code and Tracker card/panel surfaces.
-- Some included files already have partial JSDoc typing but do not currently carry file-level `// @ts-check`; making the entire include set CheckJS-clean is future typing-hardening roadmap work, not release-quality debt.
+- The repo-wide CheckJS pass is currently clean when run against `tsconfig.checkjs.json`, but it is still a separate validation step rather than part of `npm run verify` or the current GitHub Pages CI gate.
+- Some included files still rely on the broader config/JSDoc path without file-level `// @ts-check`; keep file-level hardening claims narrower than repo-wide clean-pass claims.
 - `boot.js`, `vite.config.js`, and other supporting modules are included in the broader config for diagnostics, but they should not be described as fully boundary-hardened unless that work has actually landed.
 
 ## Top-level entrypoints

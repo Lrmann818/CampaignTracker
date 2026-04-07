@@ -79,7 +79,7 @@ The repo is still plain JavaScript. Current type safety comes from `tsconfig.che
 - File-level `// @ts-check` is now in use for the composition root (`app.js`), `js/state.js`, all current `js/domain/*` and `js/storage/*` modules, map page orchestration/persistence modules, tracker page orchestration modules, several shared UI primitives, and focused utility/feature modules such as `js/features/autosize.js`, `js/features/numberSteppers.js`, and `js/utils/dev.js`.
 - Shared typedefs mostly live beside the code that owns them. The main persisted-state and migration types live in `js/state.js`; ambient browser/build shims live in `types/*.d.ts`.
 - `tsconfig.checkjs.json` includes `app.js`, `boot.js`, `vite.config.js`, `js/**/*.js`, and `types/**/*.d.ts`, so the broader repo can be checked with CheckJS as a diagnostic even where older files are outside the current file-level-hardened set.
-- For the current app/version, repo-wide CheckJS is diagnostic only and is not a merge or release gate. Making the entire include set CheckJS-clean is future typing-hardening roadmap work, not release-quality debt.
+- The repo-wide CheckJS pass is currently clean when run against `tsconfig.checkjs.json`. It is still an extra static-validation step rather than part of `npm run verify` or the current CI gate.
 
 ## 6. Local development
 
@@ -129,6 +129,7 @@ The repo now includes targeted automation in two layers:
 - `tests/smoke/partyLocationPanels.smoke.js` covers the same tracker-card behavior for Party and Location panels, including location type filtering.
 - `tests/smoke/trackerPanelLifecycle.smoke.js` covers repeated `initTrackerPage(...)` calls so tracker panel lifecycle cleanup stays single-bound after re-init.
 - `tests/smoke/characterPanelLifecycle.smoke.js` covers repeated `initCharacterPageUI(...)` calls so Character page re-init keeps spells, equipment, and representative panel actions single-bound after teardown/re-init.
+- `tests/smoke/dropdownRegression.smoke.js` covers shared dropdown/popover behavior, including enhanced select opening, tracker card menu clickability in the body-ported menu path, and dropdown wiring after rerender.
 
 Run the test suite in watch mode:
 
@@ -166,15 +167,15 @@ Run one suite directly:
 npm run test:run -- tests/state.migrate.test.js
 ```
 
-`npm run test:smoke` runs the current 10-test Playwright suite against a controlled Vite server started in production mode on the repo's GitHub Pages base path. Keeping that suite local-only is the current release-process decision for this version; preview-based PWA/offline validation remains manual, and CI/browser-expansion work is roadmap hardening rather than unresolved release debt.
+`npm run test:smoke` runs the current 16-test Playwright suite against a controlled Vite server started in production mode on the repo's GitHub Pages base path. Keeping that suite local-only is the current release-process decision for this version; preview-based PWA/offline validation remains manual, and CI/browser-expansion work is roadmap hardening rather than unresolved release debt.
 
-This is intentionally targeted coverage, not full-app automation. Automation now covers migration, `sanitizeForSave(...)`, `createStateActions(...)`, safe asset replacement ordering, local save/load, a representative structured save/load round trip, save-manager behavior, backup/import logic, basic browser boot, one reload-persistence path, a file-based backup round trip into a fresh browser context, tracker-page re-init safety, character-page re-init safety, and targeted NPC/Party/Location panel regression paths. `Reset Everything`, broader Character-page coverage beyond the current lifecycle smoke, map drawing/touch behavior, and PWA/offline behavior remain manual release checks today; broader automation for those areas is roadmap work, while broader automated cross-browser coverage remains out of scope for this version.
+This is intentionally targeted coverage, not full-app automation. Automation now covers migration, `sanitizeForSave(...)`, `createStateActions(...)`, safe asset replacement ordering, local save/load, a representative structured save/load round trip, save-manager behavior, backup/import logic, basic browser boot, one reload-persistence path, a file-based backup round trip into a fresh browser context, tracker-page re-init safety, character-page re-init safety, targeted NPC/Party/Location panel regression paths, and shared dropdown/popover regressions. `Reset Everything`, broader Character-page coverage beyond the current lifecycle smoke, map drawing/touch behavior, and PWA/offline behavior remain manual release checks today; broader automation for those areas is roadmap work, while broader automated cross-browser coverage remains out of scope for this version.
 
 `npm run verify` is the canonical local readiness check. It runs `npm run test:run` and `npm run build`, matching the automated checks in CI. It does not replace `npm run preview` or the browser-level manual checks needed for release validation.
 
 For the closest local match to CI, start from a clean install with `npm ci`, then run `npm run verify`. CI does not currently run `npm run test:smoke`.
 
-Static validation is also available for the vanilla-JS codebase via `tsconfig.checkjs.json`. That repo-wide CheckJS path remains useful for diagnostics, but older Character-panel and Tracker card/panel surfaces still keep the full pass from being clean. For this version, that full pass is intentionally not a must-pass project gate; making it one is future roadmap hardening, not release-quality debt.
+Static validation is also available for the vanilla-JS codebase via `tsconfig.checkjs.json`. That repo-wide CheckJS pass is currently clean, but it remains separate from `npm run verify` and the current CI gate. Treat it as an extra static-validation check when touching typing work or module-boundary contracts.
 
 ## 8. Build and preview
 

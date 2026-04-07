@@ -125,7 +125,7 @@ When changing persistence, backup, import, or rendering behavior:
 
 - Treat `sanitizeForSave(...)`, `migrateState(...)`, IndexedDB helpers, and backup import/export as one system. If you add a persisted field or a new blob/text reference, update all affected paths together.
 - Do not assume `SaveManager.flush()` makes IndexedDB writes durable. It only drives the main `localStorage` save path.
-- Prefer `write new -> update reference -> delete old` when replacing stored blobs. Some current image flows delete the old blob before the new one is safely committed, which can lose the previous asset if the new write fails.
+- Preserve the current commit-before-delete ordering for blob-backed replacements and deletions. Current portrait/map flows do not delete the previously referenced blob until the structured state change has been durably saved.
 - Keep user-controlled content in form values, `textContent`, and DOM-created nodes. Avoid rendering user or imported content with `innerHTML` or similar HTML-parsing APIs unless a sanitization strategy and security review are added first.
 - Be cautious about adding new network behavior or relaxing CSP directives. Document why the change is needed and what new trust assumptions it introduces.
 - Re-test the full local data lifecycle after storage changes: edit data, refresh, export backup, reset, import backup, and verify restore behavior.

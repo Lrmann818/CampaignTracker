@@ -122,12 +122,12 @@ Intentional differences between local verification and CI:
 
 ### CheckJS / JSDoc validation status
 
-The repo also has an in-progress static-validation path for vanilla JS:
+The repo also has a repo-wide static-validation path for vanilla JS:
 
 - `tsconfig.checkjs.json` enables `allowJs` + `checkJs` for `app.js`, `boot.js`, `vite.config.js`, `js/**/*.js`, and `types/**/*.d.ts`.
 - The currently hardened `@ts-check` surface is narrower than that repo-wide include set and is concentrated in `app.js`, `js/state.js`, all current `js/domain/*` and `js/storage/*` modules, tracker/map orchestration modules, several shared UI primitives, and focused utility/feature modules.
-- The broad pass is useful as a diagnostic when touching typing work, dependency boundaries, or JSDoc contracts.
-- It is intentionally not a must-pass release gate for this version. The full repo pass still reports errors in older Character-panel and Tracker card/panel modules, and making it clean enough to gate releases is future typing-hardening roadmap work.
+- The broad pass is currently clean and is useful when touching typing work, dependency boundaries, or JSDoc contracts.
+- It is still a separate manual check rather than part of `npm run verify` or the current CI gate.
 - There is currently no dedicated `package.json` script for this. When maintainers want the broad diagnostic run, the current command is:
 
 ```bash
@@ -141,7 +141,7 @@ Run these before merging any user-visible change:
 1. Run `npm run verify`.
    Expected: the same automated gate CI uses passes locally.
 2. If the change touched an existing `@ts-check` module, JSDoc typedefs, `types/*.d.ts`, or module boundary contracts, run the CheckJS command from section 2 when practical.
-   Expected: no new typing regressions are introduced in the area you touched, even though the full repo pass remains a diagnostic-only roadmap hardening surface rather than a global gate.
+   Expected: the current broad pass stays clean when you run it, even though it remains an extra manual check rather than part of the canonical `npm run verify` gate.
 3. Open the app in `npm run dev` or another local served environment.
    Expected: the changed area loads cleanly and normal interaction does not produce unexpected console errors.
 4. Reload the relevant top-level route.
