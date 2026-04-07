@@ -29,8 +29,8 @@ git checkout -b final-closure-v0.5.0
 
 - [N] Branch created: `final-closure-v0.5.0`
   - work is being done in 'Refactoring' instead
-- [ ] Working tree clean before starting
-- [ ] Baseline verification run recorded
+- [Y] Working tree clean before starting
+- [Y] Baseline verification run recorded
 
 Baseline commands:
 
@@ -42,9 +42,46 @@ npm run test:smoke
 ```
 
 Notes:
-- __________________________________________
-- __________________________________________
-- __________________________________________
+- FIRST RUN:
+- Baseline verification on Refactoring branch:
+
+- git status: clean
+- npm test: PASS (11 files, 80 tests)
+- npm run build: PASS
+- npm run verify: PASS
+- npm run test:smoke: FAIL
+
+Smoke failures:
+- tests/smoke/dropdownRegression.smoke.js
+  1) card-level tracker dropdowns open and stay wired after rerender
+     - expected open dropdown menu count to return to 0
+     - received 1
+  2) card-level tracker dropdown options stay clickable in the body-ported card menu path
+     - expected NPC card count to become 0 after delete path
+     - received 1
+
+Interpretation:
+- unit/integration/build baseline is healthy
+- remaining regression is concentrated in tracker dropdown/card-menu behavior
+- start closure work there first
+
+- NEXT & LAST RUN:
+- Baseline verification recorded on Refactoring branch.
+
+Results:
+- npm test: PASS
+- npm run build: PASS
+- npm run verify: PASS
+- npm run test:smoke: PASS
+
+Additional targeted regression verification:
+- npm run test:smoke -- dropdownRegression.smoke.js: PASS
+- npm run test:smoke -- dropdownRegression.smoke.js --repeat-each=10: PASS
+
+Notes:
+- stderr output during vitest was expected from failure-path/rollback tests.
+- Earlier smoke regression was fixed in shared dropdown/popover lifecycle code.
+- Current baseline is green and suitable for starting the remaining closure steps.
 
 ---
 
