@@ -317,7 +317,8 @@ export function initAttacksPanel(deps = {}) {
     if (!(target instanceof HTMLInputElement)) return;
 
     const row = target.closest(".attackRow");
-    const attackId = row?.dataset?.attackId;
+    if (!(row instanceof HTMLElement)) return;
+    const attackId = row.dataset.attackId;
     if (!attackId) return;
 
     const fieldClass = Object.keys(ATTACK_FIELD_BY_CLASS).find((className) => target.classList.contains(className));
@@ -336,7 +337,8 @@ export function initAttacksPanel(deps = {}) {
       if (!(target instanceof HTMLElement)) return;
 
       const row = target.closest(".attackRow");
-      const attackId = row?.dataset?.attackId;
+      if (!(row instanceof HTMLElement)) return;
+      const attackId = row.dataset.attackId;
       if (!attackId) return;
 
       const moveBtn = target.closest(".moveBtn");
