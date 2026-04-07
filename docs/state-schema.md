@@ -219,10 +219,11 @@ Older saves may also contain the typo `tracker.ui.textareaHeigts`. Current code 
 - `hpMax: number | null`
 - `hitDieAmt: number | null`
   - Canonical persisted field.
-  - Seeded by `js/state.js`, written by the Vitals panel, and enforced by save/load normalization.
+  - Seeded by `js/state.js`, written by the Vitals panel, and enforced by migration-time normalization.
 - `hitDieAmount?: number | null`
   - Legacy compatibility alias only.
-  - Incoming saves that still use this name are normalized to `hitDieAmt`, and new saves no longer emit it.
+  - Incoming saves that still use this name are normalized to `hitDieAmt` during `migrateState(...)`.
+  - DEV save/export code warns if runtime state still contains this alias; runtime writes should use `hitDieAmt`.
 - `hitDieSize: number | null`
 - `ac: number | null`
 - `initiative: number | null`

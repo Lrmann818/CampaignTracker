@@ -60,7 +60,7 @@ Current automated scope is intentionally targeted:
 - `tests/state.migrate.test.js` covers supported legacy migration paths, current-schema normalization, malformed or partial payload repair, inventory backfill, active-inventory clamping, and idempotence.
 - `tests/state.sanitize.test.js` covers `sanitizeForSave(...)` top-level copy behavior so save/export sanitization does not mutate the live tracker/character buckets.
 - `tests/stateActions.test.js` covers `createStateActions(...)`, including queue-save semantics, tracker-card type aliases, and prototype-pollution/path-hardening guards.
-- `tests/storage.persistence.test.js` covers `saveAllLocal(...)` sanitized writes plus `loadAll(...)` behavior for missing storage, corrupt storage, stale-bucket replacement, legacy `imgDataUrl` migration, default-map repair, hit-die alias canonicalization, and a representative save/load round trip.
+- `tests/storage.persistence.test.js` covers `saveAllLocal(...)` sanitized writes plus `loadAll(...)` behavior for missing storage, corrupt storage, stale-bucket replacement, legacy `imgDataUrl` migration, default-map repair, hit-die alias save/load compatibility, and a representative save/load round trip.
 - `tests/storage.blobReplacement.test.js` covers the hardened blob replacement contract: write new, apply new reference, flush structured save, then delete old, with rollback on failure.
 - `tests/assetReplacementFlows.test.js` covers portrait/map replacement failure paths so old asset references remain intact when the replacement save cannot be committed.
 - `tests/storage.saveManager.test.js` covers the local save lifecycle: dirty-delay timing, debounce behavior, `flush()` results, failure banner behavior, retry after failure, repeated dirty cycles, and `init()` reset behavior.
@@ -75,7 +75,7 @@ Current automated scope is intentionally targeted:
 Critical paths currently protected by automation:
 
 - schema upgrades and load-time normalization for saved state
-- local save serialization that strips runtime-only fields and canonicalizes persisted hit-die naming
+- local save serialization that strips runtime-only fields while leaving hit-die alias normalization to migration
 - startup load behavior when stored data is missing, partial, malformed, or legacy-shaped
 - `sanitizeForSave(...)` behavior that must not mutate live top-level tracker/character buckets
 - save-aware state-action helper behavior, including prototype-pollution/path hardening on helper paths
