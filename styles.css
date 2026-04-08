@@ -2449,6 +2449,27 @@ div.mutedSmall {
   margin-bottom: 4px;
 }
 
+#page-tracker :is(.sessionHeader, .npcHeader, .partyHeader, .locHeader)>h2 {
+  min-width: 0;
+}
+
+#page-tracker :is(.sessionControls, .npcControls, .partyControls, .locControls).panelControls {
+  min-width: 0;
+  margin-left: auto;
+}
+
+#page-tracker :is(.sessionControls, .npcControls, .partyControls, .locControls).panelControls>.sectionMoves {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+#sessionPanel,
+#npcPanel,
+#partyPanel,
+#locationsPanel {
+  container-type: inline-size;
+}
+
 @media (max-width: 600px) {
   #page-tracker :is(.sessionHeader, .npcHeader, .partyHeader, .locHeader) {
     display: grid;
@@ -2470,16 +2491,95 @@ div.mutedSmall {
     justify-content: flex-end;
     align-content: flex-start;
   }
+
+  #page-tracker :is(.sessionControls, .npcControls, .partyControls, .locControls).panelControls>.sectionMoves {
+    margin-left: 0;
+  }
+}
+
+@container (max-width: 31rem) {
+  #sessionPanel>.sessionHeader {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--panel-control-gap);
+    row-gap: 0;
+  }
+
+  #sessionPanel>.sessionHeader>h2 {
+    grid-column: 1;
+    align-self: start;
+  }
+
+  #sessionPanel>.sessionHeader>.sessionControls.panelControls {
+    grid-column: 2;
+    min-width: 0;
+    margin-left: 0;
+    justify-content: flex-end;
+    align-content: flex-start;
+  }
+
+  #sessionPanel>.sessionHeader>.sessionControls.panelControls>.sectionMoves {
+    margin-left: 0;
+  }
+}
+
+@container (max-width: 37rem) {
+  :is(#npcPanel>.npcHeader, #partyPanel>.partyHeader) {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--panel-control-gap);
+    row-gap: 0;
+  }
+
+  :is(#npcPanel>.npcHeader, #partyPanel>.partyHeader)>h2 {
+    grid-column: 1;
+    align-self: start;
+  }
+
+  :is(#npcPanel>.npcHeader>.npcControls.panelControls, #partyPanel>.partyHeader>.partyControls.panelControls) {
+    grid-column: 2;
+    min-width: 0;
+    margin-left: 0;
+    justify-content: flex-end;
+    align-content: flex-start;
+  }
+
+  :is(#npcPanel>.npcHeader>.npcControls.panelControls, #partyPanel>.partyHeader>.partyControls.panelControls)>.sectionMoves {
+    margin-left: 0;
+  }
+}
+
+@container (max-width: 46rem) {
+  #locationsPanel>.locHeader {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--panel-control-gap);
+    row-gap: 0;
+  }
+
+  #locationsPanel>.locHeader>h2 {
+    grid-column: 1;
+    align-self: start;
+  }
+
+  #locationsPanel>.locHeader>.locControls.panelControls {
+    grid-column: 2;
+    min-width: 0;
+    margin-left: 0;
+    justify-content: flex-end;
+    align-content: flex-start;
+  }
+
+  #locationsPanel>.locHeader>.locControls.panelControls>.sectionMoves {
+    margin-left: 0;
+  }
 }
 
 .locCards {
   --cards-grid-gap: 4px;
-}
-
-#npcPanel,
-#partyPanel,
-#locationsPanel {
-  container-type: inline-size;
 }
 
 /* 380px ~= (2 * 174px) + 8px gap + 24px grid horizontal padding */
