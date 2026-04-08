@@ -34,6 +34,10 @@ describe("support helpers", () => {
     });
 
     expect(mailtoUrl.startsWith("mailto:support%40example.com?")).toBe(true);
+    expect(mailtoUrl).toContain("subject=Lore%20Ledger%20Bug%20Report");
+    expect(mailtoUrl).toContain("Please%20describe%20the%20bug%3A");
+    expect(mailtoUrl).toContain("What%20were%20you%20doing%3F%0A%0A");
+    expect(mailtoUrl).not.toContain("+");
 
     const params = new URLSearchParams(mailtoUrl.split("?")[1]);
     expect(params.get("subject")).toBe("Lore Ledger Bug Report");

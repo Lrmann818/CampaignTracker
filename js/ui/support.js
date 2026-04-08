@@ -183,10 +183,11 @@ export function buildBugReportMailtoUrl(options) {
   const recipient = toNonEmptyString(options?.recipient, SUPPORT_EMAIL);
   const subject = toNonEmptyString(options?.subject, BUG_REPORT_SUBJECT);
   const body = buildBugReportBody({ debugInfoText: options?.debugInfoText || "" });
-  const params = new URLSearchParams();
-  params.set("subject", subject);
-  params.set("body", body);
-  return `mailto:${encodeURIComponent(recipient)}?${params.toString()}`;
+  const query = [
+    `subject=${encodeURIComponent(subject)}`,
+    `body=${encodeURIComponent(body)}`
+  ].join("&");
+  return `mailto:${encodeURIComponent(recipient)}?${query}`;
 }
 
 /**

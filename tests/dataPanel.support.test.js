@@ -177,6 +177,10 @@ describe("initDataPanel support actions", () => {
     });
 
     expect(deps.setStatus).toHaveBeenCalledWith("Opening bug report email…");
+    expect(dom.location.href).toContain("subject=Lore%20Ledger%20Bug%20Report");
+    expect(dom.location.href).toContain("Please%20describe%20the%20bug%3A");
+    expect(dom.location.href).toContain("%0A%0ADebug%20info%3A%0A");
+    expect(dom.location.href).not.toContain("+");
 
     const params = new URLSearchParams(dom.location.href.split("?")[1]);
     expect(params.get("subject")).toBe("Lore Ledger Bug Report");
