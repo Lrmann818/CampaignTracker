@@ -1545,6 +1545,7 @@ body[data-shell-mode="hub"] main {
 .hubLayout {
   display: grid;
   grid-template-columns: minmax(250px, 340px) minmax(0, 1fr);
+  align-items: start;
   gap: 14px;
   position: relative;
   z-index: 1;

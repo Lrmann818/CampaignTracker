@@ -117,6 +117,31 @@ async function getHubShellLayoutState(page) {
   return state;
 }
 
+/**
+ * @param {import("@playwright/test").Page} page
+ */
+async function getHubPanelState(page) {
+  const state = await page.evaluate(() => {
+    const createPanel = document.querySelector(".hubCreatePanel");
+    const listPanel = document.querySelector(".hubListPanel");
+    if (!(createPanel instanceof HTMLElement) || !(listPanel instanceof HTMLElement)) return null;
+
+    const createRect = createPanel.getBoundingClientRect();
+    const listRect = listPanel.getBoundingClientRect();
+
+    return {
+      createTop: createRect.top,
+      listTop: listRect.top,
+      createHeight: createRect.height,
+      listHeight: listRect.height
+    };
+  });
+
+  expect(state).not.toBeNull();
+  if (!state) throw new Error("Expected Hub panels to be present");
+  return state;
+}
+
 test("first-run users land on the Campaign Hub and the empty state hides after creating a campaign", async ({ page }) => {
   const fatalSignals = await openSmokeApp(page, { ensureCampaign: false });
   await expectHubShell(page);
@@ -248,6 +273,36 @@ test("hub shell stays within the viewport and keeps a dark root background on de
 
     await expectNoFatalSignals(page, fatalSignals);
   }
+});
+
+test("desktop hub keeps the create panel at its natural height when the archive grows", async ({ page }) => {
+  await page.setViewportSize({ width: 1365, height: 900 });
+  const fatalSignals = await openSmokeApp(page, { ensureCampaign: false });
+
+  await expectHubShell(page);
+  const before = await getHubPanelState(page);
+
+  const campaignNames = [
+    "Smoke Chronicle One",
+    "Smoke Chronicle Two",
+    "Smoke Chronicle Three",
+    "Smoke Chronicle Four",
+    "Smoke Chronicle Five"
+  ];
+
+  for (const campaignName of campaignNames) {
+    await createCampaignFromHub(page, campaignName);
+    await returnToHubFromSettings(page);
+  }
+
+  await expect(page.locator("#hubCampaignList")).toBeVisible();
+  const after = await getHubPanelState(page);
+
+  expect(Math.abs(after.createTop - after.listTop)).toBeLessThan(1);
+  expect(Math.abs(after.createHeight - before.createHeight)).toBeLessThan(1);
+  expect(after.listHeight).toBeGreaterThan(after.createHeight + 40);
+
+  await expectNoFatalSignals(page, fatalSignals);
 });
 
 test("hub atmosphere layers stay anchored while the content scrolls", async ({ page }) => {
