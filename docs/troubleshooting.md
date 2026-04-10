@@ -251,6 +251,16 @@ Recovery:
 3. If the issue is touch, image-picker, or install related, retry on a real iOS Safari or Android Chrome device.
 4. If the issue only happens in private browsing or a temporary profile, retry in a normal persistent profile before assuming the app data is corrupted.
 
+## Support and debug info
+
+Use `Data & Settings` -> `Support` when you need a clean troubleshooting snapshot.
+
+- `Copy Debug Info` is the most reliable path. It copies a narrow plain-text block with version/build metadata, runtime mode/context, campaign-active status, current page, capability hints, timestamp, and user agent.
+- If clipboard access is blocked or unavailable, the app shows that same block in a dialog instead of failing silently.
+- `Report Bug` tries to hand off to the system mail app with that same debug block prefilled.
+- `mailto:` handoff can vary by browser, installed PWA, or packaged wrapper. If no draft opens, copy the debug info manually and send it to `support@lore-ledger.com`.
+- The debug block is intentionally privacy-bounded and does not include campaign notes, map content, query-string contents, or backup payloads.
+
 ## Manual inspection in DevTools
 
 If you need to inspect the current browser state directly:

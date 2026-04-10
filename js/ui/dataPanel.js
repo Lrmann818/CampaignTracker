@@ -276,6 +276,8 @@ export function initDataPanel(deps) {
     collectDebugInfoSnapshot({
       version,
       build,
+      campaignState: hasActiveCampaign(state) ? "active" : "none",
+      currentRoute: getActiveSupportPage(state),
       fallbackPage: getActiveSupportPage(state)
     })
   );
@@ -459,11 +461,33 @@ export function initDataPanel(deps) {
 
   if (reportBugBtn) addListener(reportBugBtn, "click",
     safeAsync(async () => {
-      notifyStatus(setStatus, "Opening bug report email…");
+      const debugInfo = getDebugInfo();
+      const canLaunchMailto =
+        typeof location === "object" &&
+        location !== null &&
+        "href" in location;
+
+      if (!canLaunchMailto) {
+        await uiAlert(
+          [
+            `Email draft launch is unavailable in this app context.`,
+            ``,
+            `Send your report to: ${SUPPORT_EMAIL}`,
+            ``,
+            `Include this debug info:`,
+            debugInfo
+          ].join("\n"),
+          { title: "Report Bug" }
+        );
+        notifyStatus(setStatus, "Email draft unavailable here. Debug info shown.");
+        return;
+      }
+
       openBugReportMailto({
         recipient: SUPPORT_EMAIL,
-        debugInfoText: getDebugInfo()
+        debugInfoText: debugInfo
       });
+      notifyStatus(setStatus, `Opening bug report email… If nothing opens, copy debug info and email ${SUPPORT_EMAIL}.`);
     }, (err) => {
       console.error(err);
       notifyStatus(setStatus, "Open bug report failed.");
@@ -653,5 +677,16 @@ function removeAllBlobIds(root) {
  * @returns {string}
  */
 function getActiveSupportPage(state) {
-  return typeof state?.ui?.activeTab === "string" ? state.ui.activeTab : "";
+  if (!hasActiveCampaign(state)) return "hub";
+  return typeof state?.ui?.activeTab === "string" && state.ui.activeTab.trim()
+    ? state.ui.activeTab
+    : "tracker";
+}
+
+/**
+ * @param {State} state
+ * @returns {boolean}
+ */
+function hasActiveCampaign(state) {
+  return typeof state?.appShell?.activeCampaignId === "string" && !!state.appShell.activeCampaignId.trim();
 }

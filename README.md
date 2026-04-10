@@ -257,6 +257,16 @@ Version metadata is resolved at build time in [`vite.config.js`](vite.config.js)
 - The build also exposes the short Git SHA when available
 - If Git metadata is unavailable, the app falls back to `package.json` version metadata and the build SHA may be empty
 
+## 10. Support and diagnostics
+
+`Data & Settings` includes a small `Support` section for production troubleshooting.
+
+- `Report Bug` opens a prefilled `mailto:` draft to `support@lore-ledger.com` when the current browser/app context allows email-app handoff.
+- `Copy Debug Info` copies a deliberately narrow plain-text snapshot. If clipboard APIs are unavailable or denied, the app shows the same snapshot in a dialog instead of failing silently.
+- The snapshot includes version/build metadata, runtime mode/context, whether a campaign is active, the current top-level page, a few browser capability hints relevant to support, a timestamp, and the user agent.
+- The snapshot does not include campaign notes, map content, exported backup payloads, blob ids, query-string contents, or other large/private user data.
+- In installed PWA or package-style contexts, `mailto:` behavior is still platform-dependent. If no email app opens, use `Copy Debug Info` and send that block manually.
+
 Example baseline tag flow:
 
 ```bash
@@ -266,7 +276,7 @@ git push origin v0.4.0
 
 `package.json` currently keeps a placeholder version and should be treated as the fallback path rather than the primary release source of truth.
 
-## 10. GitHub Pages deployment notes
+## 11. GitHub Pages deployment notes
 
 - Production base path is `/` in [`vite.config.js`](vite.config.js)
 - GitHub Pages production is being prepared for the custom domain `https://lore-ledger.com/`
@@ -283,7 +293,7 @@ If the GitHub Pages path ever changes, update the following together:
 - PWA manifest `id`, `start_url`, and `scope`
 - Workbox navigation fallback paths
 
-## 11. Persistence and storage overview
+## 12. Persistence and storage overview
 
 The app is local-first and stores data in the browser:
 
@@ -304,7 +314,7 @@ Intentionally non-persistent runtime state:
 
 For maintainers, this split matters: copying `localStorage` alone is not a complete backup of a populated app.
 
-## 12. PWA / offline behavior overview
+## 13. PWA / offline behavior overview
 
 Production builds register a service worker through `vite-plugin-pwa`. Dev builds do not register the service worker.
 
@@ -318,7 +328,7 @@ Production builds register a service worker through `vite-plugin-pwa`. Dev build
 
 See [`docs/PWA_NOTES.md`](docs/PWA_NOTES.md) for offline test steps and cache reset guidance.
 
-## 13. Documentation index
+## 14. Documentation index
 
 Core maintainer docs:
 
@@ -345,7 +355,7 @@ Branch planning/history notes kept in `docs/`:
 - [`docs/lore-ledger-final-remaining-closure-plan.md`](docs/lore-ledger-final-remaining-closure-plan.md) - branch closure plan and review-prep notes
 - [`docs/lore-ledger-closure-branch-commit-tracker.md`](docs/lore-ledger-closure-branch-commit-tracker.md) - branch work tracker and commit checklist
 
-## 14. Current status / known limitations
+## 15. Current status / known limitations
 
 - The app is single-user and browser-local. There is no sync, login, or shared backend.
 - Clearing site data or switching browser profiles will remove local data unless a backup JSON has been exported first.

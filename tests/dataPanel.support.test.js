@@ -198,7 +198,9 @@ describe("initDataPanel support actions", () => {
       expect(dom.location.href.startsWith("mailto:support%40lore-ledger.com?")).toBe(true);
     });
 
-    expect(deps.setStatus).toHaveBeenCalledWith("Opening bug report email…");
+    expect(deps.setStatus).toHaveBeenCalledWith(
+      "Opening bug report email… If nothing opens, copy debug info and email support@lore-ledger.com."
+    );
     expect(dom.location.href).toContain("subject=Lore%20Ledger%20Bug%20Report");
     expect(dom.location.href).toContain("Please%20describe%20the%20bug%3A");
     expect(dom.location.href).toContain("%0A%0ADebug%20info%3A%0A");
@@ -207,7 +209,8 @@ describe("initDataPanel support actions", () => {
     const params = new URLSearchParams(dom.location.href.split("?")[1]);
     expect(params.get("subject")).toBe("Lore Ledger Bug Report");
     expect(params.get("body")).toContain("Debug info:");
-    expect(params.get("body")).toContain("Current page: #tracker");
+    expect(params.get("body")).toContain("Current page: #hub");
+    expect(params.get("body")).toContain("Campaign state: no active campaign");
     expect(params.get("body")).toContain("User agent: LoreLedgerTest/1.0");
   });
 
@@ -226,7 +229,8 @@ describe("initDataPanel support actions", () => {
     });
 
     expect(dom.navigator.clipboard.writeText.mock.calls[0][0]).toContain("App version:");
-    expect(dom.navigator.clipboard.writeText.mock.calls[0][0]).toContain("Current page: #tracker");
+    expect(dom.navigator.clipboard.writeText.mock.calls[0][0]).toContain("Current page: #hub");
+    expect(dom.navigator.clipboard.writeText.mock.calls[0][0]).toContain("Campaign state: no active campaign");
     expect(dom.navigator.clipboard.writeText.mock.calls[0][0]).toContain("User agent: LoreLedgerTest/1.0");
   });
 
@@ -244,11 +248,48 @@ describe("initDataPanel support actions", () => {
     });
 
     expect(uiAlertMock.mock.calls[0][0]).toContain("App version:");
-    expect(uiAlertMock.mock.calls[0][0]).toContain("Current page: #tracker");
+    expect(uiAlertMock.mock.calls[0][0]).toContain("Current page: #hub");
+    expect(uiAlertMock.mock.calls[0][0]).toContain("Campaign state: no active campaign");
     expect(uiAlertMock.mock.calls[0][0]).toContain("User agent: LoreLedgerTest/1.0");
     expect(uiAlertMock.mock.calls[0][1]).toEqual({ title: "Debug info" });
     expect(deps.setStatus).toHaveBeenCalledWith("Couldn't copy automatically. Debug info shown in dialog.");
     consoleErrorSpy.mockRestore();
+  });
+
+  it("falls back to an in-app support dialog when mailto launch is unavailable", async () => {
+    const deps = createDeps();
+    const { initDataPanel } = await import("../js/ui/dataPanel.js");
+
+    delete globalThis.location;
+    initDataPanel(deps);
+
+    dom.reportBugBtn.dispatchEvent(new Event("click"));
+    await vi.waitFor(() => {
+      expect(uiAlertMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(uiAlertMock.mock.calls[0][0]).toContain("Email draft launch is unavailable in this app context.");
+    expect(uiAlertMock.mock.calls[0][0]).toContain("support@lore-ledger.com");
+    expect(uiAlertMock.mock.calls[0][0]).toContain("Current page: #hub");
+    expect(uiAlertMock.mock.calls[0][1]).toEqual({ title: "Report Bug" });
+    expect(deps.setStatus).toHaveBeenCalledWith("Email draft unavailable here. Debug info shown.");
+  });
+
+  it("uses the active campaign state and page in debug info when a campaign is open", async () => {
+    const deps = createDeps();
+    deps.state.appShell.activeCampaignId = "campaign_alpha";
+    deps.state.ui.activeTab = "map";
+    const { initDataPanel } = await import("../js/ui/dataPanel.js");
+
+    initDataPanel(deps);
+
+    dom.copyDebugInfoBtn.dispatchEvent(new Event("click"));
+    await vi.waitFor(() => {
+      expect(dom.navigator.clipboard.writeText).toHaveBeenCalledTimes(1);
+    });
+
+    expect(dom.navigator.clipboard.writeText.mock.calls[0][0]).toContain("Current page: #map");
+    expect(dom.navigator.clipboard.writeText.mock.calls[0][0]).toContain("Campaign state: active campaign");
   });
 
   it("shows the Campaign Hub return action only while a campaign is active", async () => {

@@ -59,7 +59,10 @@ The support/debug payload is intentionally narrow. It includes:
 - app version
 - build id when build metadata is available
 - runtime label (`web` or `pwa`)
+- runtime context (`browser-tab`, installed PWA, or other standalone display mode when detectable)
+- whether a campaign is currently active, without including campaign names or content
 - current page/route from the app hash or active top-level page fallback
+- a few support-oriented browser capability hints (clipboard path, service-worker/update availability, storage-estimate availability, online/offline state)
 - timestamp
 - user agent
 
@@ -73,6 +76,8 @@ It intentionally does not include:
 - other large or sensitive user data
 
 This is a plain-text troubleshooting snapshot, not a data export. `Report Bug` pre-fills an email draft with that snapshot; `Copy Debug Info` copies the same minimal block for issue reports or manual triage.
+
+`mailto:` launching is inherently platform-dependent. In a normal browser tab it usually hands off to the system mail app. Installed PWAs, mobile standalone contexts, and packaged wrappers may handle that differently. The app now treats manual fallback as a first-class path: if email launching is unavailable, or if nothing opens, the intended fallback is `Copy Debug Info` plus a manual email to `support@lore-ledger.com`.
 
 ## 5. CSP summary
 

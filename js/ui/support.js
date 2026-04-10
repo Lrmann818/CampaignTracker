@@ -50,24 +50,52 @@ function normalizeSupportRoute(value, fallback = "(unknown)") {
 }
 
 /**
- * @param {{ windowObj?: { matchMedia?: ((query: string) => { matches: boolean }) | undefined } | null, navigatorObj?: unknown }} [options]
- * @returns {"web" | "pwa"}
+ * @param {{ windowObj?: { matchMedia?: ((query: string) => { matches: boolean }) | undefined } | null, query: string }} options
+ * @returns {boolean}
  */
-export function detectRuntimeMode(options = {}) {
+function matchesDisplayMode({ windowObj, query }) {
+  try {
+    return !!windowObj?.matchMedia?.(query)?.matches;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * @param {{ windowObj?: { matchMedia?: ((query: string) => { matches: boolean }) | undefined } | null, navigatorObj?: unknown }} [options]
+ * @returns {"browser-tab" | "installed-pwa" | "standalone-window" | "fullscreen" | "minimal-ui"}
+ */
+export function detectRuntimeContext(options = {}) {
   const windowObj = options.windowObj ?? globalThis.window;
   const navigatorObj = options.navigatorObj ?? globalThis.navigator;
 
-  try {
-    if (windowObj?.matchMedia?.("(display-mode: standalone)")?.matches) return "pwa";
-  } catch {
-    // Ignore matchMedia/environment errors and fall through to a conservative label.
+  if (matchesDisplayMode({ windowObj, query: "(display-mode: window-controls-overlay)" })) {
+    return "standalone-window";
+  }
+  if (matchesDisplayMode({ windowObj, query: "(display-mode: fullscreen)" })) {
+    return "fullscreen";
+  }
+  if (matchesDisplayMode({ windowObj, query: "(display-mode: minimal-ui)" })) {
+    return "minimal-ui";
+  }
+  if (matchesDisplayMode({ windowObj, query: "(display-mode: standalone)" })) {
+    return "installed-pwa";
   }
 
   const standalone = navigatorObj && typeof navigatorObj === "object"
     ? Reflect.get(navigatorObj, "standalone")
     : undefined;
-  if (standalone === true) return "pwa";
-  return "web";
+  if (standalone === true) return "installed-pwa";
+
+  return "browser-tab";
+}
+
+/**
+ * @param {{ windowObj?: { matchMedia?: ((query: string) => { matches: boolean }) | undefined } | null, navigatorObj?: unknown }} [options]
+ * @returns {"web" | "pwa"}
+ */
+export function detectRuntimeMode(options = {}) {
+  return detectRuntimeContext(options) === "browser-tab" ? "web" : "pwa";
 }
 
 /**
@@ -86,11 +114,82 @@ export function getCurrentRoute(options = {}) {
 }
 
 /**
+ * @param {unknown} value
+ * @returns {"active" | "none"}
+ */
+function normalizeCampaignState(value) {
+  return value === "active" ? "active" : "none";
+}
+
+/**
+ * @param {{
+ *   navigatorObj?: unknown,
+ *   documentObj?: { execCommand?: unknown } | null,
+ *   locationObj?: { href?: unknown } | null
+ * }} [options]
+ * @returns {{
+ *   clipboardSupport: "async" | "execCommand" | "unavailable",
+ *   mailtoSupport: "location-href" | "unavailable",
+ *   updateSupport: "service-worker" | "unavailable",
+ *   storageEstimateSupport: "available" | "unavailable",
+ *   connectivity: "online" | "offline" | "unknown"
+ * }}
+ */
+export function collectSupportCapabilities(options = {}) {
+  const navigatorObj = options.navigatorObj ?? globalThis.navigator;
+  const documentObj = options.documentObj ?? globalThis.document;
+  const locationObj = options.locationObj ?? globalThis.location;
+  const clipboard = navigatorObj && typeof navigatorObj === "object"
+    ? Reflect.get(navigatorObj, "clipboard")
+    : null;
+  const storage = navigatorObj && typeof navigatorObj === "object"
+    ? Reflect.get(navigatorObj, "storage")
+    : null;
+
+  const clipboardSupport = clipboard && typeof clipboard === "object" && typeof Reflect.get(clipboard, "writeText") === "function"
+    ? "async"
+    : (typeof documentObj?.execCommand === "function" ? "execCommand" : "unavailable");
+
+  const mailtoSupport =
+    locationObj && typeof locationObj === "object" && "href" in locationObj
+      ? "location-href"
+      : "unavailable";
+
+  const updateSupport =
+    navigatorObj && typeof navigatorObj === "object" && "serviceWorker" in navigatorObj
+      ? "service-worker"
+      : "unavailable";
+
+  const storageEstimateSupport = storage && typeof storage === "object" && typeof Reflect.get(storage, "estimate") === "function"
+    ? "available"
+    : "unavailable";
+
+  const rawOnline = navigatorObj && typeof navigatorObj === "object"
+    ? Reflect.get(navigatorObj, "onLine")
+    : undefined;
+  const connectivity =
+    rawOnline === true ? "online" :
+      rawOnline === false ? "offline" :
+        "unknown";
+
+  return {
+    clipboardSupport,
+    mailtoSupport,
+    updateSupport,
+    storageEstimateSupport,
+    connectivity
+  };
+}
+
+/**
  * @param {{
  *   version?: unknown,
- *   build?: unknown,
+  *   build?: unknown,
+ *   campaignState?: unknown,
+ *   currentRoute?: unknown,
  *   fallbackPage?: unknown,
- *   locationObj?: { hash?: unknown, pathname?: unknown, search?: unknown } | null,
+ *   locationObj?: { href?: unknown, hash?: unknown, pathname?: unknown, search?: unknown } | null,
+ *   documentObj?: { execCommand?: unknown } | null,
  *   navigatorObj?: unknown,
  *   windowObj?: { matchMedia?: ((query: string) => { matches: boolean }) | undefined } | null,
  *   timestamp?: unknown
@@ -99,7 +198,14 @@ export function getCurrentRoute(options = {}) {
  *   version: string,
  *   build: string,
  *   runtimeMode: string,
+ *   runtimeContext: string,
+ *   campaignState: "active" | "none",
  *   currentRoute: string,
+ *   clipboardSupport: "async" | "execCommand" | "unavailable",
+ *   mailtoSupport: "location-href" | "unavailable",
+ *   updateSupport: "service-worker" | "unavailable",
+ *   storageEstimateSupport: "available" | "unavailable",
+ *   connectivity: "online" | "offline" | "unknown",
  *   timestamp: string,
  *   userAgent: string
  * }}
@@ -107,12 +213,28 @@ export function getCurrentRoute(options = {}) {
 export function collectDebugInfoSnapshot(options = {}) {
   const { version, build } = getAppReleaseInfo(options);
   const navigatorObj = options.navigatorObj ?? globalThis.navigator;
+  const runtimeContext = detectRuntimeContext({ windowObj: options.windowObj, navigatorObj });
+  const capabilities = collectSupportCapabilities({
+    navigatorObj,
+    documentObj: options.documentObj,
+    locationObj: options.locationObj
+  });
+  const currentRoute = toNonEmptyString(options.currentRoute);
 
   return {
     version,
     build,
     runtimeMode: detectRuntimeMode({ windowObj: options.windowObj, navigatorObj }),
-    currentRoute: getCurrentRoute({ locationObj: options.locationObj, fallbackPage: options.fallbackPage }),
+    runtimeContext,
+    campaignState: normalizeCampaignState(options.campaignState),
+    currentRoute: currentRoute
+      ? normalizeSupportRoute(currentRoute, "(unknown)")
+      : getCurrentRoute({ locationObj: options.locationObj, fallbackPage: options.fallbackPage }),
+    clipboardSupport: capabilities.clipboardSupport,
+    mailtoSupport: capabilities.mailtoSupport,
+    updateSupport: capabilities.updateSupport,
+    storageEstimateSupport: capabilities.storageEstimateSupport,
+    connectivity: capabilities.connectivity,
     timestamp: toNonEmptyString(options.timestamp, new Date().toISOString()),
     userAgent: toNonEmptyString(
       navigatorObj && typeof navigatorObj === "object"
@@ -128,7 +250,14 @@ export function collectDebugInfoSnapshot(options = {}) {
  *   version?: unknown,
  *   build?: unknown,
  *   runtimeMode?: unknown,
+ *   runtimeContext?: unknown,
+ *   campaignState?: unknown,
  *   currentRoute?: unknown,
+ *   clipboardSupport?: unknown,
+ *   mailtoSupport?: unknown,
+ *   updateSupport?: unknown,
+ *   storageEstimateSupport?: unknown,
+ *   connectivity?: unknown,
  *   timestamp?: unknown,
  *   userAgent?: unknown
  * }} [options]
@@ -137,7 +266,14 @@ export function collectDebugInfoSnapshot(options = {}) {
 export function buildDebugInfoText(options = {}) {
   const { version, build } = getAppReleaseInfo(options);
   const runtimeMode = toNonEmptyString(options.runtimeMode, "web");
+  const runtimeContext = toNonEmptyString(options.runtimeContext, "browser-tab");
+  const campaignState = normalizeCampaignState(options.campaignState);
   const currentRoute = normalizeSupportRoute(options.currentRoute, "(unknown)");
+  const clipboardSupport = toNonEmptyString(options.clipboardSupport, "unavailable");
+  const mailtoSupport = toNonEmptyString(options.mailtoSupport, "unavailable");
+  const updateSupport = toNonEmptyString(options.updateSupport, "unavailable");
+  const storageEstimateSupport = toNonEmptyString(options.storageEstimateSupport, "unavailable");
+  const connectivity = toNonEmptyString(options.connectivity, "unknown");
   const timestamp = toNonEmptyString(options.timestamp, "(unknown)");
   const userAgent = toNonEmptyString(options.userAgent, "(unknown)");
 
@@ -145,7 +281,14 @@ export function buildDebugInfoText(options = {}) {
     `App version: ${version}`,
     build ? `Build id: ${build}` : null,
     `Runtime mode: ${runtimeMode}`,
+    `Runtime context: ${runtimeContext}`,
+    `Campaign state: ${campaignState === "active" ? "active campaign" : "no active campaign"}`,
     `Current page: ${currentRoute}`,
+    `Connectivity: ${connectivity}`,
+    `Clipboard support: ${clipboardSupport}`,
+    `Email draft support: ${mailtoSupport}`,
+    `Update support: ${updateSupport}`,
+    `Storage estimate support: ${storageEstimateSupport}`,
     `Timestamp: ${timestamp}`,
     `User agent: ${userAgent}`
   ]

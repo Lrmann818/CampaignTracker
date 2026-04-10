@@ -5,14 +5,22 @@ describe("support helpers", () => {
     const {
       buildBugReportMailtoUrl,
       buildDebugInfoText,
-      collectDebugInfoSnapshot
+      collectDebugInfoSnapshot,
+      detectRuntimeContext
     } = await import("../js/ui/support.js");
 
     const debugInfo = buildDebugInfoText({
       version: "1.2.3",
       build: "abc123",
       runtimeMode: "pwa",
+      runtimeContext: "installed-pwa",
+      campaignState: "active",
       currentRoute: "#map",
+      clipboardSupport: "async",
+      mailtoSupport: "location-href",
+      updateSupport: "service-worker",
+      storageEstimateSupport: "available",
+      connectivity: "online",
       timestamp: "2026-04-08T12:34:56.000Z",
       userAgent: "LoreLedgerTest/1.0"
     });
@@ -22,7 +30,14 @@ describe("support helpers", () => {
         "App version: 1.2.3",
         "Build id: abc123",
         "Runtime mode: pwa",
+        "Runtime context: installed-pwa",
+        "Campaign state: active campaign",
         "Current page: #map",
+        "Connectivity: online",
+        "Clipboard support: async",
+        "Email draft support: location-href",
+        "Update support: service-worker",
+        "Storage estimate support: available",
         "Timestamp: 2026-04-08T12:34:56.000Z",
         "User agent: LoreLedgerTest/1.0"
       ].join("\n")
@@ -49,23 +64,50 @@ describe("support helpers", () => {
     const snapshot = collectDebugInfoSnapshot({
       version: "1.2.3",
       build: "abc123",
+      campaignState: "none",
       fallbackPage: "tracker",
       locationObj: {
+        href: "https://example.test/#tracker",
         hash: "",
         pathname: "/",
         search: "?notes=secret"
       },
       navigatorObj: {
-        userAgent: "LoreLedgerTest/1.0"
+        userAgent: "LoreLedgerTest/1.0",
+        onLine: false,
+        storage: {
+          estimate: async () => ({ quota: 1, usage: 1 })
+        }
       },
       windowObj: {
         matchMedia: () => ({ matches: false })
       },
+      documentObj: {
+        execCommand: () => true
+      },
       timestamp: "2026-04-08T12:34:56.000Z"
     });
 
+    expect(snapshot.runtimeContext).toBe("browser-tab");
+    expect(snapshot.campaignState).toBe("none");
     expect(snapshot.currentRoute).toBe("#tracker");
+    expect(snapshot.clipboardSupport).toBe("execCommand");
+    expect(snapshot.mailtoSupport).toBe("location-href");
+    expect(snapshot.updateSupport).toBe("unavailable");
+    expect(snapshot.storageEstimateSupport).toBe("available");
+    expect(snapshot.connectivity).toBe("offline");
     expect(buildDebugInfoText(snapshot)).not.toContain("secret");
+    expect(buildDebugInfoText(snapshot)).toContain("Campaign state: no active campaign");
+    expect(buildDebugInfoText(snapshot)).not.toContain("activeCampaignId");
+
+    expect(
+      detectRuntimeContext({
+        windowObj: {
+          matchMedia: (query) => ({ matches: query === "(display-mode: window-controls-overlay)" })
+        },
+        navigatorObj: {}
+      })
+    ).toBe("standalone-window");
   });
 
   it("falls back to execCommand copy when the async clipboard API is unavailable", async () => {
