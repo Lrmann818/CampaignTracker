@@ -24,6 +24,8 @@ import { registerSW } from "virtual:pwa-register";
 let registerPromise = null;
 /** @type {UpdateServiceWorker | null} */
 let updateServiceWorker = null;
+/** @type {ServiceWorkerRegistration | null} */
+let swRegistration = null;
 /** @type {Set<PwaUpdateCallback>} */
 const needRefreshHandlers = new Set();
 /** @type {Set<PwaUpdateCallback>} */
@@ -55,6 +57,9 @@ function ensureRegistration() {
     if (!isProdBuild) return null;
     updateServiceWorker = /** @type {UpdateServiceWorker} */ (registerSW({
       immediate: true,
+      onRegisteredSW(_swUrl, registration) {
+        swRegistration = registration || null;
+      },
       onNeedRefresh() {
         notifyHandlers(needRefreshHandlers);
       },
@@ -94,8 +99,8 @@ export function initPwaUpdates({ onNeedRefresh, onOfflineReady } = {}) {
   return {
     checkForUpdates: async () => {
       await ensureRegistration();
-      if (!updateServiceWorker) return false;
-      await updateServiceWorker(false);
+      if (!swRegistration) return false;
+      await swRegistration.update();
       return true;
     },
     applyUpdate: async () => {
