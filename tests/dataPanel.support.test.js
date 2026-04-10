@@ -71,6 +71,7 @@ class FakeDocument extends EventTarget {
     super();
     this._elements = new Map(elements.map((element) => [element.id, element]));
     this.lastModified = "2026-04-08";
+    this.body = new FakeElement("body");
   }
 
   getElementById(id) {
