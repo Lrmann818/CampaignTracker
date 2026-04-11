@@ -84,6 +84,7 @@ import { createThemeManager } from "./js/ui/theme.js";
 
 import { setupSettingsPanel } from "./js/ui/settingsPanel.js";
 import { initTrackerPage } from "./js/pages/tracker/trackerPage.js";
+import { initCombatPage } from "./js/pages/combat/combatPage.js";
 import { initCampaignHubPage } from "./js/pages/hub/campaignHubPage.js";
 
 import { setupMapPage } from "./js/pages/map/mapPage.js";
@@ -114,6 +115,7 @@ import {
 /** @typedef {Parameters<typeof _resetAll>[0]} ResetAllDeps */
 /** @typedef {Parameters<typeof setupSettingsPanel>[0]} SettingsPanelDeps */
 /** @typedef {Parameters<typeof initTrackerPage>[0]} TrackerPageDeps */
+/** @typedef {Parameters<typeof initCombatPage>[0]} CombatPageDeps */
 /** @typedef {Parameters<typeof setupMapPage>[0]} MapPageDeps */
 /** @typedef {Parameters<typeof setupTextareaSizing>[0]} TextareaSizingDeps */
 /** @typedef {ReturnType<typeof setupTextareaSizing>} TextareaSizingApi */
@@ -377,6 +379,17 @@ function createTrackerPageDeps() {
 }
 
 /**
+ * @returns {CombatPageDeps}
+ */
+function createCombatPageDeps() {
+  return {
+    state: appState,
+    SaveManager,
+    setStatus: StatusApi.setStatus
+  };
+}
+
+/**
  * @returns {MapPageDeps}
  */
 function createMapPageDeps() {
@@ -489,6 +502,8 @@ const NOOP_HUB_PAGE_API = {
   /** @type {ModuleInitResult | ModuleInitPromise} */
   let trackerPageApi = getNoopDestroyApi();
   /** @type {ModuleInitResult | ModuleInitPromise} */
+  let combatPageApi = getNoopDestroyApi();
+  /** @type {ModuleInitResult | ModuleInitPromise} */
   let mapPageApi = getNoopDestroyApi();
   /** @type {TopTabsNavigationApi} */
   let topTabsApi = NOOP_TOP_TABS_API;
@@ -496,7 +511,7 @@ const NOOP_HUB_PAGE_API = {
   let campaignHubPageApi = NOOP_HUB_PAGE_API;
 
   const hasActiveCampaign = () => !!appState.appShell?.activeCampaignId;
-  const isCampaignContentTab = (tabName) => ["tracker", "character", "map"].includes(tabName);
+  const isCampaignContentTab = (tabName) => ["tracker", "combat", "character", "map"].includes(tabName);
   const canActivateTab = (tabName) => !isCampaignContentTab(tabName) || hasActiveCampaign();
   const getDefaultLandingTab = () => (hasActiveCampaign() ? "tracker" : "hub");
 
@@ -579,6 +594,14 @@ const NOOP_HUB_PAGE_API = {
       trackerPageApi.destroy();
     }
     if (
+      combatPageApi &&
+      typeof combatPageApi === "object" &&
+      "destroy" in combatPageApi &&
+      typeof combatPageApi.destroy === "function"
+    ) {
+      combatPageApi.destroy();
+    }
+    if (
       mapPageApi &&
       typeof mapPageApi === "object" &&
       "destroy" in mapPageApi &&
@@ -587,12 +610,14 @@ const NOOP_HUB_PAGE_API = {
       mapPageApi.destroy();
     }
     trackerPageApi = getNoopDestroyApi();
+    combatPageApi = getNoopDestroyApi();
     mapPageApi = getNoopDestroyApi();
   };
 
   const initCampaignModules = () => {
     if (!hasActiveCampaign()) return;
     trackerPageApi = runModuleInit("Tracker page", () => initTrackerPage(createTrackerPageDeps()));
+    combatPageApi = runModuleInit("Combat page", () => initCombatPage(createCombatPageDeps()));
     mapPageApi = runModuleInit("Map page", () => setupMapPage(createMapPageDeps()));
   };
 

@@ -1887,6 +1887,17 @@ body[data-shell-mode="hub"] main {
   overflow: hidden;
 }
 
+.combatPanel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow:
+    0 6px 16px var(--shadow-inset);
+  min-width: 0;
+  overflow: hidden;
+}
+
 .mapPanel {
   background: var(--panel);
   /* map panel background */
@@ -1924,12 +1935,25 @@ body[data-shell-mode="hub"] main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.combatColumns {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .trackerCol {
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
   /* allow children to shrink */
+}
+
+.combatCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
 }
 
 @media (max-width: 600px) {
@@ -1942,6 +1966,10 @@ body[data-shell-mode="hub"] main {
   }
 
   .trackerColumns {
+    grid-template-columns: 1fr;
+  }
+
+  .combatColumns {
     grid-template-columns: 1fr;
   }
 }
@@ -2630,6 +2658,73 @@ button.panelSelectBtn:hover {
 .panel>.locHeader,
 .panel>.row {
   margin-bottom: var(--panel-header-gap);
+}
+
+.combatPanel>.panelHeader {
+  margin-bottom: var(--panel-header-gap);
+}
+
+.combatEmptyState {
+  display: grid;
+  gap: 4px;
+  min-height: 120px;
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  padding: 18px;
+}
+
+.combatCardsShell {
+  min-height: 12px;
+}
+
+.combatRoundStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.combatStatTile {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  padding: 10px;
+  min-width: 0;
+}
+
+.combatStatLabel {
+  color: var(--muted);
+  font-size: var(--small-font-size);
+  line-height: 1.2;
+}
+
+.combatStatValue {
+  color: var(--text);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 4px;
+}
+
+.combatControlRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.combatControlRow button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .combatRoundStats {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Card dropdowns (inside cards) */
@@ -5792,6 +5887,10 @@ body.modal-open { overflow: hidden; overscroll-behavior: none; }
 /* When collapsed, hide everything in the panel EXCEPT the header element.
    JS ensures the chosen header gets [data-panel-header]. */
 section.panel[data-collapsed="true"]> :not([data-panel-header]) {
+  display: none !important;
+}
+
+section.combatPanel[data-collapsed="true"]> :not([data-panel-header]) {
   display: none !important;
 }
 

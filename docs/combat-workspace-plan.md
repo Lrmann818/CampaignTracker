@@ -4,7 +4,7 @@
 
 - **Phase:** 3 — Combat Workspace
 - **Overall status:** In progress
-- **Current next slice:** Slice 3 — Combat page shell
+- **Current next slice:** Slice 4 — Tracker add-to-combat flow
 
 ---
 
@@ -314,7 +314,7 @@ Field names may evolve slightly to fit repo conventions, but the explicit `works
 
 ### Slice 3 — Combat page shell
 
-**Status:** Planned
+**Status:** Done
 
 #### Scope
 
@@ -324,6 +324,35 @@ Field names may evolve slightly to fit repo conventions, but the explicit `works
 - always-present Combat Cards panel shell
 - always-present Round Controls / Timer panel shell
 - workspace layout persistence hooks
+
+#### Completed notes
+
+- added the Combat top-level campaign tab and page shell
+- wired Combat page init/destroy through the app composition root alongside campaign modules
+- added the always-present Combat Cards and Round Controls / Timer panel shells
+- rendered the empty combat state and inert placeholder controls without future combat behavior
+- added Combat-only workspace layout hooks for panel order and collapsed state under `combat.workspace`
+- kept Combat shell wiring isolated from Character-page selectors and global UI collapse state
+
+#### Files changed in Slice 3
+
+- `app.js`
+- `index.html`
+- `styles.css`
+- `js/pages/combat/combatPage.js`
+- `js/pages/combat/combatSectionReorder.js`
+- `tests/combatPage.test.js`
+- `tests/smoke/combatShell.smoke.js`
+- `docs/combat-workspace-plan.md`
+
+#### Verification completed for Slice 3
+
+- targeted Combat page unit tests passed
+- targeted Combat shell smoke test passed
+- full unit test suite passed
+- full browser smoke suite passed
+- typecheck passed
+- build passed
 
 ---
 

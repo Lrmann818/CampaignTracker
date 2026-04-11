@@ -84,6 +84,7 @@
     <div class="topbarRight">
       <nav class="tabs" id="campaignTabs" role="tablist" aria-label="Pages" hidden>
         <button class="tab" data-tab="tracker" role="tab" aria-selected="false">Tracker</button>
+        <button class="tab" data-tab="combat" role="tab" aria-selected="false">Combat</button>
         <button class="tab" data-tab="character" role="tab" aria-selected="false">Character</button>
         <button class="tab" data-tab="map" role="tab" aria-selected="false">Map</button>
       </nav>
@@ -407,6 +408,61 @@
 
         </div>
         <div class="trackerCol" id="trackerCol1"></div>
+      </div>
+    </section>
+
+    <!-- COMBAT PAGE -->
+    <section class="page" id="page-combat">
+      <div class="combatColumns" id="combatColumns">
+        <div class="combatCol" id="combatCol0">
+          <section class="combatPanel" id="combatCardsPanel" aria-labelledby="combatCardsTitle">
+            <div class="panelHeader">
+              <div>
+                <h2 class="m0" id="combatCardsTitle">Combat Cards</h2>
+                <p class="mutedSmall m0" id="combatCardsStatus">Add combatants from Tracker to begin.</p>
+              </div>
+            </div>
+
+            <div class="combatEmptyState" id="combatEmptyState">
+              <p class="m0">No combatants yet.</p>
+              <p class="muted m0">Add combatants from Tracker to begin.</p>
+            </div>
+
+            <div class="combatCardsShell" id="combatCardsShell" aria-live="polite"></div>
+          </section>
+        </div>
+
+        <div class="combatCol" id="combatCol1">
+          <section class="combatPanel" id="combatRoundPanel" aria-labelledby="combatRoundTitle">
+            <div class="panelHeader combatRoundHeader">
+              <div>
+                <h2 class="m0" id="combatRoundTitle">Round Controls / Timer</h2>
+                <p class="mutedSmall m0">Manual combat controls are coming in the next slice.</p>
+              </div>
+            </div>
+
+            <div class="combatRoundStats" aria-label="Encounter timing">
+              <div class="combatStatTile">
+                <div class="combatStatLabel">Round</div>
+                <div class="combatStatValue" id="combatRoundValue">1</div>
+              </div>
+              <div class="combatStatTile">
+                <div class="combatStatLabel">Elapsed</div>
+                <div class="combatStatValue" id="combatElapsedValue">00:00</div>
+              </div>
+              <div class="combatStatTile">
+                <div class="combatStatLabel">Turn</div>
+                <div class="combatStatValue" id="combatTurnSecondsValue">6s</div>
+              </div>
+            </div>
+
+            <div class="combatControlRow" aria-label="Combat controls">
+              <button type="button" class="panelBtn panelBtnSm" id="combatNextTurnBtn" disabled>Next Turn</button>
+              <button type="button" class="panelBtn panelBtnSm" id="combatUndoBtn" disabled>Undo</button>
+              <button type="button" class="danger panelBtn panelBtnSm" id="combatClearBtn" disabled>Clear Combat</button>
+            </div>
+          </section>
+        </div>
       </div>
     </section>
 
