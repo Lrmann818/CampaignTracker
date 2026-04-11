@@ -190,3 +190,67 @@ test("combat status effects can be added, edited, expired by turns, undone, and 
 
   await expectNoFatalSignals(page, fatalSignals);
 });
+
+test("combat workspace panel picker adds embedded panels, persists selection, prevents duplicates, and supports remove + collapse", async ({ page }) => {
+  const fatalSignals = await openSmokeApp(page, { campaignName: "Combat Embedded Panels Smoke" });
+
+  await page.getByRole("tab", { name: "Combat" }).click();
+  await expect(page.locator("#page-combat")).toBeVisible();
+
+  // All three panels are available to add initially
+  await expect(page.locator("[data-add-embedded-panel='vitals']")).toBeVisible();
+  await expect(page.locator("[data-add-embedded-panel='spells']")).toBeVisible();
+  await expect(page.locator("[data-add-embedded-panel='weapons']")).toBeVisible();
+
+  // Add Vitals
+  await page.locator("[data-add-embedded-panel='vitals']").click();
+  await expect(page.locator("#combatEmbeddedPanel_vitals")).toBeVisible();
+
+  // Vitals button disappears from picker (duplicate prevention)
+  await expect(page.locator("[data-add-embedded-panel='vitals']")).not.toBeVisible();
+
+  // State persists in workspace
+  await expect.poll(() =>
+    page.evaluate(() => globalThis.__APP_STATE__?.combat?.workspace?.embeddedPanels)
+  ).toEqual(["vitals"]);
+
+  // Add Spells
+  await page.locator("[data-add-embedded-panel='spells']").click();
+  await expect(page.locator("#combatEmbeddedPanel_spells")).toBeVisible();
+  await expect.poll(() =>
+    page.evaluate(() => globalThis.__APP_STATE__?.combat?.workspace?.embeddedPanels)
+  ).toEqual(["vitals", "spells"]);
+
+  // Collapse the Vitals panel via header click
+  await page.locator("#combatEmbeddedPanel_vitals .panelHeader").click();
+  await expect(page.locator("#combatEmbeddedPanel_vitals")).toHaveAttribute("aria-expanded", "false");
+  await expect.poll(() =>
+    page.evaluate(() => globalThis.__APP_STATE__?.combat?.workspace?.panelCollapsed?.combatEmbeddedPanel_vitals)
+  ).toBe(true);
+
+  // Remove the Vitals panel
+  await page.locator("[data-remove-embedded-panel='vitals']").click();
+  await expect(page.locator("#combatEmbeddedPanel_vitals")).not.toBeVisible();
+
+  // Vitals is available in the picker again
+  await expect(page.locator("[data-add-embedded-panel='vitals']")).toBeVisible();
+
+  await expect.poll(() =>
+    page.evaluate(() => globalThis.__APP_STATE__?.combat?.workspace?.embeddedPanels)
+  ).toEqual(["spells"]);
+
+  // Add all three — picker shows "All panels added." when full
+  await page.locator("[data-add-embedded-panel='vitals']").click();
+  await page.locator("[data-add-embedded-panel='weapons']").click();
+  await expect(page.locator("[data-add-embedded-panel='vitals']")).not.toBeVisible();
+  await expect(page.locator("[data-add-embedded-panel='spells']")).not.toBeVisible();
+  await expect(page.locator("[data-add-embedded-panel='weapons']")).not.toBeVisible();
+  await expect(page.locator("#combatPanelPickerRow")).toContainText("All panels added.");
+
+  // Workspace layout (panelOrder) and encounter state are unaffected
+  await expect.poll(() =>
+    page.evaluate(() => globalThis.__APP_STATE__?.combat?.encounter?.participants?.length ?? 0)
+  ).toBe(0);
+
+  await expectNoFatalSignals(page, fatalSignals);
+});

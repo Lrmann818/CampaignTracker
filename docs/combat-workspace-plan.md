@@ -4,7 +4,7 @@
 
 - **Phase:** 3 — Combat Workspace
 - **Overall status:** In progress
-- **Current next slice:** Slice 7 — Embedded panels
+- **Current next slice:** Slice 8 — Styling, accessibility, and polish
 
 ---
 
@@ -498,7 +498,7 @@ Field names may evolve slightly to fit repo conventions, but the explicit `works
 
 ### Slice 7 — Embedded panels
 
-**Status:** Planned
+**Status:** Done
 
 #### Scope
 
@@ -507,6 +507,35 @@ Field names may evolve slightly to fit repo conventions, but the explicit `works
 - Spells embedded panel
 - Weapons / Attacks embedded panel
 - prevent duplicate embedded panel selection
+
+#### Completed notes
+
+- added panel picker in `#combatEmbeddedPanels` container (in `combatCol1` after the Round Controls panel)
+- picker renders add-buttons only for panels not yet active; disappears when all three are added
+- added collapsible embedded panel sections for Vitals, Spells, and Weapons / Attacks
+- each panel is a read-only view onto `state.character` — no copied data, no sync layers
+- panel content re-renders on `COMBAT_ENCOUNTER_CHANGED_EVENT` so HP writeback from combat cards stays live in Vitals
+- panel selection persists in `combat.workspace.embeddedPanels`; collapse state persists in `combat.workspace.panelCollapsed` under the `combatEmbeddedPanel_*` id prefix
+- duplicate panel prevention is enforced by `addEmbeddedPanel()` which rejects unknown and duplicate ids
+- embedded panel module (`combatEmbeddedPanels.js`) is self-contained; does not import Character-page panel modules
+
+#### Files changed in Slice 7
+
+- `js/pages/combat/combatEmbeddedPanels.js` (new)
+- `js/pages/combat/combatPage.js`
+- `index.html`
+- `styles.css`
+- `tests/combatEmbeddedPanels.test.js` (new)
+- `tests/smoke/combatShell.smoke.js`
+- `docs/combat-workspace-plan.md`
+
+#### Verification completed for Slice 7
+
+- targeted embedded panel unit tests passed (35/35)
+- all existing combat unit tests passed
+- full unit test suite passed (207/207)
+- typecheck passed
+- build passed
 
 ---
 

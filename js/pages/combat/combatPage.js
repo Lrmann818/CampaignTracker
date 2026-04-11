@@ -4,6 +4,7 @@
 // Combat Workspace shell and Slice 5 encounter controls.
 
 import { setupCombatSectionReorder } from "./combatSectionReorder.js";
+import { initCombatEmbeddedPanels } from "./combatEmbeddedPanels.js";
 import { COMBAT_ENCOUNTER_CHANGED_EVENT, notifyCombatEncounterChanged } from "./combatEvents.js";
 import {
   advanceCombatTurn,
@@ -962,6 +963,7 @@ export function initCombatPage(deps = {}) {
 
   runShellInit("Combat layout persistence", () => setupCombatSectionReorder({ state, SaveManager, setStatus }));
   runShellInit("Combat panel collapse", () => initCombatPanelCollapse({ state, SaveManager, root }));
+  runShellInit("Combat embedded panels", () => initCombatEmbeddedPanels({ state, SaveManager, setStatus, root }));
   cardsShell.addEventListener("click", handleCombatCardClick, { signal });
   cardsShell.addEventListener("change", handleCombatRoleChange, { signal });
   cardsShell.addEventListener("change", handleStatusModeChange, { signal });

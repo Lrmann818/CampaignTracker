@@ -2910,6 +2910,187 @@ button.panelSelectBtn:hover {
   }
 }
 
+/* ── Slice 7: Embedded panels panel picker ─────────────────────────────────── */
+
+.combatPanelPicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+}
+
+.combatPanelPickerLabel {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+/* ── Embedded panel sections ───────────────────────────────────────────────── */
+
+.combatEmbeddedPanel {
+  margin-top: 0;
+}
+
+.combatEmbeddedPanel > .panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--panel-header-gap);
+}
+
+.combatEmbeddedTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.combatEmbeddedPanelBody {
+  display: grid;
+  gap: 5px;
+}
+
+/* ── Vitals embedded content ───────────────────────────────────────────────── */
+
+.combatEmbedHpBlock {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.combatEmbedHpValue {
+  font-weight: 800;
+  font-size: 1.15em;
+}
+
+.combatEmbedStatRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.92em;
+}
+
+.combatEmbedStatLabel {
+  color: var(--muted);
+}
+
+.combatEmbedStatValue {
+  font-weight: 600;
+}
+
+.combatEmbedSectionLabel {
+  color: var(--muted);
+  font-size: 0.82em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
+.combatEmbedResources {
+  display: grid;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.combatEmbedResourceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.9em;
+}
+
+.combatEmbedResourceName {
+  color: var(--muted);
+}
+
+.combatEmbedResourceValue {
+  font-weight: 600;
+}
+
+/* ── Spells embedded content ───────────────────────────────────────────────── */
+
+.combatEmbedSpellLevel {
+  display: grid;
+  gap: 3px;
+}
+
+.combatEmbedSpellLevelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+.combatEmbedSpellLevelLabel {
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.combatEmbedSpellSlots {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+.combatEmbedSpellLevelBody {
+  display: grid;
+  gap: 2px;
+  padding-left: 6px;
+}
+
+.combatEmbedSpellRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.9em;
+  padding: 1px 0;
+}
+
+.combatEmbedSpellRow.isExpended {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.combatEmbedSpellName {
+  flex: 1 1 auto;
+}
+
+.combatEmbedSpellFlags {
+  color: var(--muted);
+  font-size: 0.82em;
+  white-space: nowrap;
+}
+
+/* ── Weapons / Attacks embedded content ────────────────────────────────────── */
+
+.combatEmbedWeaponRow {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9em;
+}
+
+.combatEmbedWeaponRow:last-child {
+  border-bottom: none;
+}
+
+.combatEmbedWeaponName {
+  font-weight: 600;
+}
+
+.combatEmbedWeaponStats {
+  color: var(--muted);
+  font-size: 0.88em;
+}
+
 /* Card dropdowns (inside cards) */
 .cardSelect,
 button.cardSelectBtn {
