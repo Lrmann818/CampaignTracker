@@ -1,7 +1,9 @@
 // @ts-check
 // js/pages/combat/combatPage.js
 //
-// Combat Workspace shell and Slice 5 encounter controls.
+// Combat Workspace shell — corrective pass for card UI/interaction.
+// Slice 5/6 corrections: HP modal, status modal, portrait, compact status,
+// moveBtn ordering, role tint, no initiative counter.
 
 import { setupCombatSectionReorder } from "./combatSectionReorder.js";
 import { initCombatEmbeddedPanels } from "./combatEmbeddedPanels.js";
@@ -20,7 +22,15 @@ import {
   updateCombatParticipantStatusEffect,
   undoCombatTurn
 } from "../../domain/combatEncounterActions.js";
-import { COMBAT_ROLES, STATUS_DURATION_MODES, normalizeCombatEncounter } from "../../domain/combat.js";
+import {
+  COMBAT_ROLES,
+  STATUS_DURATION_MODES,
+  findCombatSource,
+  getCombatHpFromSource,
+  normalizeCombatEncounter
+} from "../../domain/combat.js";
+import { flipSwapTwo } from "../../ui/flipSwap.js";
+import { enhanceSelectDropdown } from "../../ui/selectDropdown.js";
 import { getNoopDestroyApi, requireMany } from "../../utils/domGuards.js";
 import { DEV_MODE } from "../../utils/dev.js";
 
@@ -28,12 +38,23 @@ import { DEV_MODE } from "../../utils/dev.js";
 /** @typedef {{ markDirty?: () => void }} SaveManagerLike */
 /** @typedef {(message: string, opts?: { title?: string, okText?: string, cancelText?: string }) => Promise<boolean> | boolean} UiConfirmFn */
 /** @typedef {(message: string, opts?: { stickyMs?: number }) => void} CombatPageStatusFn */
+/** @typedef {typeof import("../../storage/blobs.js").blobIdToObjectUrl} BlobIdToObjectUrlFn */
 /**
  * @typedef {{
  *   state?: State,
  *   SaveManager?: SaveManagerLike,
  *   uiConfirm?: UiConfirmFn,
- *   setStatus?: CombatPageStatusFn
+ *   uiPrompt?: Function,
+ *   setStatus?: CombatPageStatusFn,
+ *   Popovers?: unknown,
+ *   blobIdToObjectUrl?: BlobIdToObjectUrlFn,
+ *   textKey_spellNotes?: Function,
+ *   putText?: Function,
+ *   getText?: Function,
+ *   deleteText?: Function,
+ *   autoSizeInput?: Function,
+ *   enhanceNumberSteppers?: Function,
+ *   applyTextareaSize?: Function
  * }} CombatPageDeps
  */
 /** @typedef {{ destroy: () => void, render: () => void }} CombatPageApi */
@@ -56,15 +77,25 @@ import { DEV_MODE } from "../../utils/dev.js";
  *   name: string,
  *   role: "party" | "enemy" | "npc",
  *   roleLabel: string,
- *   orderLabel: string,
  *   isActive: boolean,
  *   canMoveUp: boolean,
  *   canMoveDown: boolean,
  *   hpCurrentLabel: string,
  *   hpMaxLabel: string,
+ *   hpDisplayLabel: string,
  *   tempHp: number,
  *   hasTempHp: boolean,
- *   statusEffects: Array<{ id: string, label: string, detail: string, durationMode: "none" | "rounds" | "time", durationInputValue: string, expired: boolean }>
+ *   hpState: "normal" | "temp" | "zero",
+ *   portraitBlobId: string | null,
+ *   statusEffects: Array<{
+ *     id: string,
+ *     label: string,
+ *     detail: string,
+ *     durationMode: "none" | "rounds" | "seconds",
+ *     durationInputValue: string,
+ *     remainingLabel: string,
+ *     expired: boolean
+ *   }>
  * }} CombatCardViewModel
  */
 /**
@@ -84,8 +115,13 @@ export const COMBAT_ROLE_OPTIONS = Object.freeze([
 export const COMBAT_STATUS_DURATION_OPTIONS = Object.freeze([
   { value: STATUS_DURATION_MODES.NONE, label: "No duration" },
   { value: STATUS_DURATION_MODES.ROUNDS, label: "Rounds" },
-  { value: STATUS_DURATION_MODES.TIME, label: "Seconds" }
+  { value: STATUS_DURATION_MODES.SECONDS, label: "Seconds" },
+  { value: STATUS_DURATION_MODES.MINUTES, label: "Minutes" },
+  { value: STATUS_DURATION_MODES.HOURS, label: "Hours" }
 ]);
+
+export const COMBAT_ROLE_SELECT_CLASSES = "panelSelect combatRoleSelect";
+export const COMBAT_STATUS_MODE_SELECT_CLASSES = "settingsSelect combatStatusModalModeSelect";
 
 /** @type {CombatPageApi | null} */
 let activeCombatPageController = null;
@@ -168,12 +204,40 @@ function cleanIdOrNull(value) {
 
 /**
  * @param {unknown} remaining
+ * @returns {string}
+ */
+function formatStatusTimeRemaining(remaining) {
+  const safeSeconds = Math.max(0, Math.trunc(Number(remaining) || 0));
+  if (safeSeconds < 60) return `${safeSeconds}s`;
+  const totalMinutes = Math.floor(safeSeconds / 60);
+  if (safeSeconds < 3600) {
+    const seconds = safeSeconds % 60;
+    return `${String(totalMinutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+/**
+ * @param {unknown} remaining
  * @param {unknown} mode
  * @returns {string}
  */
-function formatStatusEffectDetail(remaining, mode) {
+export function formatStatusEffectDetail(remaining, mode) {
   if (mode === "rounds") return `(${Number(remaining) || 0} rd)`;
-  if (mode === "time") return `(${Number(remaining) || 0}s)`;
+  if (mode === "time") return `(${formatStatusTimeRemaining(remaining)})`;
+  return "";
+}
+
+/**
+ * @param {unknown} remaining
+ * @param {unknown} mode
+ * @returns {string}
+ */
+function formatStatusRemainingLabel(remaining, mode) {
+  if (mode === "rounds") return `${Number(remaining) || 0} rd`;
+  if (mode === "time") return formatStatusTimeRemaining(remaining);
   return "";
 }
 
@@ -193,32 +257,82 @@ function formatStatusDurationInputValue(remaining, mode) {
  * @returns {CombatCardViewModel[]}
  */
 export function getCombatCardViewModels(state) {
-  const encounter = normalizeCombatEncounter(objectOrEmpty(objectOrEmpty(state).combat).encounter);
+  const s = objectOrEmpty(state);
+  const encounter = normalizeCombatEncounter(objectOrEmpty(s.combat).encounter);
+  const tracker = s.tracker;
+
   return encounter.participants.map((participant, index) => {
-    const hpCurrent = participant.hpCurrent == null ? "--" : String(participant.hpCurrent);
-    const hpMax = participant.hpMax == null ? "--" : String(participant.hpMax);
+    // Resolve portrait blob ID from canonical source — never copied into encounter state.
+    let portraitBlobId = /** @type {string | null} */ (null);
+    const source = findCombatSource(
+      tracker != null && typeof tracker === "object" && !Array.isArray(tracker)
+        ? /** @type {Record<string, unknown>} */ (tracker)
+        : null,
+      participant.source
+    );
+    const sourceBlobId = source?.card?.imgBlobId;
+    if (typeof sourceBlobId === "string" && sourceBlobId) {
+      portraitBlobId = sourceBlobId;
+    }
+
+    const sourceHp = source ? getCombatHpFromSource(source.card) : null;
+    const canonicalMax = sourceHp?.hpMax ?? participant.hpMax;
+    const currentHp = participant.hpCurrent;
+    const tempHp = Math.max(0, Math.trunc(Number(participant.tempHp) || 0));
+    const displayHp = currentHp == null ? null : currentHp + tempHp;
+    const hpCurrent = currentHp == null ? "--" : String(currentHp);
+    const hpMax = canonicalMax == null ? "--" : String(canonicalMax);
+    const hpDisplay = displayHp == null ? "--" : String(displayHp);
+    const hpState = tempHp > 0 ? "temp" : displayHp === 0 ? "zero" : "normal";
+
     return {
       id: participant.id,
       name: participant.name || "Unnamed participant",
       role: participant.role,
       roleLabel: COMBAT_ROLE_OPTIONS.find((option) => option.value === participant.role)?.label || "NPC",
-      orderLabel: String(index + 1),
       isActive: participant.id === encounter.activeParticipantId,
       canMoveUp: index > 0,
       canMoveDown: index < encounter.participants.length - 1,
       hpCurrentLabel: hpCurrent,
       hpMaxLabel: hpMax,
-      tempHp: Math.max(0, Math.trunc(Number(participant.tempHp) || 0)),
-      hasTempHp: Number(participant.tempHp) > 0,
+      hpDisplayLabel: hpDisplay,
+      tempHp,
+      hasTempHp: tempHp > 0,
+      hpState,
+      portraitBlobId,
       statusEffects: participant.statusEffects.map((effect) => ({
         id: effect.id,
         label: effect.label,
         detail: formatStatusEffectDetail(effect.remaining, effect.durationMode),
-        durationMode: effect.durationMode,
+        durationMode: effect.durationMode === "time" ? "seconds" : effect.durationMode,
         durationInputValue: formatStatusDurationInputValue(effect.remaining, effect.durationMode),
+        remainingLabel: formatStatusRemainingLabel(effect.remaining, effect.durationMode),
         expired: effect.expired === true
       }))
     };
+  });
+}
+
+/**
+ * @param {HTMLSelectElement} select
+ * @param {unknown} Popovers
+ * @param {{
+ *   buttonClass: string,
+ *   preferRight?: boolean,
+ *   exclusive?: boolean
+ * }} opts
+ * @returns {ReturnType<typeof enhanceSelectDropdown> | null}
+ */
+function enhanceCombatSelect(select, Popovers, opts) {
+  if (!Popovers) return null;
+  return enhanceSelectDropdown({
+    select,
+    Popovers,
+    buttonClass: opts.buttonClass,
+    optionClass: "swatchOption",
+    groupLabelClass: "dropdownGroupLabel",
+    preferRight: opts.preferRight !== false,
+    exclusive: opts.exclusive
   });
 }
 
@@ -331,146 +445,134 @@ function createCombatActionButton({ action, text, className = "", disabled = fal
 }
 
 /**
- * @param {HTMLSelectElement} select
- * @param {string} selectedValue
- * @returns {void}
- */
-function appendStatusDurationOptions(select, selectedValue) {
-  COMBAT_STATUS_DURATION_OPTIONS.forEach((option) => {
-    const optionEl = document.createElement("option");
-    optionEl.value = option.value;
-    optionEl.textContent = option.label;
-    optionEl.selected = option.value === selectedValue;
-    select.appendChild(optionEl);
-  });
-}
-
-/**
- * @param {HTMLSelectElement} select
- * @returns {HTMLInputElement}
- */
-function createStatusDurationInput(select) {
-  const input = document.createElement("input");
-  input.className = "combatStatusDurationInput";
-  input.type = "number";
-  input.min = "0";
-  input.step = "1";
-  input.inputMode = "numeric";
-  input.placeholder = select.value === "time" ? "Seconds" : "Rounds";
-  input.disabled = select.value === "none";
-  input.setAttribute("aria-label", "Status duration remaining");
-  return input;
-}
-
-/**
+ * Syncs the duration input's enabled state and placeholder with the mode select.
  * @param {HTMLSelectElement} select
  * @param {HTMLInputElement} input
  * @returns {void}
  */
 function syncStatusDurationInput(select, input) {
-  const hasDuration = select.value === "rounds" || select.value === "time";
+  const hasDuration = select.value === "rounds"
+    || select.value === "time"
+    || select.value === "seconds"
+    || select.value === "minutes"
+    || select.value === "hours";
   input.disabled = !hasDuration;
-  input.placeholder = select.value === "time" ? "Seconds" : "Rounds";
+  input.placeholder = select.value === "minutes"
+    ? "Minutes"
+    : select.value === "hours"
+      ? "Hours"
+      : select.value === "rounds"
+        ? "Rounds"
+        : "Seconds";
   if (!hasDuration) input.value = "";
 }
 
 /**
- * @param {string} labelText
- * @param {string} selectedMode
- * @param {string} durationValue
+ * Renders a compact status effect row: gear button, label box, duration box.
+ * Replaces the Slice 6 inline editor rows with a modal-based editing flow.
+ * @param {CombatCardViewModel["statusEffects"][number]} effect
  * @returns {HTMLElement}
  */
-function createStatusDurationSettings(labelText, selectedMode, durationValue) {
+function renderCompactStatusEffect(effect) {
+  const row = document.createElement("div");
+  row.className = "combatStatusCompactRow";
+  row.classList.toggle("isExpired", effect.expired);
+  row.dataset.combatStatusEffectId = effect.id;
+
+  const gearBtn = document.createElement("button");
+  gearBtn.type = "button";
+  gearBtn.className = "moveBtn combatStatusGearBtn";
+  gearBtn.dataset.combatAction = "status-modal-open-edit";
+  gearBtn.title = `Edit ${effect.label}`;
+  gearBtn.setAttribute("aria-label", `Edit status: ${effect.label}`);
+  gearBtn.textContent = "⚙";
+  row.appendChild(gearBtn);
+
+  const nameBox = document.createElement("span");
+  nameBox.className = "combatStatusNameBox combatStatusChip";
+  nameBox.classList.toggle("isExpired", effect.expired);
+  nameBox.textContent = effect.label;
+  row.appendChild(nameBox);
+
+  if (effect.remainingLabel) {
+    const durationBox = document.createElement("span");
+    durationBox.className = "combatStatusDurationBox";
+    durationBox.textContent = effect.remainingLabel;
+    row.appendChild(durationBox);
+  }
+
+  if (effect.expired) {
+    row.appendChild(createTextEl("Expired", "combatStatusExpiredLabel"));
+  }
+
+  return row;
+}
+
+/**
+ * Renders a small portrait area for the left column of a combat card.
+ * Uses a canonical blob ID — no image data is copied into encounter state.
+ * Falls back to an initials avatar when no portrait is set.
+ * @param {string | null} blobId
+ * @param {string} name
+ * @param {BlobIdToObjectUrlFn | undefined} blobIdToObjectUrl
+ * @returns {HTMLElement}
+ */
+function renderCombatPortrait(blobId, name, blobIdToObjectUrl) {
   const wrap = document.createElement("div");
-  wrap.className = "combatStatusDurationSettings";
+  wrap.className = "combatCardPortrait";
+  wrap.setAttribute("aria-hidden", "true");
 
-  const label = document.createElement("span");
-  label.textContent = labelText;
+  if (blobId && typeof blobIdToObjectUrl === "function") {
+    const img = document.createElement("img");
+    img.className = "combatCardPortraitImg";
+    img.alt = "";
+    wrap.appendChild(img);
+    blobIdToObjectUrl(blobId).then((url) => {
+      if (url) img.src = url;
+    }).catch(() => { /* ignore stale blob errors */ });
+  } else {
+    const avatar = document.createElement("div");
+    avatar.className = "combatCardPortraitAvatar";
+    avatar.textContent = (name || "?").trim().charAt(0).toUpperCase();
+    wrap.appendChild(avatar);
+  }
 
-  const select = document.createElement("select");
-  select.className = "combatStatusModeSelect";
-  select.dataset.combatStatusMode = "true";
-  select.setAttribute("aria-label", "Status duration mode");
-  appendStatusDurationOptions(select, selectedMode);
-
-  const durationInput = createStatusDurationInput(select);
-  durationInput.value = durationValue;
-  syncStatusDurationInput(select, durationInput);
-
-  wrap.appendChild(label);
-  wrap.appendChild(select);
-  wrap.appendChild(durationInput);
   return wrap;
 }
 
 /**
- * @param {CombatCardViewModel["statusEffects"][number]} effect
- * @returns {HTMLElement}
- */
-function renderStatusEffectEditor(effect) {
-  const row = document.createElement("div");
-  row.className = "combatStatusEffect";
-  row.classList.toggle("isExpired", effect.expired);
-  row.dataset.combatStatusEffectId = effect.id;
-
-  const chip = document.createElement("span");
-  chip.className = "combatStatusChip";
-  chip.classList.toggle("isExpired", effect.expired);
-  chip.textContent = effect.detail ? `${effect.label} ${effect.detail}` : effect.label;
-  row.appendChild(chip);
-
-  if (effect.expired) row.appendChild(createTextEl("Expired", "combatStatusExpiredLabel"));
-
-  const labelInput = document.createElement("input");
-  labelInput.className = "combatStatusLabelInput";
-  labelInput.value = effect.label;
-  labelInput.placeholder = "Status label";
-  labelInput.setAttribute("aria-label", `Edit status label for ${effect.label}`);
-  row.appendChild(labelInput);
-
-  row.appendChild(createStatusDurationSettings("Duration", effect.durationMode, effect.durationInputValue));
-  row.appendChild(createCombatActionButton({ action: "save-status", text: "Save", className: "panelBtn panelBtnSm" }));
-  row.appendChild(createCombatActionButton({ action: "remove-status", text: "Remove", className: "danger panelBtn panelBtnSm" }));
-  return row;
-}
-
-/**
+ * Renders a single combat card article element.
+ * - No initiative/order counter (removed per v1 spec)
+ * - Portrait on the left (canonical, read-only)
+ * - Single clickable HP area → opens HP modal
+ * - Compact status chips + gear buttons + "+ Status Effect" → opens status modal
+ * - ↑/↓ move buttons using the existing moveBtn style
+ * - Role tint via combatRole-{role} class (already wired in CSS)
  * @param {CombatCardViewModel} card
+ * @param {BlobIdToObjectUrlFn | undefined} blobIdToObjectUrl
+ * @param {unknown} Popovers
  * @returns {HTMLElement}
  */
-function renderStatusComposer(card) {
-  const row = document.createElement("div");
-  row.className = "combatStatusComposer";
-
-  const labelInput = document.createElement("input");
-  labelInput.className = "combatStatusAddLabelInput";
-  labelInput.placeholder = "Status label";
-  labelInput.setAttribute("aria-label", `New status label for ${card.name}`);
-  row.appendChild(labelInput);
-
-  row.appendChild(createStatusDurationSettings("Duration", "none", ""));
-  row.appendChild(createCombatActionButton({ action: "add-status", text: "Add Status", className: "panelBtn panelBtnSm" }));
-  return row;
-}
-
-/**
- * @param {CombatCardViewModel} card
- * @returns {HTMLElement}
- */
-function renderCombatCard(card) {
+function renderCombatCard(card, blobIdToObjectUrl, Popovers) {
   const article = document.createElement("article");
   article.className = `combatCard combatRole-${card.role}`;
   article.dataset.combatParticipantId = card.id;
   article.classList.toggle("isActive", card.isActive);
   article.setAttribute("aria-label", `${card.name} combat card`);
 
+  // Left column: portrait
+  article.appendChild(renderCombatPortrait(card.portraitBlobId, card.name, blobIdToObjectUrl));
+
+  // Right column: all card content
+  const content = document.createElement("div");
+  content.className = "combatCardContent";
+
+  // Header row: name + active badge + role select
   const header = document.createElement("div");
   header.className = "combatCardHeader";
 
   const titleWrap = document.createElement("div");
   titleWrap.className = "combatCardTitleWrap";
-  titleWrap.appendChild(createTextEl(card.orderLabel, "combatOrderBadge"));
-
   const nameEl = document.createElement("div");
   nameEl.className = "combatCardName";
   nameEl.textContent = card.name;
@@ -478,8 +580,9 @@ function renderCombatCard(card) {
   if (card.isActive) titleWrap.appendChild(createTextEl("Active", "combatActiveBadge"));
 
   const roleSelect = document.createElement("select");
-  roleSelect.className = "combatRoleSelect";
+  roleSelect.className = COMBAT_ROLE_SELECT_CLASSES;
   roleSelect.dataset.combatRole = "true";
+  roleSelect.title = `Combat role for ${card.name}`;
   roleSelect.setAttribute("aria-label", `Combat role for ${card.name}`);
   COMBAT_ROLE_OPTIONS.forEach((option) => {
     const optionEl = document.createElement("option");
@@ -491,91 +594,106 @@ function renderCombatCard(card) {
 
   header.appendChild(titleWrap);
   header.appendChild(roleSelect);
+  enhanceCombatSelect(roleSelect, Popovers, {
+    buttonClass: "panelSelectBtn",
+    preferRight: true
+  });
 
-  const hpRow = document.createElement("div");
-  hpRow.className = "combatHpRow";
-  const hpLabel = document.createElement("div");
+  // HP area: single clickable button — opens HP modal
+  const hpBtn = document.createElement("button");
+  hpBtn.type = "button";
+  hpBtn.className = "combatHpBtn";
+  hpBtn.classList.toggle("hasTempHp", card.hasTempHp);
+  hpBtn.classList.toggle("isZeroHp", card.hpState === "zero");
+  hpBtn.dataset.combatAction = "hp-modal";
+  hpBtn.setAttribute("aria-label", `Adjust HP for ${card.name}`);
+  const hpLabel = document.createElement("span");
   hpLabel.className = "combatHpLabel";
   hpLabel.textContent = "HP";
-  const hpValue = document.createElement("div");
+  const hpValue = document.createElement("span");
   hpValue.className = "combatHpValue";
-  hpValue.classList.toggle("hasTempHp", card.hasTempHp);
-  hpValue.textContent = `${card.hpCurrentLabel} / ${card.hpMaxLabel}`;
-  hpRow.appendChild(hpLabel);
-  hpRow.appendChild(hpValue);
-  hpRow.appendChild(createTextEl(`Temp ${card.tempHp}`, "combatTempHp"));
+  hpValue.textContent = card.hpDisplayLabel;
+  hpBtn.appendChild(hpLabel);
+  hpBtn.appendChild(hpValue);
 
+  // Status row: compact chips with gear buttons + add button
   const statusRow = document.createElement("div");
   statusRow.className = "combatStatusRow";
-  const statusLabel = document.createElement("div");
-  statusLabel.className = "combatStatusHeading";
-  statusLabel.textContent = "Status";
-  statusRow.appendChild(statusLabel);
   if (card.statusEffects.length === 0) {
     statusRow.appendChild(createTextEl("No status effects", "combatNoStatus"));
   } else {
     card.statusEffects.forEach((effect) => {
-      statusRow.appendChild(renderStatusEffectEditor(effect));
+      statusRow.appendChild(renderCompactStatusEffect(effect));
     });
   }
-  statusRow.appendChild(renderStatusComposer(card));
+  statusRow.appendChild(
+    createCombatActionButton({
+      action: "status-modal-open-add",
+      text: "+ Status Effect",
+      className: "panelBtn panelBtnSm combatAddStatusBtn"
+    })
+  );
 
-  const amountRow = document.createElement("div");
-  amountRow.className = "combatHpActionRow";
-  const amountInput = document.createElement("input");
-  amountInput.className = "combatHpAmountInput";
-  amountInput.type = "number";
-  amountInput.min = "0";
-  amountInput.step = "1";
-  amountInput.inputMode = "numeric";
-  amountInput.placeholder = "Amt";
-  amountInput.setAttribute("aria-label", `HP amount for ${card.name}`);
-  amountRow.appendChild(amountInput);
-  amountRow.appendChild(createCombatActionButton({ action: "damage", text: "Damage", className: "panelBtn panelBtnSm" }));
-  amountRow.appendChild(createCombatActionButton({ action: "heal", text: "Heal", className: "panelBtn panelBtnSm" }));
-  amountRow.appendChild(createCombatActionButton({ action: "temp", text: "Temp", className: "panelBtn panelBtnSm" }));
-
+  // Controls row: ↑/↓ move buttons (reuse moveBtn style) + make active + remove
   const controlRow = document.createElement("div");
   controlRow.className = "combatCardControls";
-  controlRow.appendChild(createCombatActionButton({
-    action: "move-up",
-    text: "Up",
-    disabled: !card.canMoveUp,
-    title: "Move earlier"
-  }));
-  controlRow.appendChild(createCombatActionButton({
-    action: "move-down",
-    text: "Down",
-    disabled: !card.canMoveDown,
-    title: "Move later"
-  }));
-  controlRow.appendChild(createCombatActionButton({
-    action: "make-active",
-    text: "Make Active",
-    disabled: card.isActive
-  }));
-  controlRow.appendChild(createCombatActionButton({
-    action: "remove",
-    text: "Remove",
-    className: "danger panelBtn panelBtnSm"
-  }));
 
-  article.appendChild(header);
-  article.appendChild(hpRow);
-  article.appendChild(statusRow);
-  article.appendChild(amountRow);
-  article.appendChild(controlRow);
+  const movesWrap = document.createElement("div");
+  movesWrap.className = "combatCardMoves";
+
+  const upBtn = document.createElement("button");
+  upBtn.type = "button";
+  upBtn.className = "moveBtn";
+  upBtn.dataset.combatAction = "move-up";
+  upBtn.textContent = "↑";
+  upBtn.title = "Move earlier in order";
+  upBtn.disabled = !card.canMoveUp;
+  movesWrap.appendChild(upBtn);
+
+  const downBtn = document.createElement("button");
+  downBtn.type = "button";
+  downBtn.className = "moveBtn";
+  downBtn.dataset.combatAction = "move-down";
+  downBtn.textContent = "↓";
+  downBtn.title = "Move later in order";
+  downBtn.disabled = !card.canMoveDown;
+  movesWrap.appendChild(downBtn);
+
+  controlRow.appendChild(movesWrap);
+  controlRow.appendChild(
+    createCombatActionButton({
+      action: "make-active",
+      text: "Active",
+      disabled: card.isActive,
+      title: "Set as active combatant"
+    })
+  );
+  controlRow.appendChild(
+    createCombatActionButton({
+      action: "remove",
+      text: "Remove",
+      className: "danger panelBtn panelBtnSm"
+    })
+  );
+
+  content.appendChild(header);
+  content.appendChild(hpBtn);
+  content.appendChild(statusRow);
+  content.appendChild(controlRow);
+  article.appendChild(content);
   return article;
 }
 
 /**
  * @param {HTMLElement} cardsShell
  * @param {CombatCardViewModel[]} cards
+ * @param {BlobIdToObjectUrlFn | undefined} blobIdToObjectUrl
+ * @param {unknown} Popovers
  * @returns {void}
  */
-function renderCombatCards(cardsShell, cards) {
+function renderCombatCards(cardsShell, cards, blobIdToObjectUrl, Popovers) {
   cardsShell.replaceChildren();
-  cards.forEach((card) => cardsShell.appendChild(renderCombatCard(card)));
+  cards.forEach((card) => cardsShell.appendChild(renderCombatCard(card, blobIdToObjectUrl, Popovers)));
 }
 
 /**
@@ -633,6 +751,189 @@ function initCombatPanelCollapse({ state, SaveManager, root }) {
 }
 
 /**
+ * Creates the shared HP adjustment modal overlay element and appends it to document.body.
+ * Any previously-created instance is removed first.
+ * @returns {{
+ *   overlay: HTMLElement,
+ *   titleEl: HTMLElement,
+ *   infoEl: HTMLElement,
+ *   input: HTMLInputElement
+ * }}
+ */
+function createCombatHpModal() {
+  document.getElementById("combatHpModal")?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.className = "modalOverlay";
+  overlay.id = "combatHpModal";
+  overlay.hidden = true;
+  overlay.setAttribute("aria-hidden", "true");
+
+  const panel = document.createElement("div");
+  panel.className = "modalPanel combatModalPanel";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-labelledby", "combatHpModalTitle");
+  panel.setAttribute("tabindex", "-1");
+  // Static template — no user-controlled text is set via innerHTML.
+  panel.innerHTML = `
+    <div class="combatModalHeader">
+      <div class="modalTitle combatModalTitle" id="combatHpModalTitle">Adjust HP</div>
+      <button type="button" class="npcSmallBtn" data-combat-hp-close aria-label="Close">✕</button>
+    </div>
+    <div class="combatModalBody">
+      <p class="combatHpModalInfo m0 mutedSmall"></p>
+      <input type="number" min="0" step="1" inputmode="numeric" placeholder="Amount"
+             class="combatHpModalInput" aria-label="HP amount" />
+    </div>
+    <div class="combatModalFooter">
+      <button type="button" class="danger panelBtn panelBtnSm" data-combat-hp-action="damage">Damage</button>
+      <button type="button" class="panelBtn panelBtnSm" data-combat-hp-action="heal">Heal</button>
+      <button type="button" class="panelBtn panelBtnSm" data-combat-hp-action="temp">Temp HP</button>
+      <button type="button" class="panelBtn panelBtnSm" data-combat-hp-close>Cancel</button>
+    </div>
+  `;
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  return {
+    overlay,
+    titleEl: /** @type {HTMLElement} */ (panel.querySelector(".combatModalTitle")),
+    infoEl: /** @type {HTMLElement} */ (panel.querySelector(".combatHpModalInfo")),
+    input: /** @type {HTMLInputElement} */ (panel.querySelector(".combatHpModalInput"))
+  };
+}
+
+/**
+ * Creates the turn-length modal overlay and appends it to document.body.
+ * Any previously-created instance is removed first.
+ * @returns {{
+ *   overlay: HTMLElement,
+ *   input: HTMLInputElement,
+ *   saveBtn: HTMLButtonElement
+ * }}
+ */
+function createCombatTurnSecondsModal() {
+  document.getElementById("combatTurnSecondsModal")?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.className = "modalOverlay";
+  overlay.id = "combatTurnSecondsModal";
+  overlay.hidden = true;
+  overlay.setAttribute("aria-hidden", "true");
+
+  const panel = document.createElement("div");
+  panel.className = "modalPanel combatModalPanel combatTurnSecondsModalPanel";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-labelledby", "combatTurnSecondsModalTitle");
+  panel.setAttribute("tabindex", "-1");
+  panel.innerHTML = `
+    <div class="combatModalHeader">
+      <div class="modalTitle combatModalTitle" id="combatTurnSecondsModalTitle">Seconds Per Turn</div>
+      <button type="button" class="npcSmallBtn" data-combat-turn-seconds-close aria-label="Close">✕</button>
+    </div>
+    <div class="combatModalBody">
+      <label class="combatTurnSecondsModalLabel" for="combatTurnSecondsModalInput">Turn length in seconds</label>
+      <input id="combatTurnSecondsModalInput" type="number" min="1" step="1" inputmode="numeric"
+             class="combatTurnSecondsModalInput" aria-label="Seconds per turn" />
+    </div>
+    <div class="combatModalFooter">
+      <button type="button" class="panelBtn panelBtnSm" data-combat-turn-seconds-save>Save</button>
+      <button type="button" class="panelBtn panelBtnSm" data-combat-turn-seconds-close>Cancel</button>
+    </div>
+  `;
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  return {
+    overlay,
+    input: /** @type {HTMLInputElement} */ (panel.querySelector(".combatTurnSecondsModalInput")),
+    saveBtn: /** @type {HTMLButtonElement} */ (panel.querySelector("[data-combat-turn-seconds-save]"))
+  };
+}
+
+/**
+ * Creates the shared status effect modal overlay element and appends it to document.body.
+ * Any previously-created instance is removed first.
+ * @returns {{
+ *   overlay: HTMLElement,
+ *   titleEl: HTMLElement,
+ *   labelInput: HTMLInputElement,
+ *   modeSelect: HTMLSelectElement,
+ *   durationInput: HTMLInputElement,
+ *   applyBtn: HTMLButtonElement,
+ *   removeBtn: HTMLButtonElement
+ * }}
+ */
+function createCombatStatusModal(Popovers) {
+  document.getElementById("combatStatusModal")?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.className = "modalOverlay";
+  overlay.id = "combatStatusModal";
+  overlay.hidden = true;
+  overlay.setAttribute("aria-hidden", "true");
+
+  const panel = document.createElement("div");
+  panel.className = "modalPanel combatModalPanel";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-labelledby", "combatStatusModalTitle");
+  panel.setAttribute("tabindex", "-1");
+  // Static template — user-controlled values are set via .value / .textContent, not innerHTML.
+  panel.innerHTML = `
+    <div class="combatModalHeader">
+      <div class="modalTitle combatModalTitle" id="combatStatusModalTitle">Add Status Effect</div>
+      <button type="button" class="npcSmallBtn" data-combat-status-close aria-label="Close">✕</button>
+    </div>
+    <div class="combatModalBody">
+      <input type="text" placeholder="Status label" class="combatStatusModalLabelInput"
+             aria-label="Status label" />
+      <div class="combatStatusModalDuration">
+        <select class="${COMBAT_STATUS_MODE_SELECT_CLASSES}" aria-label="Duration mode" title="Duration mode"></select>
+        <input type="number" min="0" step="1" inputmode="numeric" placeholder="Rounds"
+               class="combatStatusModalDurationInput" aria-label="Duration amount" disabled />
+      </div>
+    </div>
+    <div class="combatModalFooter">
+      <button type="button" class="panelBtn panelBtnSm" data-combat-status-apply>Apply</button>
+      <button type="button" class="danger panelBtn panelBtnSm" data-combat-status-remove hidden>Remove</button>
+      <button type="button" class="panelBtn panelBtnSm" data-combat-status-close>Cancel</button>
+    </div>
+  `;
+
+  // Populate the duration mode select with standard options.
+  const modeSelect = /** @type {HTMLSelectElement} */ (panel.querySelector(".combatStatusModalModeSelect"));
+  COMBAT_STATUS_DURATION_OPTIONS.forEach((option) => {
+    const optionEl = document.createElement("option");
+    optionEl.value = option.value;
+    optionEl.textContent = option.label;
+    modeSelect.appendChild(optionEl);
+  });
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  enhanceCombatSelect(modeSelect, Popovers, {
+    buttonClass: "settingsSelectBtn",
+    preferRight: true,
+    exclusive: false
+  });
+
+  return {
+    overlay,
+    titleEl: /** @type {HTMLElement} */ (panel.querySelector(".combatModalTitle")),
+    labelInput: /** @type {HTMLInputElement} */ (panel.querySelector(".combatStatusModalLabelInput")),
+    modeSelect,
+    durationInput: /** @type {HTMLInputElement} */ (panel.querySelector(".combatStatusModalDurationInput")),
+    applyBtn: /** @type {HTMLButtonElement} */ (panel.querySelector("[data-combat-status-apply]")),
+    removeBtn: /** @type {HTMLButtonElement} */ (panel.querySelector("[data-combat-status-remove]"))
+  };
+}
+
+/**
  * @param {CombatPageDeps} [deps]
  * @returns {CombatPageApi}
  */
@@ -640,7 +941,22 @@ export function initCombatPage(deps = {}) {
   activeCombatPageController?.destroy?.();
   activeCombatPageController = null;
 
-  const { state, SaveManager, uiConfirm, setStatus } = deps;
+  const {
+    state,
+    SaveManager,
+    uiConfirm,
+    uiPrompt,
+    setStatus,
+    Popovers,
+    blobIdToObjectUrl,
+    textKey_spellNotes,
+    putText,
+    getText,
+    deleteText,
+    autoSizeInput,
+    enhanceNumberSteppers,
+    applyTextareaSize
+  } = deps;
   if (!state) throw new Error("initCombatPage: state is required");
   if (!SaveManager) throw new Error("initCombatPage: SaveManager is required");
   if (!setStatus) throw new Error("initCombatPage requires setStatus");
@@ -654,7 +970,7 @@ export function initCombatPage(deps = {}) {
       roundValue: "#combatRoundValue",
       elapsedValue: "#combatElapsedValue",
       turnSecondsValue: "#combatTurnSecondsValue",
-      turnSecondsInput: "#combatTurnSecondsInput",
+      turnSecondsButton: "#combatTurnSecondsButton",
       nextTurnBtn: "#combatNextTurnBtn",
       undoBtn: "#combatUndoBtn",
       clearBtn: "#combatClearBtn"
@@ -677,7 +993,7 @@ export function initCombatPage(deps = {}) {
   const roundValue = /** @type {HTMLElement} */ (guard.els.roundValue);
   const elapsedValue = /** @type {HTMLElement} */ (guard.els.elapsedValue);
   const turnSecondsValue = /** @type {HTMLElement} */ (guard.els.turnSecondsValue);
-  const turnSecondsInput = /** @type {HTMLInputElement} */ (guard.els.turnSecondsInput);
+  const turnSecondsButton = /** @type {HTMLButtonElement} */ (guard.els.turnSecondsButton);
   const nextTurnBtn = /** @type {HTMLButtonElement} */ (guard.els.nextTurnBtn);
   const undoBtn = /** @type {HTMLButtonElement} */ (guard.els.undoBtn);
   const clearBtn = /** @type {HTMLButtonElement} */ (guard.els.clearBtn);
@@ -696,6 +1012,96 @@ export function initCombatPage(deps = {}) {
   const listenerController = new AbortController();
   addDestroy(() => listenerController.abort());
   const { signal } = listenerController;
+
+  // ── Shared modals ──────────────────────────────────────────────────────────
+
+  const hpModal = createCombatHpModal();
+  addDestroy(() => hpModal.overlay.remove());
+
+  const turnSecondsModal = createCombatTurnSecondsModal();
+  addDestroy(() => turnSecondsModal.overlay.remove());
+
+  const statusModal = createCombatStatusModal(Popovers);
+  addDestroy(() => statusModal.overlay.remove());
+
+  // Modal context: which participant / effect is currently being edited.
+  let _hpParticipantId = /** @type {string | null} */ (null);
+  let _statusParticipantId = /** @type {string | null} */ (null);
+  let _statusEffectId = /** @type {string | null} */ (null);
+
+  /**
+   * @param {string} participantId
+   * @param {CombatCardViewModel} card
+   * @returns {void}
+   */
+  const openHpModal = (participantId, card) => {
+    _hpParticipantId = participantId;
+    hpModal.titleEl.textContent = `Adjust HP — ${card.name}`;
+    hpModal.infoEl.textContent = card.hasTempHp
+      ? `Current: ${card.hpCurrentLabel} / ${card.hpMaxLabel}  ·  Temp HP: +${card.tempHp}`
+      : `Current: ${card.hpCurrentLabel} / ${card.hpMaxLabel}`;
+    hpModal.input.value = "";
+    hpModal.overlay.hidden = false;
+    hpModal.overlay.setAttribute("aria-hidden", "false");
+    queueMicrotask(() => { try { hpModal.input.focus(); } catch { /* ignore */ } });
+  };
+
+  const closeHpModal = () => {
+    hpModal.overlay.hidden = true;
+    hpModal.overlay.setAttribute("aria-hidden", "true");
+    _hpParticipantId = null;
+  };
+
+  const openTurnSecondsModal = () => {
+    const vm = getCombatShellViewModel(state);
+    turnSecondsModal.input.value = String(vm.secondsPerTurn);
+    turnSecondsModal.overlay.hidden = false;
+    turnSecondsModal.overlay.setAttribute("aria-hidden", "false");
+    queueMicrotask(() => {
+      try {
+        turnSecondsModal.input.focus();
+        turnSecondsModal.input.select();
+      } catch { /* ignore */ }
+    });
+  };
+
+  const closeTurnSecondsModal = () => {
+    turnSecondsModal.overlay.hidden = true;
+    turnSecondsModal.overlay.setAttribute("aria-hidden", "true");
+  };
+
+  /**
+   * @param {string} participantId
+   * @param {string | null} effectId  null = add mode
+   * @param {CombatCardViewModel["statusEffects"][number] | null} [effect]
+   * @returns {void}
+   */
+  const openStatusModal = (participantId, effectId, effect = null) => {
+    _statusParticipantId = participantId;
+    _statusEffectId = effectId;
+
+    const isEdit = !!effectId;
+    statusModal.titleEl.textContent = isEdit ? "Edit Status Effect" : "Add Status Effect";
+    statusModal.labelInput.value = effect?.label ?? "";
+    statusModal.modeSelect.value = effect?.durationMode ?? "none";
+    try { statusModal.modeSelect.dispatchEvent(new Event("selectDropdown:sync")); } catch { /* noop */ }
+    statusModal.durationInput.value = effect?.durationInputValue ?? "";
+    syncStatusDurationInput(statusModal.modeSelect, statusModal.durationInput);
+    statusModal.removeBtn.hidden = !isEdit;
+
+    statusModal.overlay.hidden = false;
+    statusModal.overlay.setAttribute("aria-hidden", "false");
+    queueMicrotask(() => { try { statusModal.labelInput.focus(); } catch { /* ignore */ } });
+  };
+
+  const closeStatusModal = () => {
+    statusModal.overlay.hidden = true;
+    statusModal.overlay.setAttribute("aria-hidden", "true");
+    _statusParticipantId = null;
+    _statusEffectId = null;
+  };
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
   /**
    * @param {string} featureName
@@ -738,68 +1144,96 @@ export function initCombatPage(deps = {}) {
   };
 
   /**
-   * @param {HTMLElement} cardEl
-   * @returns {number | null}
+   * @param {{ changed?: boolean }} result
+   * @param {HTMLElement | null} movedEl
+   * @param {HTMLElement | null} adjacentEl
+   * @param {-1 | 1} direction
+   * @param {string} [message]
+   * @returns {boolean}
    */
-  const getCardAmount = (cardEl) => {
-    const input = cardEl.querySelector(".combatHpAmountInput");
-    if (!(input instanceof HTMLInputElement)) return null;
-    const amount = Number(input.value);
-    if (!Number.isFinite(amount) || amount <= 0) return null;
-    return Math.trunc(amount);
+  const commitCombatMoveResult = (result, movedEl, adjacentEl, direction, message = "") => {
+    if (!result?.changed) return false;
+    SaveManager.markDirty?.();
+    if (message) setStatus(message, { stickyMs: 2000 });
+
+    const canAnimate = movedEl instanceof HTMLElement
+      && adjacentEl instanceof HTMLElement
+      && movedEl.parentElement === cardsShell
+      && adjacentEl.parentElement === cardsShell;
+
+    if (!canAnimate) {
+      render();
+      return true;
+    }
+
+    const didSwap = flipSwapTwo(movedEl, adjacentEl, {
+      durationMs: 260,
+      easing: "cubic-bezier(.22,1,.36,1)",
+      swap: () => {
+        if (direction < 0) cardsShell.insertBefore(movedEl, adjacentEl);
+        else cardsShell.insertBefore(adjacentEl, movedEl);
+      }
+    });
+
+    if (!didSwap) {
+      render();
+      return true;
+    }
+    window.setTimeout(render, 320);
+    return true;
   };
 
   /**
-   * @param {HTMLElement} container
-   * @param {string} labelSelector
+   * Reads and validates the HP modal's amount input.
+   * @returns {number | null}
+   */
+  const getHpModalAmount = () => {
+    const value = Number(hpModal.input.value);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return Math.trunc(value);
+  };
+
+  /**
+   * Reads and validates the status modal's fields.
    * @returns {{ input: { label: string, durationMode: string, duration: number | null, remaining: number | null } | null, error: string }}
    */
-  const getStatusInputValues = (container, labelSelector) => {
-    const labelInput = container.querySelector(labelSelector);
-    const modeSelect = container.querySelector(".combatStatusModeSelect");
-    const durationInput = container.querySelector(".combatStatusDurationInput");
-    if (!(labelInput instanceof HTMLInputElement) || !(modeSelect instanceof HTMLSelectElement)) {
-      return { input: null, error: "Status controls are not ready." };
-    }
-
-    const label = labelInput.value.trim();
+  const readStatusModalInput = () => {
+    const label = statusModal.labelInput.value.trim();
     if (!label) return { input: null, error: "Status effects need a label." };
 
-    const durationMode = modeSelect.value;
-    if (durationMode !== "rounds" && durationMode !== "time") {
-      return {
-        input: {
-          label,
-          durationMode: "none",
-          duration: null,
-          remaining: null
-        },
-        error: ""
-      };
+    const durationMode = statusModal.modeSelect.value;
+    if (
+      durationMode !== "rounds"
+      && durationMode !== "time"
+      && durationMode !== "seconds"
+      && durationMode !== "minutes"
+      && durationMode !== "hours"
+    ) {
+      return { input: { label, durationMode: "none", duration: null, remaining: null }, error: "" };
     }
 
-    if (!(durationInput instanceof HTMLInputElement) || durationInput.value.trim() === "") {
+    if (statusModal.durationInput.value.trim() === "") {
       return { input: null, error: "Enter a duration for timed status effects." };
     }
 
-    const duration = Number(durationInput.value);
+    const duration = Number(statusModal.durationInput.value);
     if (!Number.isFinite(duration) || duration < 0) {
       return { input: null, error: "Status duration must be zero or more." };
     }
 
     const remaining = Math.max(0, Math.trunc(duration));
-    return {
-      input: {
-        label,
-        durationMode,
-        duration: remaining,
-        remaining
-      },
-      error: ""
-    };
+    if (durationMode === "rounds") {
+      return { input: { label, durationMode, duration: remaining, remaining }, error: "" };
+    }
+    const multiplier = durationMode === "minutes" ? 60 : durationMode === "hours" ? 3600 : 1;
+    const seconds = remaining * multiplier;
+    return { input: { label, durationMode: "time", duration: seconds, remaining: seconds }, error: "" };
   };
 
+  // ── Event handlers ─────────────────────────────────────────────────────────
+
   /**
+   * Handles clicks delegated from the cardsShell.
    * @param {Event} event
    * @returns {void}
    */
@@ -814,12 +1248,15 @@ export function initCombatPage(deps = {}) {
     if (!participantId) return;
 
     const action = button.dataset.combatAction || "";
+
     if (action === "move-up") {
-      commitCombatResult(moveCombatParticipant(state, participantId, -1), "Combat order updated.");
+      const adjacentEl = cardEl.previousElementSibling instanceof HTMLElement ? cardEl.previousElementSibling : null;
+      commitCombatMoveResult(moveCombatParticipant(state, participantId, -1), cardEl, adjacentEl, -1, "Combat order updated.");
       return;
     }
     if (action === "move-down") {
-      commitCombatResult(moveCombatParticipant(state, participantId, 1), "Combat order updated.");
+      const adjacentEl = cardEl.nextElementSibling instanceof HTMLElement ? cardEl.nextElementSibling : null;
+      commitCombatMoveResult(moveCombatParticipant(state, participantId, 1), cardEl, adjacentEl, 1, "Combat order updated.");
       return;
     }
     if (action === "make-active") {
@@ -831,64 +1268,31 @@ export function initCombatPage(deps = {}) {
       commitCombatResult(result, result.removed ? `${result.removed.name} removed from combat.` : "Combatant removed.");
       return;
     }
-    if (action === "add-status") {
-      const composer = button.closest(".combatStatusComposer");
-      if (!(composer instanceof HTMLElement)) return;
-      const parsed = getStatusInputValues(composer, ".combatStatusAddLabelInput");
-      if (!parsed.input) {
-        setStatus(parsed.error || "Status could not be added.", { stickyMs: 2500 });
-        return;
-      }
-      commitCombatResult(
-        addCombatParticipantStatusEffect(state, participantId, parsed.input),
-        "Status effect added."
-      );
+    if (action === "hp-modal") {
+      const cards = getCombatCardViewModels(state);
+      const card = cards.find((c) => c.id === participantId);
+      if (card) openHpModal(participantId, card);
       return;
     }
-    if (action === "save-status") {
+    if (action === "status-modal-open-add") {
+      openStatusModal(participantId, null, null);
+      return;
+    }
+    if (action === "status-modal-open-edit") {
       const statusEl = button.closest("[data-combat-status-effect-id]");
       if (!(statusEl instanceof HTMLElement)) return;
-      const statusEffectId = cleanIdOrNull(statusEl.dataset.combatStatusEffectId);
-      if (!statusEffectId) return;
-      const parsed = getStatusInputValues(statusEl, ".combatStatusLabelInput");
-      if (!parsed.input) {
-        setStatus(parsed.error || "Status could not be saved.", { stickyMs: 2500 });
-        return;
-      }
-      if (!commitCombatResult(
-        updateCombatParticipantStatusEffect(state, participantId, statusEffectId, parsed.input),
-        "Status effect updated."
-      )) {
-        setStatus("No status changes to save.", { stickyMs: 1800 });
-      }
+      const effectId = cleanIdOrNull(statusEl.dataset.combatStatusEffectId);
+      if (!effectId) return;
+      const cards = getCombatCardViewModels(state);
+      const card = cards.find((c) => c.id === participantId);
+      const effect = card?.statusEffects.find((e) => e.id === effectId) ?? null;
+      openStatusModal(participantId, effectId, effect);
       return;
-    }
-    if (action === "remove-status") {
-      const statusEl = button.closest("[data-combat-status-effect-id]");
-      if (!(statusEl instanceof HTMLElement)) return;
-      const statusEffectId = cleanIdOrNull(statusEl.dataset.combatStatusEffectId);
-      if (!statusEffectId) return;
-      commitCombatResult(
-        removeCombatParticipantStatusEffect(state, participantId, statusEffectId),
-        "Status effect removed."
-      );
-      return;
-    }
-    if (action === "damage" || action === "heal" || action === "temp") {
-      const amount = getCardAmount(cardEl);
-      if (amount == null) {
-        setStatus("Enter an HP amount first.", { stickyMs: 2000 });
-        return;
-      }
-      const result = applyCombatParticipantHpAction(state, participantId, action, amount);
-      if (commitCombatResult(result, "Combat HP updated.")) {
-        const input = cardEl.querySelector(".combatHpAmountInput");
-        if (input instanceof HTMLInputElement) input.value = "";
-      }
     }
   };
 
   /**
+   * Handles role select changes on combat cards.
    * @param {Event} event
    * @returns {void}
    */
@@ -903,28 +1307,19 @@ export function initCombatPage(deps = {}) {
   };
 
   /**
-   * @param {Event} event
    * @returns {void}
    */
-  const handleStatusModeChange = (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLSelectElement) || target.dataset.combatStatusMode !== "true") return;
-    const settings = target.closest(".combatStatusDurationSettings");
-    const durationInput = settings?.querySelector(".combatStatusDurationInput");
-    if (durationInput instanceof HTMLInputElement) syncStatusDurationInput(target, durationInput);
-  };
-
-  /**
-   * @returns {void}
-   */
-  const handleSecondsChange = () => {
-    const value = Number(turnSecondsInput.value);
+  const saveTurnSecondsModal = () => {
+    const value = Number(turnSecondsModal.input.value);
     if (!Number.isFinite(value) || value < 1) {
-      turnSecondsInput.value = String(getCombatShellViewModel(state).secondsPerTurn);
       setStatus("Turn length must be at least 1 second.", { stickyMs: 2500 });
       return;
     }
-    commitCombatResult(setCombatSecondsPerTurn(state, value), "Turn length updated.");
+    const result = setCombatSecondsPerTurn(state, value);
+    if (result.changed) {
+      commitCombatResult(result, "Turn length updated.");
+    }
+    closeTurnSecondsModal();
   };
 
   /**
@@ -942,6 +1337,116 @@ export function initCombatPage(deps = {}) {
     commitCombatResult(clearCombat(state), "Combat cleared.");
   };
 
+  // ── HP modal wiring ────────────────────────────────────────────────────────
+
+  hpModal.overlay.addEventListener("click", (e) => {
+    if (e.target === hpModal.overlay) closeHpModal();
+  }, { signal });
+
+  hpModal.overlay.addEventListener("click", (e) => {
+    const target = e.target instanceof Element ? e.target : null;
+
+    if (target?.closest("[data-combat-hp-close]")) {
+      closeHpModal();
+      return;
+    }
+
+    const actionBtn = target?.closest("[data-combat-hp-action]");
+    if (!(actionBtn instanceof HTMLButtonElement)) return;
+    const action = /** @type {"damage" | "heal" | "temp"} */ (actionBtn.dataset.combatHpAction || "");
+    if (action !== "damage" && action !== "heal" && action !== "temp") return;
+
+    if (!_hpParticipantId) return;
+    const amount = getHpModalAmount();
+    if (amount == null) {
+      setStatus("Enter a positive HP amount.", { stickyMs: 2000 });
+      return;
+    }
+    const result = applyCombatParticipantHpAction(state, _hpParticipantId, action, amount);
+    if (commitCombatResult(result, "Combat HP updated.")) {
+      closeHpModal();
+    }
+  }, { signal });
+
+  // ── Seconds-per-turn modal wiring ─────────────────────────────────────────
+
+  turnSecondsModal.overlay.addEventListener("click", (e) => {
+    if (e.target === turnSecondsModal.overlay) closeTurnSecondsModal();
+  }, { signal });
+
+  turnSecondsModal.overlay.addEventListener("click", (e) => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (target?.closest("[data-combat-turn-seconds-close]")) {
+      closeTurnSecondsModal();
+      return;
+    }
+    if (target?.closest("[data-combat-turn-seconds-save]")) {
+      saveTurnSecondsModal();
+    }
+  }, { signal });
+
+  turnSecondsModal.input.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    saveTurnSecondsModal();
+  }, { signal });
+
+  // ── Status modal wiring ────────────────────────────────────────────────────
+
+  statusModal.overlay.addEventListener("click", (e) => {
+    if (e.target === statusModal.overlay) closeStatusModal();
+  }, { signal });
+
+  statusModal.overlay.addEventListener("click", (e) => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (target?.closest("[data-combat-status-close]")) {
+      closeStatusModal();
+    }
+  }, { signal });
+
+  statusModal.modeSelect.addEventListener("change", () => {
+    syncStatusDurationInput(statusModal.modeSelect, statusModal.durationInput);
+  }, { signal });
+
+  statusModal.applyBtn.addEventListener("click", () => {
+    if (!_statusParticipantId) return;
+    const { input, error } = readStatusModalInput();
+    if (!input) {
+      setStatus(error || "Status could not be saved.", { stickyMs: 2500 });
+      return;
+    }
+    if (_statusEffectId) {
+      // Edit mode
+      const result = updateCombatParticipantStatusEffect(state, _statusParticipantId, _statusEffectId, input);
+      if (!commitCombatResult(result, "Status effect updated.")) {
+        setStatus("No status changes to save.", { stickyMs: 1800 });
+        return;
+      }
+    } else {
+      // Add mode
+      const result = addCombatParticipantStatusEffect(state, _statusParticipantId, input);
+      if (!commitCombatResult(result, "Status effect added.")) return;
+    }
+    closeStatusModal();
+  }, { signal });
+
+  statusModal.removeBtn.addEventListener("click", () => {
+    if (!_statusParticipantId || !_statusEffectId) return;
+    const result = removeCombatParticipantStatusEffect(state, _statusParticipantId, _statusEffectId);
+    commitCombatResult(result, "Status effect removed.");
+    closeStatusModal();
+  }, { signal });
+
+  // Close either modal on Escape.
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!hpModal.overlay.hidden) { closeHpModal(); return; }
+    if (!turnSecondsModal.overlay.hidden) { closeTurnSecondsModal(); return; }
+    if (!statusModal.overlay.hidden) { closeStatusModal(); }
+  }, { signal });
+
+  // ── Main render ────────────────────────────────────────────────────────────
+
   const render = () => {
     const vm = getCombatShellViewModel(state);
     const controls = getCombatRoundControlsViewModel(state);
@@ -954,21 +1459,38 @@ export function initCombatPage(deps = {}) {
     roundValue.textContent = String(vm.round);
     elapsedValue.textContent = vm.elapsedLabel;
     turnSecondsValue.textContent = `${vm.secondsPerTurn}s`;
-    if (document.activeElement !== turnSecondsInput) turnSecondsInput.value = String(vm.secondsPerTurn);
+    turnSecondsButton.setAttribute("aria-label", `Edit seconds per turn, currently ${vm.secondsPerTurn} seconds`);
     nextTurnBtn.disabled = !controls.canNextTurn;
     undoBtn.disabled = !controls.canUndo;
     clearBtn.disabled = !controls.canClear;
-    renderCombatCards(cardsShell, cards);
+    renderCombatCards(cardsShell, cards, blobIdToObjectUrl, Popovers);
   };
+
+  // ── Init ───────────────────────────────────────────────────────────────────
 
   runShellInit("Combat layout persistence", () => setupCombatSectionReorder({ state, SaveManager, setStatus }));
   runShellInit("Combat panel collapse", () => initCombatPanelCollapse({ state, SaveManager, root }));
-  runShellInit("Combat embedded panels", () => initCombatEmbeddedPanels({ state, SaveManager, setStatus, root }));
+  runShellInit("Combat embedded panels", () => initCombatEmbeddedPanels({
+    state,
+    SaveManager,
+    setStatus,
+    root,
+    uiConfirm,
+    uiPrompt,
+    textKey_spellNotes,
+    putText,
+    getText,
+    deleteText,
+    autoSizeInput,
+    enhanceNumberSteppers,
+    applyTextareaSize
+  }));
+
   cardsShell.addEventListener("click", handleCombatCardClick, { signal });
   cardsShell.addEventListener("change", handleCombatRoleChange, { signal });
-  cardsShell.addEventListener("change", handleStatusModeChange, { signal });
-  turnSecondsInput.addEventListener("change", handleSecondsChange, { signal });
-  turnSecondsInput.addEventListener("blur", handleSecondsChange, { signal });
+
+  turnSecondsButton.addEventListener("click", openTurnSecondsModal, { signal });
+
   nextTurnBtn.addEventListener("click", () => {
     const result = advanceCombatTurn(state);
     if (!result.didAdvance) {
@@ -977,6 +1499,7 @@ export function initCombatPage(deps = {}) {
     }
     commitCombatResult(result, result.roundAdvanced ? "Next round started." : "Turn advanced.");
   }, { signal });
+
   undoBtn.addEventListener("click", () => {
     const result = undoCombatTurn(state);
     if (!result.applied) {
@@ -985,9 +1508,11 @@ export function initCombatPage(deps = {}) {
     }
     commitCombatResult(result, "Turn advance undone.");
   }, { signal });
+
   clearBtn.addEventListener("click", () => {
     void handleClearCombat();
   }, { signal });
+
   window.addEventListener(COMBAT_ENCOUNTER_CHANGED_EVENT, render, { signal });
   render();
 

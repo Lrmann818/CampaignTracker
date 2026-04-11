@@ -19,6 +19,7 @@ import {
   normalizeCombatEncounter,
   normalizeCombatRole,
   normalizeCombatSourceType,
+  normalizeStatusDurationMode,
   normalizeStatusEffects,
   statusEffectsFromText,
   undoLastTurnAdvance
@@ -257,6 +258,15 @@ describe("combat domain helpers", () => {
 
       expect(advanceStatusEffects(effects, { secondsElapsed: 0, roundAdvanced: false })[0])
         .toMatchObject({ id: "time_1", remaining: 12, expired: false });
+    });
+
+    it("normalizes minute and hour duration aliases to timed effects in seconds", () => {
+      expect(normalizeStatusDurationMode("minutes")).toBe("time");
+      expect(normalizeStatusDurationMode("hours")).toBe("time");
+      expect(makeStatusEffect({ id: "s_minutes", label: "Invisible", durationMode: "minutes", remaining: 2 }))
+        .toMatchObject({ durationMode: "time", duration: 120, remaining: 120, expired: false });
+      expect(makeStatusEffect({ id: "s_hours", label: "Ward", durationMode: "hours", duration: 1 }))
+        .toMatchObject({ durationMode: "time", duration: 3600, remaining: 3600, expired: false });
     });
   });
 

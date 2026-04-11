@@ -2683,9 +2683,15 @@ button.panelSelectBtn:hover {
   gap: 8px;
 }
 
+/* ── Combat card layout ─────────────────────────────────────────────────── */
+
 .combatCard {
-  display: grid;
-  gap: 8px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-1);
@@ -2693,27 +2699,84 @@ button.panelSelectBtn:hover {
   min-width: 0;
 }
 
+.combatCard > * {
+  position: relative;
+  z-index: 1;
+}
+
 .combatCard.isActive {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
+.combatRole-enemy,
+.combatRole-npc {
+  border-color: color-mix(in srgb, var(--role-tint-color) 32%, var(--border));
+}
+
+.combatRole-enemy::before,
+.combatRole-npc::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--role-tint-color) var(--role-tint-strength), transparent);
+}
+
+/* Role tints — party = normal, enemy = red, npc = gray */
 .combatRole-enemy {
-  background: color-mix(in srgb, var(--danger) 10%, var(--surface-1));
+  --role-tint-color: var(--danger);
+  --role-tint-strength: 18%;
 }
 
 .combatRole-npc {
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+  --role-tint-color: var(--muted);
+  --role-tint-strength: 14%;
 }
 
+/* Portrait column (left side, always present) */
+.combatCardPortrait {
+  flex: 0 0 52px;
+  width: 52px;
+  align-self: flex-start;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.combatCardPortraitImg {
+  display: block;
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.combatCardPortraitAvatar {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-3);
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: var(--muted);
+  user-select: none;
+}
+
+/* Content column (right side) */
+.combatCardContent {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+/* Card header: name + role select */
 .combatCardHeader,
-.combatHpRow,
-.combatHpActionRow,
-.combatCardControls,
-.combatTurnConfig,
-.combatStatusEffect,
-.combatStatusComposer,
-.combatStatusDurationSettings {
+.combatCardControls {
   display: flex;
   gap: 6px;
   align-items: center;
@@ -2730,7 +2793,7 @@ button.panelSelectBtn:hover {
   align-items: center;
   gap: 6px;
   min-width: 0;
-  flex: 1 1 180px;
+  flex: 1 1 140px;
 }
 
 .combatCardName {
@@ -2739,9 +2802,7 @@ button.panelSelectBtn:hover {
   overflow-wrap: anywhere;
 }
 
-.combatOrderBadge,
 .combatActiveBadge,
-.combatTempHp,
 .combatStatusChip {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -2756,24 +2817,34 @@ button.panelSelectBtn:hover {
   color: var(--accent);
 }
 
-.combatRoleSelect,
-.combatHpAmountInput,
-.combatStatusLabelInput,
-.combatStatusAddLabelInput,
-.combatStatusModeSelect,
-.combatStatusDurationInput,
-#combatTurnSecondsInput {
-  min-height: 32px;
+.combatRoleSelect {
+  flex: 0 0 auto;
+}
+
+.combatCardHeader .selectDropdown {
+  flex: 0 0 auto;
+}
+
+/* HP area — single clickable button */
+.combatHpBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-2);
-  color: var(--text);
-  padding: 4px 8px;
+  padding: 5px 8px;
   font: inherit;
+  color: inherit;
+  text-align: left;
+  align-self: start;
+  transition: border-color 0.12s, background 0.12s;
 }
 
-.combatRoleSelect {
-  flex: 0 0 auto;
+.combatHpBtn:hover {
+  border-color: var(--accent);
+  background: var(--surface-3);
 }
 
 .combatHpLabel {
@@ -2785,49 +2856,71 @@ button.panelSelectBtn:hover {
   font-weight: 800;
 }
 
-.combatHpValue.hasTempHp {
+.combatHpBtn.hasTempHp .combatHpValue {
+  color: var(--skill-prof-dot, #0b72d9);
+}
+
+.combatHpBtn.isZeroHp:not(.hasTempHp) .combatHpValue {
+  color: var(--danger);
+}
+
+.combatTempHpBadge {
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
+  padding: 2px 5px;
+  font-size: var(--small-font-size);
   color: var(--accent);
+  line-height: 1.2;
 }
 
-.combatHpAmountInput {
-  width: 76px;
-}
-
+/* Status row */
 .combatStatusRow {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   min-height: 24px;
 }
 
-.combatStatusHeading {
-  color: var(--muted);
-  font-size: var(--small-font-size);
-  font-weight: 700;
+/* Compact status effect row: chip + gear button */
+.combatStatusCompactRow {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
 }
 
-.combatStatusEffect,
-.combatStatusComposer {
+.combatStatusCompactRow.isExpired .combatStatusNameBox,
+.combatStatusCompactRow.isExpired .combatStatusDurationBox {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.combatStatusGearBtn {
+  font-size: 0.85rem;
+  padding: 2px 5px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.combatStatusGearBtn:hover {
+  opacity: 1;
+}
+
+.combatStatusNameBox {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.combatStatusDurationBox {
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
-  padding: 6px;
-}
-
-.combatStatusEffect.isExpired {
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
-}
-
-.combatStatusLabelInput,
-.combatStatusAddLabelInput {
-  flex: 1 1 150px;
-}
-
-.combatStatusModeSelect {
-  flex: 0 0 auto;
-}
-
-.combatStatusDurationInput {
-  width: 84px;
+  background: var(--surface-2);
+  padding: 3px 6px;
+  font-size: var(--small-font-size);
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--muted);
 }
 
 .combatStatusChip.isExpired {
@@ -2846,22 +2939,83 @@ button.panelSelectBtn:hover {
   font-size: var(--small-font-size);
 }
 
-.combatStatusDurationSettings span {
+/* Move buttons (↑/↓) reuse existing .moveBtn style */
+.combatCardMoves {
+  display: flex;
+  gap: 3px;
+}
+
+/* Combat modals */
+.combatModalPanel {
+  width: min(440px, 100%);
+}
+
+.combatModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.combatModalBody {
+  padding: 14px 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.combatModalFooter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--hairline);
+}
+
+.combatHpModalInfo {
+  color: var(--muted);
+}
+
+.combatHpModalInput,
+.combatTurnSecondsModalInput,
+.combatStatusModalLabelInput,
+.combatStatusModalDurationInput {
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 6px 10px;
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.combatStatusModalDuration {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.combatStatusModalModeSelect {
+  flex: 1 1 0;
+  width: auto;
+}
+
+.combatStatusModalDuration .selectDropdown {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.combatStatusModalDurationInput {
+  flex: 0 0 90px;
+  width: 90px;
+}
+
+.combatTurnSecondsModalLabel {
   color: var(--muted);
   font-size: var(--small-font-size);
-}
-
-.combatTurnConfig {
-  margin-bottom: 8px;
-}
-
-.combatTurnConfig label {
-  color: var(--muted);
-  font-size: var(--small-font-size);
-}
-
-#combatTurnSecondsInput {
-  width: 88px;
 }
 
 .combatRoundStats {
@@ -2877,6 +3031,32 @@ button.panelSelectBtn:hover {
   background: var(--surface-1);
   padding: 10px;
   min-width: 0;
+}
+
+.combatTurnSecondsButton {
+  appearance: none;
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.combatTurnSecondsButton:hover {
+  background: var(--surface-2);
+}
+
+.combatTurnSecondsButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.combatTurnSecondsHint {
+  color: var(--muted);
+  font-size: var(--small-font-size);
+  line-height: 1.2;
+  margin-top: 4px;
 }
 
 .combatStatLabel {
@@ -2927,26 +3107,36 @@ button.panelSelectBtn:hover {
 
 /* ── Embedded panel sections ───────────────────────────────────────────────── */
 
+#combatEmbeddedPanels {
+  display: grid;
+  gap: 10px;
+}
+
 .combatEmbeddedPanel {
   margin-top: 0;
 }
 
-.combatEmbeddedPanel > .panelHeader {
+.combatEmbeddedPanelChrome {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--panel-header-gap);
+  gap: 8px;
+  min-height: var(--panel-control-h);
+  padding: 0 2px;
 }
 
-.combatEmbeddedTitleGroup {
+.combatEmbeddedMoves {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .combatEmbeddedPanelBody {
-  display: grid;
-  gap: 5px;
+  display: block;
+}
+
+.combatEmbeddedSourcePanel {
+  margin-top: 0;
 }
 
 /* ── Vitals embedded content ───────────────────────────────────────────────── */
@@ -3152,6 +3342,11 @@ button.cardSelectBtn[aria-expanded="true"] {
 .cardSelect,
 button.npcSmallBtn {
   margin-bottom: 5.5px;
+}
+
+button.combatActionSuccess {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .cardSelect,

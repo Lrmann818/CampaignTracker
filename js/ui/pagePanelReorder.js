@@ -301,10 +301,28 @@ export function setupPagePanelReorder({
 
   /**
    * @param {HTMLElement} col
+   * @returns {Node[]}
+   */
+  function liftNonPanelChildren(col) {
+    const selector = panelSelector || "section.panel";
+    const preserved = [];
+    for (const child of Array.from(col.childNodes)) {
+      if (child instanceof HTMLElement && child.matches(selector)) continue;
+      preserved.push(child);
+      col.removeChild(child);
+    }
+    return preserved;
+  }
+
+  /**
+   * @param {HTMLElement} col
    * @returns {void}
    */
-  function clearColumn(col) {
-    while (col.firstChild) col.removeChild(col.firstChild);
+  function clearPanelChildren(col) {
+    const selector = panelSelector || "section.panel";
+    Array.from(col.children).forEach((child) => {
+      if (child instanceof HTMLElement && child.matches(selector)) child.remove();
+    });
   }
 
   /** @returns {boolean} */
@@ -316,9 +334,11 @@ export function setupPagePanelReorder({
   function applyOrder() {
     const order = getOrder();
     const map = new Map(sections.map((section) => [section.id, section.panelEl]));
+    const preservedCol0 = liftNonPanelChildren(dom.col0);
+    const preservedCol1 = liftNonPanelChildren(dom.col1);
 
-    clearColumn(dom.col0);
-    clearColumn(dom.col1);
+    clearPanelChildren(dom.col0);
+    clearPanelChildren(dom.col1);
 
     const single = isSingleColumn();
 
@@ -328,6 +348,9 @@ export function setupPagePanelReorder({
       if (single) dom.col0.appendChild(el);
       else (idx % 2 === 0 ? dom.col0 : dom.col1).appendChild(el);
     });
+
+    preservedCol0.forEach((child) => dom.col0.appendChild(child));
+    preservedCol1.forEach((child) => dom.col1.appendChild(child));
   }
 
   /**

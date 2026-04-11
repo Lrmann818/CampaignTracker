@@ -386,7 +386,17 @@ function createCombatPageDeps() {
     state: appState,
     SaveManager,
     uiConfirm,
-    setStatus: StatusApi.setStatus
+    uiPrompt,
+    setStatus: StatusApi.setStatus,
+    Popovers,
+    blobIdToObjectUrl,
+    textKey_spellNotes,
+    putText,
+    getText,
+    deleteText,
+    autoSizeInput,
+    enhanceNumberSteppers,
+    applyTextareaSize: (el) => applyTextareaSize?.(el)
   };
 }
 

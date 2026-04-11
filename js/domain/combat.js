@@ -84,7 +84,10 @@ export const COMBAT_ROLES = Object.freeze({
 export const STATUS_DURATION_MODES = Object.freeze({
   NONE: "none",
   ROUNDS: "rounds",
-  TIME: "time"
+  TIME: "time",
+  SECONDS: "seconds",
+  MINUTES: "minutes",
+  HOURS: "hours"
 });
 
 export const DEFAULT_SECONDS_PER_TURN = 6;
@@ -337,8 +340,29 @@ export function findCombatSource(tracker, sourceRef) {
 export function normalizeStatusDurationMode(value) {
   const raw = cleanString(value).toLowerCase();
   if (raw === "round" || raw === "rounds") return "rounds";
-  if (raw === "time" || raw === "second" || raw === "seconds") return "time";
+  if (
+    raw === "time"
+    || raw === "second"
+    || raw === "seconds"
+    || raw === "minute"
+    || raw === "minutes"
+    || raw === "hour"
+    || raw === "hours"
+  ) {
+    return "time";
+  }
   return "none";
+}
+
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
+export function getStatusDurationUnitMultiplier(value) {
+  const raw = cleanString(value).toLowerCase();
+  if (raw === "minute" || raw === "minutes") return 60;
+  if (raw === "hour" || raw === "hours") return 3600;
+  return 1;
 }
 
 /**
@@ -373,8 +397,11 @@ function statusIsExpired(remaining, mode) {
 export function makeStatusEffect(input = {}) {
   const mode = normalizeStatusDurationMode(input.durationMode);
   const label = cleanString(input.label) || "Status Effect";
-  const duration = mode === "none" ? null : nonNegativeNumber(input.duration ?? input.remaining);
-  const remaining = mode === "none" ? null : nonNegativeNumber(input.remaining ?? duration);
+  const multiplier = mode === "time" ? getStatusDurationUnitMultiplier(input.durationMode) : 1;
+  const duration = mode === "none" ? null : nonNegativeNumber(input.duration ?? input.remaining) * multiplier;
+  const remaining = mode === "none" ? null : nonNegativeNumber(input.remaining ?? duration) * (
+    input.remaining == null ? 1 : multiplier
+  );
 
   return {
     ...input,

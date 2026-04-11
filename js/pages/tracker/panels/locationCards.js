@@ -240,10 +240,11 @@ function createLocationCardsController(deps = {}) {
       const name = result.participant?.name || "Participant";
       notifyCombatEncounterChanged({ sourceType: "location", sourceId: id, participantId: result.participant?.id || null });
       if (typeof setStatus === "function") setStatus(`${name} added to combat.`, { stickyMs: 2000 });
-      return;
+      return true;
     }
 
     if (typeof setStatus === "function") setStatus("Could not add this location to combat.", { stickyMs: 3000 });
+    return false;
   }
 
   async function pickLocImage(id) {

@@ -66,14 +66,28 @@ export function createCombatButton({
   title = "Add to combat"
 } = {}) {
   const button = document.createElement("button");
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let feedbackTimer = null;
+  const showAddedFeedback = () => {
+    if (feedbackTimer) clearTimeout(feedbackTimer);
+    button.classList.add("combatActionSuccess");
+    button.textContent = "Added";
+    feedbackTimer = setTimeout(() => {
+      button.classList.remove("combatActionSuccess");
+      button.textContent = text;
+      feedbackTimer = null;
+    }, 1100);
+  };
   button.type = "button";
   button.className = className;
   button.textContent = text;
   button.title = title;
-  button.addEventListener("click", (e) => {
+  button.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (typeof onAddToCombat === "function") onAddToCombat();
+    if (typeof onAddToCombat !== "function") return;
+    const result = await onAddToCombat();
+    if (result !== false) showAddedFeedback();
   });
   return button;
 }

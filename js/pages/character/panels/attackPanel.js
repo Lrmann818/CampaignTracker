@@ -22,6 +22,8 @@ export function initAttacksPanel(deps = {}) {
   const {
     state,
     SaveManager,
+    root = document,
+    selectors = {},
     uiConfirm,
     autoSizeInput,
     setStatus,
@@ -39,8 +41,9 @@ export function initAttacksPanel(deps = {}) {
     panelEl: "#charAttacksPanel",
     listEl: "#attackList",
     addBtn: "#addAttackBtn",
+    ...selectors
   };
-  const guard = requireMany(required, { root: document, setStatus, context: "Weapons panel" });
+  const guard = requireMany(required, { root, setStatus, context: "Weapons panel" });
   if (!guard.ok) return guard.destroy;
   const { panelEl, listEl, addBtn } = guard.els;
 

@@ -7,17 +7,22 @@
 // embedded panels: Vitals, Spells, and Weapons / Attacks.
 //
 // Architecture rules:
-//  - Reads state.character directly — no copied data, no sync layers.
-//  - Does NOT import Character-page panel modules (no fixed-DOM-ID coupling).
-//  - Panel selection, order, and collapse persist via combat.workspace.
-//  - Embedded panel content re-renders on COMBAT_ENCOUNTER_CHANGED_EVENT so
-//    HP writeback from combat cards stays in sync.
+//  - Hosted Character panel modules read/write state.character directly — no
+//    copied data, no sync layers.
+//  - Panel selection and order persist via combat.workspace.
+//  - Combat encounter changes do not create a separate embedded-panel sync
+//    store; hosted panels operate directly against canonical character state.
 
 import { COMBAT_ENCOUNTER_CHANGED_EVENT } from "./combatEvents.js";
+import { initAttacksPanel } from "../character/panels/attackPanel.js";
+import { initSpellsPanel } from "../character/panels/spellsPanel.js";
+import { initVitalsPanel } from "../character/panels/vitalsPanel.js";
+import { flipSwapTwo } from "../../ui/flipSwap.js";
 
 /** @typedef {import("../../state.js").State} State */
 /** @typedef {{ markDirty?: () => void }} SaveManagerLike */
 /** @typedef {(message: string, opts?: { stickyMs?: number }) => void} CombatStatusFn */
+/** @typedef {{ destroy?: () => void }} Destroyable */
 
 /**
  * @typedef {{ id: string, label: string }} EmbeddedPanelDef
@@ -36,9 +41,55 @@ export const EMBEDDED_PANEL_DEFS = Object.freeze([
   { id: "weapons", label: "Weapons / Attacks" },
 ]);
 
+export const EMBEDDED_PANEL_HOST_SELECTORS = Object.freeze({
+  vitals: Object.freeze({
+    panelEl: "#combatEmbeddedVitalsSource",
+    wrap: "#combatEmbeddedVitalsTiles",
+    addBtn: "#combatEmbeddedAddResourceBtn",
+    charHpCur: "#combatEmbeddedCharHpCur",
+    charHpMax: "#combatEmbeddedCharHpMax",
+    hitDieAmt: "#combatEmbeddedHitDieAmt",
+    hitDieSize: "#combatEmbeddedHitDieSize",
+    charAC: "#combatEmbeddedCharAC",
+    charInit: "#combatEmbeddedCharInit",
+    charSpeed: "#combatEmbeddedCharSpeed",
+    charProf: "#combatEmbeddedCharProf",
+    charSpellAtk: "#combatEmbeddedCharSpellAtk",
+    charSpellDC: "#combatEmbeddedCharSpellDC"
+  }),
+  spells: Object.freeze({
+    panelEl: "#combatEmbeddedSpellsSource",
+    containerEl: "#combatEmbeddedSpellLevels",
+    addLevelBtnEl: "#combatEmbeddedAddSpellLevelBtn"
+  }),
+  weapons: Object.freeze({
+    panelEl: "#combatEmbeddedWeaponsSource",
+    listEl: "#combatEmbeddedAttackList",
+    addBtn: "#combatEmbeddedAddAttackBtn"
+  })
+});
+
 /** @returns {Set<string>} */
 function validPanelIdSet() {
   return new Set(EMBEDDED_PANEL_DEFS.map((d) => d.id));
+}
+
+/**
+ * Keep workspace.embeddedPanels bounded to the three v1 panels with no duplicates.
+ * @param {unknown} panelIds
+ * @returns {string[]}
+ */
+function normalizeEmbeddedPanelIds(panelIds) {
+  if (!Array.isArray(panelIds)) return [];
+  const validIds = validPanelIdSet();
+  const seen = new Set();
+  const normalized = [];
+  for (const panelId of panelIds) {
+    if (typeof panelId !== "string" || !validIds.has(panelId) || seen.has(panelId)) continue;
+    seen.add(panelId);
+    normalized.push(panelId);
+  }
+  return normalized;
 }
 
 // ─── Selection helpers ───────────────────────────────────────────────────────
@@ -80,6 +131,24 @@ export function removeEmbeddedPanel(embeddedPanels, panelId) {
   const idx = embeddedPanels.indexOf(panelId);
   if (idx === -1) return false;
   embeddedPanels.splice(idx, 1);
+  return true;
+}
+
+/**
+ * Move an active embedded panel within workspace.embeddedPanels.
+ * This keeps embedded ordering persisted in the existing workspace state bucket.
+ * @param {string[]} embeddedPanels
+ * @param {string} panelId
+ * @param {-1 | 1} direction
+ * @returns {boolean}
+ */
+export function moveEmbeddedPanel(embeddedPanels, panelId, direction) {
+  if (!Array.isArray(embeddedPanels)) return false;
+  if (direction !== -1 && direction !== 1) return false;
+  const idx = embeddedPanels.indexOf(panelId);
+  const nextIdx = idx + direction;
+  if (idx === -1 || nextIdx < 0 || nextIdx >= embeddedPanels.length) return false;
+  [embeddedPanels[idx], embeddedPanels[nextIdx]] = [embeddedPanels[nextIdx], embeddedPanels[idx]];
   return true;
 }
 
@@ -284,154 +353,151 @@ function createEl(tag, className, textContent) {
 }
 
 /**
- * Render Vitals panel content into a container.
+ * Render a scoped Vitals source-panel host into a container.
+ * The real Vitals panel initializer binds the controls after this shell exists.
  * @param {HTMLElement} container
- * @param {VitalsEmbeddedViewModel} vm
  * @returns {void}
  */
-export function renderVitalsEmbeddedContent(container, vm) {
+export function renderVitalsEmbeddedContent(container) {
   container.replaceChildren();
 
-  const hpBlock = createEl("div", "combatEmbedHpBlock");
-  hpBlock.appendChild(createEl("span", "combatEmbedStatLabel", "HP"));
-  hpBlock.appendChild(createEl("span", "combatEmbedHpValue", `${vm.hp} / ${vm.hpMax}`));
-  container.appendChild(hpBlock);
-
-  /** @type {Array<[string, string | null]>} */
-  const statPairs = [
-    ["AC", vm.ac],
-    ["Initiative", vm.initiative],
-    ["Speed", vm.speed],
-    ["Proficiency", vm.proficiency],
-    ["Spell Atk", vm.spellAttack],
-    ["Spell DC", vm.spellDC],
-  ];
-
-  for (const [label, value] of statPairs) {
-    if (value == null) continue;
-    const row = createEl("div", "combatEmbedStatRow");
-    row.appendChild(createEl("span", "combatEmbedStatLabel", label));
-    row.appendChild(createEl("span", "combatEmbedStatValue", value));
-    container.appendChild(row);
-  }
-
-  if (vm.resources.length > 0) {
-    const resSection = createEl("div", "combatEmbedResources");
-    resSection.appendChild(createEl("div", "combatEmbedSectionLabel", "Resources"));
-    for (const r of vm.resources) {
-      const row = createEl("div", "combatEmbedResourceRow");
-      const name = (r.name || "").trim();
-      if (name) row.appendChild(createEl("span", "combatEmbedResourceName", name));
-      row.appendChild(createEl("span", "combatEmbedResourceValue", `${r.cur} / ${r.max}`));
-      resSection.appendChild(row);
-    }
-    container.appendChild(resSection);
-  }
+  const panel = createEl("section", "panel combatEmbeddedSourcePanel combatEmbeddedVitalsHost");
+  panel.id = "combatEmbeddedVitalsSource";
+  panel.innerHTML = `
+    <div class="panelHeader">
+      <h2 class="m0">Vitals</h2>
+      <button id="combatEmbeddedAddResourceBtn" type="button" class="headerAddBtn" title="Add another resource tracker">+ Resource</button>
+    </div>
+    <div class="charTiles" id="combatEmbeddedVitalsTiles">
+      <div class="charTile" data-vital-key="hp">
+        <div class="charTileLabel">HP</div>
+        <div class="charHpRow">
+          <input id="combatEmbeddedCharHpCur" type="number" placeholder="Cur" />
+          <span class="muted">/</span>
+          <input id="combatEmbeddedCharHpMax" type="number" placeholder="Max" />
+        </div>
+      </div>
+      <div class="charTile" data-vital-key="hitDie">
+        <div class="charTileLabel">Hit Dice</div>
+        <div class="charHpRow">
+          <input id="combatEmbeddedHitDieAmt" type="number" placeholder="2" />
+          <span class="muted">d</span>
+          <input id="combatEmbeddedHitDieSize" type="number" placeholder="6" />
+        </div>
+      </div>
+      <div class="charTile" data-vital-key="ac">
+        <div class="charTileLabel">Armor Class</div>
+        <input id="combatEmbeddedCharAC" type="number" placeholder="AC" />
+      </div>
+      <div class="charTile" data-vital-key="init">
+        <div class="charTileLabel">Initiative</div>
+        <input id="combatEmbeddedCharInit" type="number" placeholder="Init" />
+      </div>
+      <div class="charTile" data-vital-key="speed">
+        <div class="charTileLabel">Speed</div>
+        <input id="combatEmbeddedCharSpeed" type="number" placeholder="Speed" />
+      </div>
+      <div class="charTile" data-vital-key="prof">
+        <div class="charTileLabel">Proficiency</div>
+        <input id="combatEmbeddedCharProf" type="number" placeholder="+X" />
+      </div>
+      <div class="charTile" data-vital-key="spellAtk">
+        <div class="charTileLabel">Spell Attack</div>
+        <input id="combatEmbeddedCharSpellAtk" type="number" placeholder="+X" />
+      </div>
+      <div class="charTile" data-vital-key="spellDC">
+        <div class="charTileLabel">Spell DC</div>
+        <input id="combatEmbeddedCharSpellDC" type="number" placeholder="DC" />
+      </div>
+    </div>
+  `;
+  container.appendChild(panel);
 }
 
 /**
- * Render Spells panel content into a container.
+ * Render a scoped Spells source-panel host into a container.
  * @param {HTMLElement} container
- * @param {SpellsEmbeddedViewModel} vm
  * @returns {void}
  */
-export function renderSpellsEmbeddedContent(container, vm) {
+export function renderSpellsEmbeddedContent(container) {
   container.replaceChildren();
 
-  if (!vm.levels.length) {
-    container.appendChild(createEl("p", "mutedSmall m0", "No spells yet."));
-    return;
-  }
-
-  for (const level of vm.levels) {
-    const levelEl = createEl("div", "combatEmbedSpellLevel");
-    levelEl.dataset.spellLevelId = level.id;
-
-    const headerEl = createEl("div", "combatEmbedSpellLevelHeader");
-    headerEl.appendChild(createEl("span", "combatEmbedSpellLevelLabel", level.label || "Level"));
-    if (level.hasSlots) {
-      headerEl.appendChild(
-        createEl("span", "combatEmbedSpellSlots", `${level.used}/${level.total}`)
-      );
-    }
-    levelEl.appendChild(headerEl);
-
-    if (!level.collapsed) {
-      const bodyEl = createEl("div", "combatEmbedSpellLevelBody");
-      if (!level.spells.length) {
-        bodyEl.appendChild(createEl("p", "mutedSmall m0", "No spells."));
-      } else {
-        for (const spell of level.spells) {
-          const row = createEl("div", "combatEmbedSpellRow");
-          row.classList.toggle("isExpended", spell.expended);
-          row.appendChild(createEl("span", "combatEmbedSpellName", spell.name || "(unnamed)"));
-          const flags = [];
-          if (spell.prepared) flags.push("Prep");
-          if (spell.expended) flags.push("Cast");
-          if (flags.length) {
-            row.appendChild(createEl("span", "combatEmbedSpellFlags", flags.join(" · ")));
-          }
-          bodyEl.appendChild(row);
-        }
-      }
-      levelEl.appendChild(bodyEl);
-    }
-
-    container.appendChild(levelEl);
-  }
+  const panel = createEl("section", "panel combatEmbeddedSourcePanel combatEmbeddedSpellsHost");
+  panel.id = "combatEmbeddedSpellsSource";
+  panel.innerHTML = `
+    <div class="row between items-center">
+      <h2 class="m0">Spells</h2>
+      <button id="combatEmbeddedAddSpellLevelBtn" type="button" class="headerAddBtn" title="Add spell level">+ Level</button>
+    </div>
+    <div id="combatEmbeddedSpellLevels" class="spellLevels"></div>
+    <div class="mutedSmall">Tip: each spell has its own notes box. Use the arrow on a spell to show/hide notes.</div>
+  `;
+  container.appendChild(panel);
 }
 
 /**
- * Render Weapons / Attacks panel content into a container.
+ * Render a scoped Weapons / Attacks source-panel host into a container.
  * @param {HTMLElement} container
- * @param {WeaponsEmbeddedViewModel} vm
  * @returns {void}
  */
-export function renderWeaponsEmbeddedContent(container, vm) {
+export function renderWeaponsEmbeddedContent(container) {
   container.replaceChildren();
 
-  if (!vm.attacks.length) {
-    container.appendChild(createEl("p", "mutedSmall m0", "No weapons yet."));
-    return;
-  }
-
-  for (const atk of vm.attacks) {
-    const row = createEl("div", "combatEmbedWeaponRow");
-    row.appendChild(createEl("span", "combatEmbedWeaponName", atk.name || "(unnamed)"));
-    const stats = [atk.bonus, atk.damage, atk.type, atk.range].filter(Boolean);
-    if (stats.length) {
-      row.appendChild(createEl("span", "combatEmbedWeaponStats", stats.join(" · ")));
-    }
-    container.appendChild(row);
-  }
+  const panel = createEl("section", "panel combatEmbeddedSourcePanel combatEmbeddedWeaponsHost");
+  panel.id = "combatEmbeddedWeaponsSource";
+  panel.innerHTML = `
+    <div class="row between items-center">
+      <h2 class="m0">Weapons</h2>
+      <button id="combatEmbeddedAddAttackBtn" type="button" class="headerAddBtn" title="Add a new weapon">+ Weapon</button>
+    </div>
+    <div id="combatEmbeddedAttackList" class="attackList"></div>
+  `;
+  container.appendChild(panel);
 }
 
 // ─── Panel section DOM builder ───────────────────────────────────────────────
 
 /**
- * Build a collapsible embedded panel section element.
+ * Build an embedded panel host element.
  * @param {EmbeddedPanelDef} def
- * @param {boolean} collapsed
+ * @param {number} index
+ * @param {number} total
  * @returns {HTMLElement}
  */
-function buildEmbeddedPanelSection(def, collapsed) {
+function buildEmbeddedPanelSection(def, index, total) {
   const section = document.createElement("section");
-  section.className = "combatPanel combatEmbeddedPanel";
+  section.className = "combatEmbeddedPanel";
   section.id = embeddedPanelDomId(def.id);
   section.dataset.embeddedPanelId = def.id;
-  section.setAttribute("aria-labelledby", `combatEmbeddedTitle_${def.id}`);
-  section.dataset.collapsed = collapsed ? "true" : "false";
-  section.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  section.setAttribute("aria-label", def.label);
 
-  const header = createEl("div", "panelHeader panelHeaderClickable");
-  header.setAttribute("data-panel-header", "");
+  const chrome = createEl("div", "combatEmbeddedPanelChrome");
+  chrome.dataset.embeddedPanelChrome = def.id;
 
-  const titleGroup = createEl("div", "combatEmbeddedTitleGroup");
-  const title = createEl("h3", "m0");
-  title.id = `combatEmbeddedTitle_${def.id}`;
-  title.textContent = def.label;
-  titleGroup.appendChild(title);
-  header.appendChild(titleGroup);
+  const movesWrap = createEl("div", "sectionMoves combatEmbeddedMoves");
+  movesWrap.dataset.embeddedPanelMoves = def.id;
+
+  const moveUpBtn = document.createElement("button");
+  moveUpBtn.type = "button";
+  moveUpBtn.className = "moveBtn";
+  moveUpBtn.dataset.moveEmbeddedPanel = "-1";
+  moveUpBtn.textContent = "↑";
+  moveUpBtn.title = "Move panel up";
+  moveUpBtn.disabled = index <= 0;
+  moveUpBtn.setAttribute("aria-label", `Move ${def.label} panel up`);
+  movesWrap.appendChild(moveUpBtn);
+
+  const moveDownBtn = document.createElement("button");
+  moveDownBtn.type = "button";
+  moveDownBtn.className = "moveBtn";
+  moveDownBtn.dataset.moveEmbeddedPanel = "1";
+  moveDownBtn.textContent = "↓";
+  moveDownBtn.title = "Move panel down";
+  moveDownBtn.disabled = index >= total - 1;
+  moveDownBtn.setAttribute("aria-label", `Move ${def.label} panel down`);
+  movesWrap.appendChild(moveDownBtn);
+
+  chrome.appendChild(movesWrap);
 
   const removeBtn = document.createElement("button");
   removeBtn.type = "button";
@@ -439,9 +505,8 @@ function buildEmbeddedPanelSection(def, collapsed) {
   removeBtn.dataset.removeEmbeddedPanel = def.id;
   removeBtn.textContent = "Remove";
   removeBtn.setAttribute("aria-label", `Remove ${def.label} panel`);
-  header.appendChild(removeBtn);
-
-  section.appendChild(header);
+  chrome.appendChild(removeBtn);
+  section.appendChild(chrome);
 
   const body = createEl("div", "combatEmbeddedPanelBody");
   body.dataset.embeddedPanelBody = def.id;
@@ -486,19 +551,42 @@ function buildPanelPickerRow(available) {
 /**
  * Initialize the embedded panels area for the Combat Workspace.
  *
- * Renders a panel picker and one collapsible section per active panel.
- * Panel additions, removals, and collapse state are persisted via
- * combat.workspace.embeddedPanels and combat.workspace.panelCollapsed.
+ * Renders a panel picker and one reorderable source-panel host per active panel.
+ * Panel additions, removals, and order are persisted via
+ * combat.workspace.embeddedPanels.
  *
  * @param {{
  *   state: State,
  *   SaveManager: SaveManagerLike,
  *   setStatus?: CombatStatusFn,
- *   root: HTMLElement
+ *   root: HTMLElement,
+ *   uiConfirm?: Function,
+ *   uiPrompt?: Function,
+ *   textKey_spellNotes?: Function,
+ *   putText?: Function,
+ *   getText?: Function,
+ *   deleteText?: Function,
+ *   autoSizeInput?: Function,
+ *   enhanceNumberSteppers?: Function,
+ *   applyTextareaSize?: Function
  * }} deps
  * @returns {{ destroy: () => void }}
  */
-export function initCombatEmbeddedPanels({ state, SaveManager, root }) {
+export function initCombatEmbeddedPanels({
+  state,
+  SaveManager,
+  root,
+  setStatus,
+  uiConfirm,
+  uiPrompt,
+  textKey_spellNotes,
+  putText,
+  getText,
+  deleteText,
+  autoSizeInput,
+  enhanceNumberSteppers,
+  applyTextareaSize
+}) {
   const containerEl = root.querySelector("#combatEmbeddedPanels");
   if (!(containerEl instanceof HTMLElement)) {
     // Container not present in DOM — degrade gracefully.
@@ -508,6 +596,25 @@ export function initCombatEmbeddedPanels({ state, SaveManager, root }) {
   let destroyed = false;
   const ac = new AbortController();
   const { signal } = ac;
+  /** @type {Map<string, Destroyable>} */
+  const panelApis = new Map();
+
+  /**
+   * @param {string} panelId
+   * @returns {void}
+   */
+  function destroyPanelApi(panelId) {
+    const api = panelApis.get(panelId);
+    try { api?.destroy?.(); } catch (err) { console.warn("Embedded panel destroy failed:", err); }
+    panelApis.delete(panelId);
+  }
+
+  /**
+   * @returns {void}
+   */
+  function destroyAllPanelApis() {
+    for (const panelId of Array.from(panelApis.keys())) destroyPanelApi(panelId);
+  }
 
   /**
    * Get or repair the workspace sub-object from state.
@@ -520,7 +627,7 @@ export function initCombatEmbeddedPanels({ state, SaveManager, root }) {
       workspace = {};
       combat.workspace = workspace;
     }
-    if (!Array.isArray(workspace.embeddedPanels)) workspace.embeddedPanels = [];
+    workspace.embeddedPanels = normalizeEmbeddedPanelIds(workspace.embeddedPanels);
     if (!workspace.panelCollapsed || typeof workspace.panelCollapsed !== "object" || Array.isArray(workspace.panelCollapsed)) {
       workspace.panelCollapsed = {};
     }
@@ -537,13 +644,86 @@ export function initCombatEmbeddedPanels({ state, SaveManager, root }) {
     const bodyEl = containerEl.querySelector(`[data-embedded-panel-body="${panelId}"]`);
     if (!(bodyEl instanceof HTMLElement)) return;
 
+    destroyPanelApi(panelId);
+
+    /** @type {Destroyable | null} */
+    let api = null;
     if (panelId === "vitals") {
-      renderVitalsEmbeddedContent(bodyEl, getVitalsEmbeddedViewModel(state));
+      renderVitalsEmbeddedContent(bodyEl);
+      api = initVitalsPanel({
+        state,
+        SaveManager,
+        root: bodyEl,
+        selectors: EMBEDDED_PANEL_HOST_SELECTORS.vitals,
+        autoSizeInput,
+        enhanceNumberSteppers,
+        uiConfirm,
+        setStatus
+      });
     } else if (panelId === "spells") {
-      renderSpellsEmbeddedContent(bodyEl, getSpellsEmbeddedViewModel(state));
+      renderSpellsEmbeddedContent(bodyEl);
+      api = initSpellsPanel({
+        state,
+        SaveManager,
+        root: bodyEl,
+        selectors: EMBEDDED_PANEL_HOST_SELECTORS.spells,
+        noteTextareaIdPrefix: "combatEmbeddedSpellNotes_",
+        textKey_spellNotes,
+        putText,
+        getText,
+        deleteText,
+        uiConfirm,
+        uiPrompt,
+        setStatus,
+        enhanceNumberSteppers,
+        applyTextareaSize
+      });
     } else if (panelId === "weapons") {
-      renderWeaponsEmbeddedContent(bodyEl, getWeaponsEmbeddedViewModel(state));
+      renderWeaponsEmbeddedContent(bodyEl);
+      api = initAttacksPanel({
+        state,
+        SaveManager,
+        root: bodyEl,
+        selectors: EMBEDDED_PANEL_HOST_SELECTORS.weapons,
+        uiConfirm,
+        autoSizeInput,
+        setStatus
+      });
     }
+
+    if (api && typeof api === "object") panelApis.set(panelId, api);
+  }
+
+  /**
+   * Keep host move buttons accurate after a DOM swap that avoids a full render.
+   * @returns {void}
+   */
+  function syncEmbeddedPanelMoveButtons() {
+    const sections = Array.from(containerEl.querySelectorAll("[data-embedded-panel-id]"))
+      .filter((el) => el instanceof HTMLElement);
+    const last = sections.length - 1;
+    sections.forEach((section, index) => {
+      const up = section.querySelector("[data-move-embedded-panel='-1']");
+      const down = section.querySelector("[data-move-embedded-panel='1']");
+      if (up instanceof HTMLButtonElement) up.disabled = index <= 0;
+      if (down instanceof HTMLButtonElement) down.disabled = index >= last;
+    });
+  }
+
+  /**
+   * @param {string} panelId
+   * @param {-1 | 1} direction
+   * @param {HTMLButtonElement | null} fallbackBtn
+   * @returns {void}
+   */
+  function focusEmbeddedMoveButton(panelId, direction, fallbackBtn = null) {
+    requestAnimationFrame(() => {
+      if (destroyed) return;
+      const section = containerEl.querySelector(`[data-embedded-panel-id="${panelId}"]`);
+      const target = section?.querySelector(`[data-move-embedded-panel="${direction}"]`) || fallbackBtn;
+      if (!(target instanceof HTMLElement)) return;
+      try { target.focus({ preventScroll: true }); } catch { target.focus(); }
+    });
   }
 
   /**
@@ -555,28 +735,23 @@ export function initCombatEmbeddedPanels({ state, SaveManager, root }) {
 
     const workspace = getWorkspace();
     const activePanelIds = /** @type {string[]} */ (workspace.embeddedPanels);
-    const panelCollapsed = /** @type {Record<string, boolean>} */ (workspace.panelCollapsed);
     const available = getAvailableEmbeddedPanels(activePanelIds);
 
+    destroyAllPanelApis();
     containerEl.replaceChildren();
 
     // Panel picker
     containerEl.appendChild(buildPanelPickerRow(available));
 
-    // One collapsible section per active panel
-    for (const panelId of activePanelIds) {
+    // One source-panel host per active panel
+    activePanelIds.forEach((panelId, index) => {
       const def = EMBEDDED_PANEL_DEFS.find((d) => d.id === panelId);
-      if (!def) continue; // unknown id — skip defensively
+      if (!def) return; // unknown id — skip defensively
 
-      const domId = embeddedPanelDomId(def.id);
-      const collapsed = panelCollapsed[domId] === true;
-      const section = buildEmbeddedPanelSection(def, collapsed);
+      const section = buildEmbeddedPanelSection(def, index, activePanelIds.length);
       containerEl.appendChild(section);
-
-      if (!collapsed) {
-        renderPanelContent(panelId);
-      }
-    }
+      renderPanelContent(panelId);
+    });
   }
 
   // ─── Event handling ─────────────────────────────────────────────────────
@@ -601,6 +776,55 @@ export function initCombatEmbeddedPanels({ state, SaveManager, root }) {
       return;
     }
 
+    // Reorder embedded panels within workspace.embeddedPanels.
+    const moveBtn = target.closest("[data-move-embedded-panel]");
+    if (moveBtn instanceof HTMLButtonElement && moveBtn.dataset.moveEmbeddedPanel) {
+      const sectionEl = moveBtn.closest("[data-embedded-panel-id]");
+      if (!(sectionEl instanceof HTMLElement)) return;
+      const panelId = sectionEl.dataset.embeddedPanelId;
+      const direction = Number(moveBtn.dataset.moveEmbeddedPanel) < 0 ? -1 : 1;
+      const workspace = getWorkspace();
+      const activePanelIds = /** @type {string[]} */ (workspace.embeddedPanels);
+      const fromIndex = activePanelIds.indexOf(panelId || "");
+      const adjacentId = activePanelIds[fromIndex + direction] || "";
+      const adjacentEl = adjacentId
+        ? containerEl.querySelector(`[data-embedded-panel-id="${adjacentId}"]`)
+        : null;
+      const moved = moveEmbeddedPanel(
+        activePanelIds,
+        panelId || "",
+        /** @type {-1 | 1} */ (direction)
+      );
+      if (moved) {
+        SaveManager.markDirty?.();
+        const canAnimate = sectionEl.parentElement === containerEl
+          && adjacentEl instanceof HTMLElement
+          && adjacentEl.parentElement === containerEl;
+        if (!canAnimate) {
+          render();
+          return;
+        }
+
+        const didSwap = flipSwapTwo(sectionEl, adjacentEl, {
+          durationMs: 260,
+          easing: "cubic-bezier(.22,1,.36,1)",
+          swap: () => {
+            if (direction < 0) containerEl.insertBefore(sectionEl, adjacentEl);
+            else containerEl.insertBefore(adjacentEl, sectionEl);
+          },
+          afterSwap: syncEmbeddedPanelMoveButtons
+        });
+
+        if (!didSwap) {
+          render();
+          return;
+        }
+        syncEmbeddedPanelMoveButtons();
+        focusEmbeddedMoveButton(panelId || "", /** @type {-1 | 1} */ (direction), moveBtn);
+      }
+      return;
+    }
+
     // Remove panel button
     const removeBtn = target.closest("[data-remove-embedded-panel]");
     if (removeBtn instanceof HTMLElement && removeBtn.dataset.removeEmbeddedPanel) {
@@ -616,43 +840,20 @@ export function initCombatEmbeddedPanels({ state, SaveManager, root }) {
       return;
     }
 
-    // Collapse toggle: header click (skip interactive controls inside the header)
-    if (target.closest("button, input, select, textarea, a, label")) return;
-
-    const headerEl = target.closest("[data-panel-header]");
-    if (!(headerEl instanceof HTMLElement)) return;
-
-    const sectionEl = headerEl.closest("[data-embedded-panel-id]");
-    if (!(sectionEl instanceof HTMLElement)) return;
-    const panelId = sectionEl.dataset.embeddedPanelId;
-    if (!panelId) return;
-
-    const domId = embeddedPanelDomId(panelId);
-    const workspace = getWorkspace();
-    const panelCollapsed = /** @type {Record<string, boolean>} */ (workspace.panelCollapsed);
-    const next = panelCollapsed[domId] !== true;
-    workspace.panelCollapsed = { ...panelCollapsed, [domId]: next };
-
-    sectionEl.dataset.collapsed = next ? "true" : "false";
-    sectionEl.setAttribute("aria-expanded", next ? "false" : "true");
-
-    if (!next) {
-      // Expanding — render fresh content now
-      renderPanelContent(panelId);
-    }
-
-    SaveManager.markDirty?.();
   }, { signal });
 
-  // Re-render visible embedded panel content when HP/status writeback occurs
-  // so the Vitals panel stays in sync with combat card HP changes.
+  // Combat encounter changes should not create a second sync layer for hosted
+  // Character panels. This only repairs a visible host if its DOM was removed.
   window.addEventListener(COMBAT_ENCOUNTER_CHANGED_EVENT, () => {
     if (destroyed) return;
     const workspace = getWorkspace();
     const activePanelIds = /** @type {string[]} */ (workspace.embeddedPanels);
-    const panelCollapsed = /** @type {Record<string, boolean>} */ (workspace.panelCollapsed);
     for (const panelId of activePanelIds) {
-      if (panelCollapsed[embeddedPanelDomId(panelId)] !== true) {
+      const bodyEl = containerEl.querySelector(`[data-embedded-panel-body="${panelId}"]`);
+      if (
+        bodyEl instanceof HTMLElement
+        && !panelApis.has(panelId)
+      ) {
         renderPanelContent(panelId);
       }
     }
@@ -665,6 +866,7 @@ export function initCombatEmbeddedPanels({ state, SaveManager, root }) {
       if (destroyed) return;
       destroyed = true;
       ac.abort();
+      destroyAllPanelApis();
       containerEl.replaceChildren();
     }
   };

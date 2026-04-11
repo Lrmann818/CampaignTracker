@@ -198,13 +198,14 @@ function makeStatusEffectFromInput(input) {
   const label = cleanString(input.label);
   if (!label) return null;
 
-  const durationMode = normalizeStatusDurationMode(input.durationMode);
+  const rawDurationMode = input.durationMode;
+  const durationMode = normalizeStatusDurationMode(rawDurationMode);
   const rawDuration = nonNegativeNumberOrNull(input.remaining ?? input.duration);
   const remaining = durationMode === "none" ? null : rawDuration ?? 0;
   return makeStatusEffect({
     ...input,
     label,
-    durationMode,
+    durationMode: durationMode === "time" ? rawDurationMode : durationMode,
     duration: durationMode === "none" ? null : remaining,
     remaining
   });

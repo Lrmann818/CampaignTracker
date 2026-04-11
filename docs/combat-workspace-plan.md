@@ -498,7 +498,7 @@ Field names may evolve slightly to fit repo conventions, but the explicit `works
 
 ### Slice 7 — Embedded panels
 
-**Status:** Done
+**Status:** In Progress
 
 #### Scope
 

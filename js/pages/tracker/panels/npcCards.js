@@ -237,10 +237,11 @@ function createNpcCardsController(deps = {}) {
       const name = result.participant?.name || "Participant";
       notifyCombatEncounterChanged({ sourceType: "npc", sourceId: id, participantId: result.participant?.id || null });
       if (typeof setStatus === "function") setStatus(`${name} added to combat.`, { stickyMs: 2000 });
-      return;
+      return true;
     }
 
     if (typeof setStatus === "function") setStatus("Could not add this NPC to combat.", { stickyMs: 3000 });
+    return false;
   }
 
   async function pickNpcImage(npcId) {

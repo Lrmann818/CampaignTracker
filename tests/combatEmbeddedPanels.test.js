@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   EMBEDDED_PANEL_DEFS,
+  EMBEDDED_PANEL_HOST_SELECTORS,
   addEmbeddedPanel,
   embeddedPanelDomId,
   getAvailableEmbeddedPanels,
   getSpellsEmbeddedViewModel,
   getVitalsEmbeddedViewModel,
   getWeaponsEmbeddedViewModel,
+  moveEmbeddedPanel,
   removeEmbeddedPanel,
 } from "../js/pages/combat/combatEmbeddedPanels.js";
 
@@ -31,6 +33,24 @@ describe("EMBEDDED_PANEL_DEFS", () => {
       expect(typeof def.label).toBe("string");
       expect(def.label.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("EMBEDDED_PANEL_HOST_SELECTORS", () => {
+  it("defines scoped source-panel hosts for exactly the locked v1 panel set", () => {
+    expect(Object.keys(EMBEDDED_PANEL_HOST_SELECTORS)).toEqual(["vitals", "spells", "weapons"]);
+  });
+
+  it("uses combat-scoped selectors instead of Character page global ids", () => {
+    expect(EMBEDDED_PANEL_HOST_SELECTORS.vitals.panelEl).toBe("#combatEmbeddedVitalsSource");
+    expect(EMBEDDED_PANEL_HOST_SELECTORS.spells.containerEl).toBe("#combatEmbeddedSpellLevels");
+    expect(EMBEDDED_PANEL_HOST_SELECTORS.weapons.listEl).toBe("#combatEmbeddedAttackList");
+
+    const allSelectors = Object.values(EMBEDDED_PANEL_HOST_SELECTORS)
+      .flatMap((selectors) => Object.values(selectors));
+    expect(allSelectors).not.toContain("#charVitalsPanel");
+    expect(allSelectors).not.toContain("#charSpellsPanel");
+    expect(allSelectors).not.toContain("#charAttacksPanel");
   });
 });
 
@@ -133,6 +153,27 @@ describe("removeEmbeddedPanel", () => {
     removeEmbeddedPanel(arr, "vitals");
     expect(addEmbeddedPanel(arr, "vitals")).toBe(true);
     expect(arr).toEqual(["vitals"]);
+  });
+});
+
+// ─── moveEmbeddedPanel ───────────────────────────────────────────────────────
+
+describe("moveEmbeddedPanel", () => {
+  it("reorders embedded panels in the persisted embeddedPanels array", () => {
+    const arr = ["vitals", "spells", "weapons"];
+    expect(moveEmbeddedPanel(arr, "weapons", -1)).toBe(true);
+    expect(arr).toEqual(["vitals", "weapons", "spells"]);
+
+    expect(moveEmbeddedPanel(arr, "vitals", 1)).toBe(true);
+    expect(arr).toEqual(["weapons", "vitals", "spells"]);
+  });
+
+  it("does not move unknown panels or move past the list bounds", () => {
+    const arr = ["vitals", "spells"];
+    expect(moveEmbeddedPanel(arr, "vitals", -1)).toBe(false);
+    expect(moveEmbeddedPanel(arr, "spells", 1)).toBe(false);
+    expect(moveEmbeddedPanel(arr, "notes", 1)).toBe(false);
+    expect(arr).toEqual(["vitals", "spells"]);
   });
 });
 

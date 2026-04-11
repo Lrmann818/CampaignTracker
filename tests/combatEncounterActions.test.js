@@ -178,6 +178,59 @@ describe("combat encounter actions", () => {
     expect(state.tracker.npcs[0].status).toBe("Blessed");
   });
 
+  it("supports minute and hour status durations while storing timed effects in seconds", () => {
+    const state = makeState();
+
+    const minutes = addCombatParticipantStatusEffect(
+      state,
+      "cmb_1",
+      { label: "Invisible", durationMode: "minutes", remaining: 2 },
+      { id: "s_minutes" }
+    );
+
+    expect(minutes).toMatchObject({
+      changed: true,
+      effect: {
+        id: "s_minutes",
+        label: "Invisible",
+        durationMode: "time",
+        duration: 120,
+        remaining: 120,
+        expired: false
+      }
+    });
+
+    const hours = updateCombatParticipantStatusEffect(
+      state,
+      "cmb_1",
+      "s_minutes",
+      { label: "Ward", durationMode: "hours", remaining: 1 }
+    );
+
+    expect(hours).toMatchObject({
+      changed: true,
+      effect: {
+        id: "s_minutes",
+        label: "Ward",
+        durationMode: "time",
+        duration: 3600,
+        remaining: 3600,
+        expired: false
+      }
+    });
+
+    state.combat.encounter.secondsPerTurn = 60;
+    const advanced = advanceCombatTurn(state, { undoId: "undo_minutes" });
+    expect(advanced.didAdvance).toBe(true);
+    expect(state.combat.encounter.participants[0].statusEffects.find((effect) => effect.id === "s_minutes"))
+      .toMatchObject({ remaining: 3540, expired: false });
+
+    const undone = undoCombatTurn(state);
+    expect(undone.applied).toBe(true);
+    expect(state.combat.encounter.participants[0].statusEffects.find((effect) => effect.id === "s_minutes"))
+      .toMatchObject({ remaining: 3600, expired: false });
+  });
+
   it("rejects status changes without labels", () => {
     const state = makeState();
 

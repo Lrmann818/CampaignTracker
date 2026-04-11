@@ -103,6 +103,8 @@ export function initVitalsPanel(deps = {}) {
   const {
     state,
     SaveManager,
+    root = document,
+    selectors = {},
     autoSizeInput,
     enhanceNumberSteppers,
     uiConfirm,
@@ -126,9 +128,10 @@ export function initVitalsPanel(deps = {}) {
     charSpeed: "#charSpeed",
     charProf: "#charProf",
     charSpellAtk: "#charSpellAtk",
-    charSpellDC: "#charSpellDC"
+    charSpellDC: "#charSpellDC",
+    ...selectors
   };
-  const guard = requireMany(required, { root: document, setStatus, context: "Vitals panel" });
+  const guard = requireMany(required, { root, setStatus, context: "Vitals panel" });
   if (!guard.ok) return guard.destroy;
   const { panelEl, wrap, addBtn } = guard.els;
 

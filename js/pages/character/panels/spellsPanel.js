@@ -13,6 +13,9 @@ export function initSpellsPanel(deps = {}) {
   const {
     state,
     SaveManager,
+    root = document,
+    selectors = {},
+    noteTextareaIdPrefix = "spellNotes_",
 
     // Spells notes storage
     textKey_spellNotes,
@@ -35,9 +38,10 @@ export function initSpellsPanel(deps = {}) {
   const required = {
     panelEl: "#charSpellsPanel",
     containerEl: "#spellLevels",
-    addLevelBtnEl: "#addSpellLevelBtn"
+    addLevelBtnEl: "#addSpellLevelBtn",
+    ...selectors
   };
-  const guard = requireMany(required, { root: document, setStatus, context: "Spells panel" });
+  const guard = requireMany(required, { root, setStatus, context: "Spells panel" });
   if (!guard.ok) return guard.destroy;
   const { containerEl, addLevelBtnEl } = guard.els;
 
@@ -467,7 +471,7 @@ export function initSpellsPanel(deps = {}) {
       const notesWrap = document.createElement("div");
       notesWrap.className = "spellNotes";
       const ta = document.createElement("textarea");
-      ta.id = `spellNotes_${spell.id}`;
+      ta.id = `${noteTextareaIdPrefix}${spell.id}`;
       ta.setAttribute("data-persist-size", "");
       ta.placeholder = "Spell notes / description...";
       ta.value = spellNotesCache.get(spell.id) ?? "";
