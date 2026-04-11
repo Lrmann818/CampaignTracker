@@ -4,7 +4,7 @@
 
 - **Phase:** 3 — Combat Workspace
 - **Overall status:** In progress
-- **Current next slice:** Slice 2 — Pure combat domain helpers
+- **Current next slice:** Slice 3 — Combat page shell
 
 ---
 
@@ -264,7 +264,7 @@ Field names may evolve slightly to fit repo conventions, but the explicit `works
 
 ### Slice 2 — Pure combat domain helpers
 
-**Status:** Next
+**Status:** Done
 
 #### Scope
 
@@ -285,6 +285,30 @@ Field names may evolve slightly to fit repo conventions, but the explicit `works
 - no tracker footer integration
 - no embedded panels
 - no CSS
+
+#### Completed notes
+
+- added pure combat participant/source helper foundations
+- added encounter-local participant factory with role inference from source type, section/category/group, and encounter-only override support
+- added HP, healing, damage, and temp HP math helpers
+- added status effect factories, legacy text parsing, normalization, expiration, and turn timing helpers
+- added turn advance helpers with elapsed time, round wrapping, timed status advancement, and undo entry creation
+- added undo apply helpers that restore turn timing/status state without reverting unrelated HP/temp HP edits
+- added clear encounter/default encounter helpers
+- kept implementation bounded to pure combat domain helpers and unit tests
+
+#### Files changed in Slice 2
+
+- `js/domain/combat.js`
+- `tests/combatDomain.test.js`
+- `docs/combat-workspace-plan.md`
+
+#### Verification completed for Slice 2
+
+- targeted combat helper tests passed
+- full unit test suite passed
+- typecheck passed
+- build passed
 
 ---
 
