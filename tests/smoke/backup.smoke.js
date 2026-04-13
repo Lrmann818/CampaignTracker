@@ -38,6 +38,7 @@ test("backup export round-trips tracker data into a fresh browser context", asyn
   const fatalSignals = await openSmokeApp(page);
   const campaignTitle = "Smoke Backup Chronicle";
   const npcName = "Roundtrip Scout";
+  const spellNoteText = "Backup keeps the Shield note.";
 
   await page.locator("#campaignTitle").fill(campaignTitle);
   await expect(page.locator("#campaignTitle")).toHaveText(campaignTitle);
@@ -46,6 +47,24 @@ test("backup export round-trips tracker data into a fresh browser context", asyn
   await expect(page.locator(".npcNameBig")).toHaveCount(1);
   await page.locator(".npcNameBig").first().fill(npcName);
   await expect(page.locator(".npcNameBig").first()).toHaveValue(npcName);
+
+  await page.getByRole("tab", { name: "Character" }).click();
+  const firstSpellLevel = page.locator("#spellLevels .spellLevel").first();
+  await firstSpellLevel.getByRole("button", { name: "+ Spell" }).click();
+  const spellRow = firstSpellLevel.locator(".spellRow").last();
+  await spellRow.locator(".spellName").fill("Shield");
+  await spellRow.locator(".spellSpellCollapseBtn").click();
+  const spellNotes = spellRow.locator("textarea[id^='spellNotes_']");
+  await spellNotes.fill(spellNoteText);
+  const spellId = await page.evaluate(() => {
+    const spellsList = globalThis.__APP_STATE__?.character?.spells?.levels?.[0]?.spells || [];
+    return spellsList.at(-1)?.id || "";
+  });
+  await expect.poll(() => page.evaluate(async (id) => {
+    const { getText, textKey_spellNotes } = await import(new URL("js/storage/texts-idb.js", window.location.href).href);
+    const campaignId = globalThis.__APP_STATE__?.appShell?.activeCampaignId;
+    return getText(textKey_spellNotes(campaignId, id));
+  }, spellId)).toBe(spellNoteText);
 
   await openDataPanel(page);
 
@@ -61,6 +80,7 @@ test("backup export round-trips tracker data into a fresh browser context", asyn
   expect(exported.version).toBe(2);
   expect(exported.state?.tracker?.campaignTitle).toBe(campaignTitle);
   expect(exported.state?.tracker?.npcs?.[0]?.name).toBe(npcName);
+  expect(Object.values(exported.texts || {})).toContain(spellNoteText);
 
   const baseURL = testInfo.project.use.baseURL ?? "http://127.0.0.1:4173/";
   const importContext = await browser.newContext({ baseURL });
@@ -83,6 +103,8 @@ test("backup export round-trips tracker data into a fresh browser context", asyn
 
     await expect(importPage.locator("#campaignTitle")).toHaveText(campaignTitle);
     await expect(importPage.locator(".npcNameBig").first()).toHaveValue(npcName);
+    await importPage.getByRole("tab", { name: "Character" }).click();
+    await expect(importPage.locator(`#spellNotes_${spellId}`)).toHaveValue(spellNoteText);
 
     await expectNoFatalSignals(importPage, importSignals);
   } finally {

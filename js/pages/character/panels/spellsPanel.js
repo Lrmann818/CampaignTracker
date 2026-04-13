@@ -1,6 +1,86 @@
 import { safeAsync } from "../../../ui/safeAsync.js";
 import { requireMany } from "../../../utils/domGuards.js";
 
+const SPELL_NOTES_SAVE_DEBOUNCE_MS = 250;
+
+const spellNotesRuntime = {
+  cache: new Map(),
+  dirtyKeys: new Set(),
+  saveTimers: new Map(),
+  pendingLoads: new Map(),
+  subscribers: new Map()
+};
+
+function subscribeSpellNote(textKey, callback) {
+  if (!textKey || typeof callback !== "function") return () => {};
+  let subscribers = spellNotesRuntime.subscribers.get(textKey);
+  if (!subscribers) {
+    subscribers = new Set();
+    spellNotesRuntime.subscribers.set(textKey, subscribers);
+  }
+  subscribers.add(callback);
+  return () => {
+    const active = spellNotesRuntime.subscribers.get(textKey);
+    if (!active) return;
+    active.delete(callback);
+    if (active.size === 0) spellNotesRuntime.subscribers.delete(textKey);
+  };
+}
+
+function notifySpellNoteSubscribers(textKey, text, source = null) {
+  const subscribers = spellNotesRuntime.subscribers.get(textKey);
+  if (!subscribers) return;
+  for (const callback of Array.from(subscribers)) {
+    callback(text, source);
+  }
+}
+
+function getCachedSpellNote(textKey) {
+  return spellNotesRuntime.cache.get(textKey);
+}
+
+async function loadSpellNote(textKey, getText) {
+  if (!textKey) return "";
+  if (spellNotesRuntime.cache.has(textKey)) {
+    return spellNotesRuntime.cache.get(textKey) ?? "";
+  }
+  if (spellNotesRuntime.pendingLoads.has(textKey)) {
+    return spellNotesRuntime.pendingLoads.get(textKey);
+  }
+
+  const loadPromise = Promise.resolve(
+    typeof getText === "function" ? getText(textKey) : ""
+  ).then((text) => {
+    if (spellNotesRuntime.cache.has(textKey)) {
+      return spellNotesRuntime.cache.get(textKey) ?? "";
+    }
+    const normalized = text || "";
+    spellNotesRuntime.cache.set(textKey, normalized);
+    notifySpellNoteSubscribers(textKey, normalized);
+    return normalized;
+  }).finally(() => {
+    spellNotesRuntime.pendingLoads.delete(textKey);
+  });
+
+  spellNotesRuntime.pendingLoads.set(textKey, loadPromise);
+  return loadPromise;
+}
+
+function persistSpellNoteNow(textKey, putText) {
+  if (typeof putText !== "function" || !textKey) return;
+  const textToSave = spellNotesRuntime.cache.get(textKey) ?? "";
+  Promise.resolve(putText(textToSave, textKey)).then(() => {
+    if (
+      spellNotesRuntime.cache.get(textKey) === textToSave
+      && !spellNotesRuntime.saveTimers.has(textKey)
+    ) {
+      spellNotesRuntime.dirtyKeys.delete(textKey);
+    }
+  }).catch((err) => {
+    console.warn("Failed to save spell notes:", err);
+  });
+}
+
 function notifyStatus(setStatus, message) {
   if (typeof setStatus === "function") {
     setStatus(message);
@@ -62,8 +142,8 @@ export function initSpellsPanel(deps = {}) {
     return normalized || null;
   })();
 
-  const spellNotesCache = new Map(); // spellId -> text
-  const spellNotesSaveTimers = new Map(); // spellId -> timeoutId
+  /** @type {Array<() => void>} */
+  let spellNotesRenderUnsubscribers = [];
 
   const addListener = (target, type, handler, options) => {
     if (!target || typeof target.addEventListener !== "function") return;
@@ -118,47 +198,51 @@ export function initSpellsPanel(deps = {}) {
   function flushPendingSpellNotes() {
     if (typeof putText !== "function") return;
 
-    spellNotesSaveTimers.forEach((timerId) => clearTimeout(timerId));
-    spellNotesSaveTimers.clear();
+    for (const [textKey, timerId] of spellNotesRuntime.saveTimers) {
+      clearTimeout(timerId);
+      spellNotesRuntime.saveTimers.delete(textKey);
+    }
 
-    spellNotesCache.forEach((text, spellId) => {
-      const textKey = getSpellNotesKey(spellId);
-      if (!textKey) return;
-      Promise.resolve(putText(text || "", textKey)).catch((err) => {
-        console.warn("Failed to flush spell notes:", err);
-      });
-    });
+    for (const textKey of Array.from(spellNotesRuntime.dirtyKeys)) {
+      persistSpellNoteNow(textKey, putText);
+    }
   }
 
-  function scheduleSpellNotesSave(spellId, text) {
-    spellNotesCache.set(spellId, text);
+  function scheduleSpellNotesSave(spellId, text, source = null) {
+    const textKey = getSpellNotesKey(spellId);
+    if (!textKey) return;
+    spellNotesRuntime.cache.set(textKey, text);
+    spellNotesRuntime.dirtyKeys.add(textKey);
+    notifySpellNoteSubscribers(textKey, text, source);
 
-    const previous = spellNotesSaveTimers.get(spellId);
+    const previous = spellNotesRuntime.saveTimers.get(textKey);
     if (previous) clearTimeout(previous);
 
     const timerId = setTimeout(() => {
-      spellNotesSaveTimers.delete(spellId);
-      const textKey = getSpellNotesKey(spellId);
-      if (destroyed || typeof putText !== "function" || !textKey) return;
-      putText(spellNotesCache.get(spellId) || "", textKey).catch((err) => {
-        console.warn("Failed to save spell notes:", err);
-      });
-    }, 250);
+      spellNotesRuntime.saveTimers.delete(textKey);
+      if (destroyed) return;
+      persistSpellNoteNow(textKey, putText);
+    }, SPELL_NOTES_SAVE_DEBOUNCE_MS);
 
-    spellNotesSaveTimers.set(spellId, timerId);
+    spellNotesRuntime.saveTimers.set(textKey, timerId);
   }
 
   async function ensureSpellNotesLoaded(spellId) {
-    if (spellNotesCache.has(spellId)) return;
     const textKey = getSpellNotesKey(spellId);
-    if (typeof getText !== "function" || !textKey) {
-      spellNotesCache.set(spellId, "");
-      return;
-    }
+    if (!textKey) return "";
+    return loadSpellNote(textKey, getText);
+  }
 
-    const text = await getText(textKey);
-    if (destroyed) return;
-    spellNotesCache.set(spellId, text || "");
+  function forgetSpellNotes(spellId) {
+    const textKey = getSpellNotesKey(spellId);
+    if (!textKey) return;
+    spellNotesRuntime.cache.delete(textKey);
+    spellNotesRuntime.dirtyKeys.delete(textKey);
+    const timerId = spellNotesRuntime.saveTimers.get(textKey);
+    if (timerId) {
+      clearTimeout(timerId);
+      spellNotesRuntime.saveTimers.delete(textKey);
+    }
   }
 
   function renderLevel(level, levelIndex) {
@@ -273,12 +357,7 @@ export function initSpellsPanel(deps = {}) {
         if (destroyed) return;
 
         for (const spell of level.spells) {
-          spellNotesCache.delete(spell.id);
-          const timerId = spellNotesSaveTimers.get(spell.id);
-          if (timerId) {
-            clearTimeout(timerId);
-            spellNotesSaveTimers.delete(spell.id);
-          }
+          forgetSpellNotes(spell.id);
           if (typeof deleteText === "function" && typeof textKey_spellNotes === "function") {
             const textKey = getSpellNotesKey(spell.id);
             if (textKey) await deleteText(textKey);
@@ -438,12 +517,7 @@ export function initSpellsPanel(deps = {}) {
         if (destroyed) return;
 
         level.spells.splice(spellIndex, 1);
-        spellNotesCache.delete(spell.id);
-        const timerId = spellNotesSaveTimers.get(spell.id);
-        if (timerId) {
-          clearTimeout(timerId);
-          spellNotesSaveTimers.delete(spell.id);
-        }
+        forgetSpellNotes(spell.id);
         if (typeof deleteText === "function" && typeof textKey_spellNotes === "function") {
           const textKey = getSpellNotesKey(spell.id);
           if (textKey) await deleteText(textKey);
@@ -471,20 +545,37 @@ export function initSpellsPanel(deps = {}) {
       const notesWrap = document.createElement("div");
       notesWrap.className = "spellNotes";
       const ta = document.createElement("textarea");
+      const textKey = getSpellNotesKey(spell.id);
       ta.id = `${noteTextareaIdPrefix}${spell.id}`;
       ta.setAttribute("data-persist-size", "");
       ta.placeholder = "Spell notes / description...";
-      ta.value = spellNotesCache.get(spell.id) ?? "";
+      ta.value = textKey ? (getCachedSpellNote(textKey) ?? "") : "";
       ta.addEventListener("input", () => {
-        scheduleSpellNotesSave(spell.id, ta.value);
+        scheduleSpellNotesSave(spell.id, ta.value, ta);
       });
 
-      if (!spellNotesCache.has(spell.id)) {
+      if (textKey) {
+        let unsubscribe = () => {};
+        unsubscribe = subscribeSpellNote(textKey, (text, source) => {
+          if (source === ta) return;
+          if (!ta.isConnected) {
+            unsubscribe();
+            return;
+          }
+          if (ta.value !== text) {
+            ta.value = text;
+            requestAnimationFrame(() => applyTextareaSize?.(ta));
+          }
+        });
+        spellNotesRenderUnsubscribers.push(unsubscribe);
+      }
+
+      if (textKey && !spellNotesRuntime.cache.has(textKey)) {
         ta.placeholder = "Loading...";
-        ensureSpellNotesLoaded(spell.id).then(() => {
+        ensureSpellNotesLoaded(spell.id).then((text) => {
           if (destroyed || !ta.isConnected) return;
           ta.placeholder = "Spell notes / description...";
-          ta.value = spellNotesCache.get(spell.id) ?? "";
+          if (ta.value !== text) ta.value = text ?? "";
           requestAnimationFrame(() => applyTextareaSize?.(ta));
         }).catch((err) => {
           console.warn("Failed to load spell notes:", err);
@@ -503,6 +594,8 @@ export function initSpellsPanel(deps = {}) {
   function render() {
     if (destroyed) return;
 
+    spellNotesRenderUnsubscribers.forEach((unsubscribe) => unsubscribe());
+    spellNotesRenderUnsubscribers = [];
     containerEl.replaceChildren();
     const levels = state.character.spells.levels;
 
@@ -578,6 +671,8 @@ export function initSpellsPanel(deps = {}) {
       if (destroyed) return;
       destroyed = true;
       flushPendingSpellNotes();
+      spellNotesRenderUnsubscribers.forEach((unsubscribe) => unsubscribe());
+      spellNotesRenderUnsubscribers = [];
       for (let i = destroyFns.length - 1; i >= 0; i--) {
         destroyFns[i]?.();
       }

@@ -274,21 +274,22 @@ Current flow:
 3. Parse JSON.
 4. Normalize and shallow-validate the format.
 5. Run `migrateState(...)` on the incoming state.
-6. Reject backups with more than `200` blob entries.
-7. Reject blob entries whose data URLs are not `image/png`, `image/jpeg`, `image/jpg`, or `image/webp`.
-8. Stage blobs first:
+6. Choose the destination campaign ID and remap imported spell-note text IDs to that campaign before writing text records.
+7. Reject backups with more than `200` blob entries.
+8. Reject blob entries whose data URLs are not `image/png`, `image/jpeg`, `image/jpg`, or `image/webp`.
+9. Stage blobs first:
    - try to preserve each original blob ID via `putBlob(blob, oldId)`
    - if that fails, store the blob under a new ID and record an old-to-new remap
-9. Snapshot every text ID the import is about to touch, then stage texts with `putText(text, id)`.
-10. Rewrite any remapped blob IDs inside migrated state.
-11. Clone the migrated result and replace the live long-lived `state` object's top-level buckets.
-12. Call `ensureMapManager()`.
-13. Call `saveAll()` and require that write to succeed before the import is accepted.
+10. Snapshot every text ID the import is about to touch, then stage texts with `putText(text, id)`.
+11. Rewrite any remapped blob IDs inside migrated state.
+12. Clone the migrated result and replace the live long-lived `state` object's top-level buckets.
+13. Call `ensureMapManager()`.
+14. Call `saveAll()` and require that write to succeed before the import is accepted.
     - when a campaign is active, this overwrites the active campaign document
-    - when importing from the Campaign Hub with no active campaign, `app.js` creates a new campaign container and saves the imported state into it
-14. After a successful save, selectively delete old blob/text records that are no longer referenced by the restored state.
-15. If the backup contained no blobs, show the completion notice.
-16. Run `afterImport()`, which currently reloads the page from `app.js`.
+    - when importing with no active campaign, import assigns a new destination campaign ID before text records are staged
+15. After a successful save, selectively delete old blob/text records that are no longer referenced by the restored state.
+16. If the backup contained no blobs, show the completion notice.
+17. Run `afterImport()`, which currently reloads the page from `app.js`.
 
 Import safety behavior:
 

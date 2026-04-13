@@ -375,6 +375,7 @@ describe("importBackup", () => {
 
   it("writes staged blobs and texts before swapping state, then cleans old assets after save", async () => {
     const state = makeState();
+    state.appShell.activeCampaignId = "campaign_current";
     state.tracker.campaignTitle = "Old Campaign";
     state.tracker.npcs = [{ name: "Old NPC", imgBlobId: "old-npc-blob" }];
     state.character.spells.levels = [
@@ -412,7 +413,7 @@ describe("importBackup", () => {
         "new-npc-blob": "data:image/png;base64,QQ=="
       },
       texts: {
-        [textKey_spellNotes("new-spell")]: "Imported spell notes"
+        [textKey_spellNotes("campaign_exported", "new-spell")]: "Imported spell notes"
       }
     });
 
@@ -423,9 +424,9 @@ describe("importBackup", () => {
       order.push("afterImport");
       expect(input.value).toBe("");
     });
-    const importedNotesKey = textKey_spellNotes("new-spell");
+    const importedNotesKey = textKey_spellNotes("campaign_current", "new-spell");
     const { textStore, putText } = installTextStore({
-      [textKey_spellNotes("old-spell")]: "Old spell notes"
+      [textKey_spellNotes("campaign_current", "old-spell")]: "Old spell notes"
     });
 
     await importBackup(
@@ -455,10 +456,12 @@ describe("importBackup", () => {
     );
 
     expect(state.tracker.campaignTitle).toBe("Imported Campaign");
+    expect(state.appShell.activeCampaignId).toBe("campaign_current");
     expect(deleteBlob).toHaveBeenCalledWith("old-npc-blob");
-    expect(deleteText).toHaveBeenCalledWith(textKey_spellNotes("old-spell"));
+    expect(deleteText).toHaveBeenCalledWith(textKey_spellNotes("campaign_current", "old-spell"));
     expect(textStore.get(importedNotesKey)).toBe("Imported spell notes");
-    expect(textStore.has(textKey_spellNotes("old-spell"))).toBe(false);
+    expect(textStore.has(textKey_spellNotes("campaign_current", "old-spell"))).toBe(false);
+    expect(textStore.has(textKey_spellNotes("campaign_exported", "new-spell"))).toBe(false);
     expect(order).toEqual([
       "putBlob",
       "putText",
@@ -469,8 +472,10 @@ describe("importBackup", () => {
   });
 
   it("commits colliding text ids on a successful import", async () => {
-    const sharedNotesKey = textKey_spellNotes("shared-spell");
+    const sharedNotesKey = textKey_spellNotes("campaign_current", "shared-spell");
+    const exportedSharedNotesKey = textKey_spellNotes("campaign_exported", "shared-spell");
     const state = makeState();
+    state.appShell.activeCampaignId = "campaign_current";
     state.character.spells.levels = [
       {
         id: "level-old",
@@ -505,7 +510,7 @@ describe("importBackup", () => {
       state: sanitizeForSave(importedState),
       blobs: {},
       texts: {
-        [sharedNotesKey]: "Imported shared notes"
+        [exportedSharedNotesKey]: "Imported shared notes"
       }
     });
 
@@ -519,11 +524,57 @@ describe("importBackup", () => {
     );
 
     expect(state.tracker.campaignTitle).toBe("Imported Campaign");
+    expect(state.appShell.activeCampaignId).toBe("campaign_current");
     expect(textStore.get(sharedNotesKey)).toBe("Imported shared notes");
+    expect(textStore.has(exportedSharedNotesKey)).toBe(false);
     expect(uiAlert).toHaveBeenCalledWith(
       "This backup did not include images. Existing portraits were kept.",
       { title: "Import complete" }
     );
+  });
+
+  it("creates a destination campaign id before restoring spell note texts when importing with no active campaign", async () => {
+    const state = makeState();
+    state.appShell.activeCampaignId = null;
+
+    const importedState = makeState();
+    importedState.tracker.campaignTitle = "Imported Campaign";
+    importedState.character.spells.levels = [
+      {
+        id: "level-new",
+        label: "Cantrips",
+        hasSlots: false,
+        used: null,
+        total: null,
+        collapsed: false,
+        spells: [{ id: "new-spell", name: "Mage Hand", notesCollapsed: true, known: true, prepared: false, expended: false }]
+      }
+    ];
+
+    const { textStore, putText } = installTextStore();
+    const exportedNotesKey = textKey_spellNotes("campaign_exported", "new-spell");
+    const input = makeInput({
+      version: 2,
+      state: sanitizeForSave(importedState),
+      blobs: {},
+      texts: {
+        [exportedNotesKey]: "Imported no-active notes"
+      }
+    });
+
+    await importBackup(
+      { target: input },
+      makeImportDeps({
+        state,
+        migrateState: vi.fn(() => importedState),
+        putText
+      })
+    );
+
+    const restoredCampaignId = state.appShell.activeCampaignId;
+    expect(restoredCampaignId).toEqual(expect.stringMatching(/^campaign_/));
+    expect(textStore.get(textKey_spellNotes(restoredCampaignId, "new-spell"))).toBe("Imported no-active notes");
+    expect(textStore.has(exportedNotesKey)).toBe(false);
   });
 
   it("rolls state back and deletes newly written blobs when save fails after the swap", async () => {

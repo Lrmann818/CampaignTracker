@@ -49,6 +49,8 @@ describe("sanitizeForSave", () => {
     state.combat.workspace.panelOrder = ["combatCardsPanel", "combatRoundPanel"];
     state.combat.workspace.embeddedPanels = ["vitals"];
     state.combat.workspace.panelCollapsed = { combatRoundPanel: true };
+    state.combat.workspace.copiedSpellNotes = { spell_1: "not workspace data" };
+    state.combat.workspace.spells = [{ id: "spell_1", notes: "not workspace data" }];
     state.combat.encounter = {
       ...state.combat.encounter,
       id: "enc_1",
@@ -63,10 +65,11 @@ describe("sanitizeForSave", () => {
     const sanitized = sanitizeForSave(state);
 
     expect(sanitized.combat).not.toBe(state.combat);
-    expect(sanitized.combat).toEqual(state.combat);
     expect(sanitized.combat.workspace.panelOrder).toEqual(["combatCardsPanel", "combatRoundPanel"]);
     expect(sanitized.combat.workspace.embeddedPanels).toEqual(["vitals"]);
     expect(sanitized.combat.workspace.panelCollapsed).toEqual({ combatRoundPanel: true });
+    expect(sanitized.combat.workspace.copiedSpellNotes).toBeUndefined();
+    expect(sanitized.combat.workspace.spells).toBeUndefined();
     expect(sanitized.combat.encounter).toMatchObject({
       id: "enc_1",
       round: 3,

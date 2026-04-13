@@ -617,6 +617,45 @@ function normalizeAppPreferences(rawPreferences) {
 }
 
 /**
+ * @param {unknown} value
+ * @returns {value is Record<string, unknown>}
+ */
+function isRecord(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * @param {unknown} value
+ * @returns {BooleanLookup}
+ */
+function normalizeBooleanLookup(value) {
+  const source = isRecord(value) ? value : {};
+  /** @type {BooleanLookup} */
+  const out = {};
+  for (const [key, entry] of Object.entries(source)) {
+    if (entry === true) out[key] = true;
+  }
+  return out;
+}
+
+/**
+ * @param {unknown} workspace
+ * @returns {CombatWorkspaceState}
+ */
+function normalizeCombatWorkspaceState(workspace) {
+  const source = isRecord(workspace) ? workspace : {};
+  return {
+    panelOrder: Array.isArray(source.panelOrder)
+      ? source.panelOrder.filter((panelId) => typeof panelId === "string")
+      : [],
+    embeddedPanels: Array.isArray(source.embeddedPanels)
+      ? source.embeddedPanels.filter((panelId) => typeof panelId === "string")
+      : [],
+    panelCollapsed: normalizeBooleanLookup(source.panelCollapsed)
+  };
+}
+
+/**
  * @param {unknown} rawApp
  * @returns {AppRuntimeState}
  */
@@ -715,6 +754,9 @@ export function sanitizeForSave(source, opts = {}) {
   delete serializableMap.redo;
 
   const serializableCombat = shallowCopySaveBucket(input.combat);
+  if (serializableCombat && typeof serializableCombat === "object" && !Array.isArray(serializableCombat)) {
+    serializableCombat.workspace = normalizeCombatWorkspaceState(serializableCombat.workspace);
+  }
 
   const serializableUi = { ...(input.ui || {}) };
   delete serializableUi.dice;
@@ -1031,14 +1073,9 @@ export function migrateState(raw) {
 
   function migrateToV3() {
     const combat = ensureObj(data, "combat");
-    const workspace = ensureObj(combat, "workspace");
+    const workspace = normalizeCombatWorkspaceState(combat.workspace);
+    combat.workspace = workspace;
     const encounter = ensureObj(combat, "encounter");
-
-    if (!Array.isArray(workspace.panelOrder)) workspace.panelOrder = [];
-    if (!Array.isArray(workspace.embeddedPanels)) workspace.embeddedPanels = [];
-    if (!workspace.panelCollapsed || typeof workspace.panelCollapsed !== "object" || Array.isArray(workspace.panelCollapsed)) {
-      workspace.panelCollapsed = {};
-    }
 
     encounter.id = typeof encounter.id === "string" && encounter.id.trim() ? encounter.id : null;
     encounter.createdAt = typeof encounter.createdAt === "string" && encounter.createdAt.trim() ? encounter.createdAt : null;

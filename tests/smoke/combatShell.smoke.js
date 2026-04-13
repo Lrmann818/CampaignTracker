@@ -4,6 +4,14 @@ import {
   openSmokeApp
 } from "./helpers/smokeApp.js";
 
+async function readActiveCampaignSpellNote(page, spellId) {
+  return page.evaluate(async (id) => {
+    const { getText, textKey_spellNotes } = await import(new URL("js/storage/texts-idb.js", window.location.href).href);
+    const campaignId = globalThis.__APP_STATE__?.appShell?.activeCampaignId;
+    return getText(textKey_spellNotes(campaignId, id));
+  }, spellId);
+}
+
 async function writeStoredCombatPanelOrder(page, panelOrder) {
   // Campaign creation saves through the app's debounced SaveManager; let that
   // initial write settle before seeding the persisted Combat workspace layout.
@@ -625,6 +633,58 @@ test("combat embedded panels preserve source-panel interactions against canonica
       range: "150/600",
       type: "Piercing"
     }));
+
+  await expectNoFatalSignals(page, fatalSignals);
+});
+
+test("combat embedded spell notes are the same canonical text as the character spell notes", async ({ page }) => {
+  const fatalSignals = await openSmokeApp(page, { campaignName: "Combat Spell Notes Integrity Smoke" });
+
+  await page.getByRole("tab", { name: "Character" }).click();
+  await expect(page.locator("#page-character")).toBeVisible();
+
+  const characterFirstLevel = page.locator("#spellLevels .spellLevel").first();
+  await characterFirstLevel.getByRole("button", { name: "+ Spell" }).click();
+  const characterSpellRow = characterFirstLevel.locator(".spellRow").last();
+  await characterSpellRow.locator(".spellName").fill("Shield");
+  await characterSpellRow.locator(".spellSpellCollapseBtn").click();
+  const characterNotes = characterSpellRow.locator("textarea[id^='spellNotes_']");
+  await expect(characterNotes).toBeVisible();
+
+  const spellId = await page.evaluate(() => {
+    const spellsList = globalThis.__APP_STATE__?.character?.spells?.levels?.[0]?.spells || [];
+    return spellsList.at(-1)?.id || "";
+  });
+  expect(spellId).toEqual(expect.stringMatching(/^spell_/));
+
+  await characterNotes.fill("Normal page note survives.");
+  await expect.poll(() => readActiveCampaignSpellNote(page, spellId)).toBe("Normal page note survives.");
+
+  await page.getByRole("tab", { name: "Combat" }).click();
+  await page.locator("[data-add-embedded-panel='spells']").click();
+  const combatPanel = page.locator("#combatEmbeddedPanel_spells");
+  await expect(combatPanel).toBeVisible();
+  const combatNotes = combatPanel.locator(`#combatEmbeddedSpellNotes_${spellId}`);
+  await expect(combatNotes).toHaveValue("Normal page note survives.");
+
+  await combatNotes.fill("Combat workspace note wins.");
+  await expect.poll(() => readActiveCampaignSpellNote(page, spellId)).toBe("Combat workspace note wins.");
+
+  await page.getByRole("tab", { name: "Character" }).click();
+  await expect(characterNotes).toHaveValue("Combat workspace note wins.");
+
+  await page.getByRole("tab", { name: "Combat" }).click();
+  await combatPanel.locator("[data-remove-embedded-panel='spells']").click();
+  await expect(page.locator("#combatEmbeddedPanel_spells")).not.toBeVisible();
+  await expect.poll(() => readActiveCampaignSpellNote(page, spellId)).toBe("Combat workspace note wins.");
+  await expect.poll(() => page.evaluate(() => globalThis.__APP_STATE__?.combat?.workspace?.embeddedPanels))
+    .toEqual([]);
+
+  await page.reload();
+  await expect(page.locator("main")).toBeVisible();
+  await page.getByRole("tab", { name: "Character" }).click();
+  await page.locator(`#spellNotes_${spellId}`).waitFor();
+  await expect(page.locator(`#spellNotes_${spellId}`)).toHaveValue("Combat workspace note wins.");
 
   await expectNoFatalSignals(page, fatalSignals);
 });

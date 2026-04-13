@@ -103,6 +103,14 @@ function isSafeImageDataUrl(s) {
 }
 
 /**
+ * @param {unknown} value
+ * @returns {string}
+ */
+function cleanString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/**
  * @param {Set<string>} target
  * @param {unknown} maybeId
  * @returns {void}
@@ -199,6 +207,95 @@ export function collectReferencedTextIds(stateLike) {
 }
 
 /**
+ * @param {unknown} stateLike
+ * @returns {Set<string>}
+ */
+function collectSpellIds(stateLike) {
+  const ids = new Set();
+  if (!isPlainObject(stateLike)) return ids;
+
+  const character = isPlainObject(stateLike.character) ? stateLike.character : null;
+  const spells = isPlainObject(character?.spells) ? character.spells : null;
+  const levels = Array.isArray(spells?.levels) ? spells.levels : [];
+
+  for (const level of levels) {
+    if (!isPlainObject(level) || !Array.isArray(level.spells)) continue;
+    for (const spell of level.spells) {
+      if (!isPlainObject(spell)) continue;
+      const spellId = cleanString(spell.id);
+      if (spellId) ids.add(spellId);
+    }
+  }
+
+  return ids;
+}
+
+/**
+ * @param {unknown} textId
+ * @returns {{ campaignId: string | null, spellId: string } | null}
+ */
+function parseSpellNotesTextId(textId) {
+  const id = cleanString(textId);
+  const prefix = "spell_notes_";
+  if (!id.startsWith(prefix)) return null;
+
+  const tail = id.slice(prefix.length);
+  if (!tail) return null;
+
+  const scopedSeparator = tail.indexOf("__");
+  if (scopedSeparator >= 0) {
+    const campaignId = tail.slice(0, scopedSeparator).trim();
+    const spellId = tail.slice(scopedSeparator + 2).trim();
+    if (!spellId) return null;
+    return { campaignId: campaignId || null, spellId };
+  }
+
+  return { campaignId: null, spellId: tail.trim() };
+}
+
+/**
+ * @param {BackupAssetMap} incomingTexts
+ * @param {unknown} migratedState
+ * @param {string | null} targetCampaignId
+ * @returns {BackupAssetMap}
+ */
+function remapIncomingSpellNoteTextIds(incomingTexts, migratedState, targetCampaignId) {
+  const normalizedCampaignId = cleanString(targetCampaignId);
+  if (!normalizedCampaignId) return incomingTexts;
+
+  const spellIds = collectSpellIds(migratedState);
+  if (spellIds.size === 0) return incomingTexts;
+
+  /** @type {BackupAssetMap} */
+  const remapped = {};
+  for (const [incomingId, text] of Object.entries(incomingTexts)) {
+    const parsed = parseSpellNotesTextId(incomingId);
+    if (!parsed || !spellIds.has(parsed.spellId)) {
+      remapped[incomingId] = text;
+      continue;
+    }
+    remapped[textKey_spellNotes(normalizedCampaignId, parsed.spellId)] = text;
+  }
+  return remapped;
+}
+
+/**
+ * @param {unknown} stateLike
+ * @returns {string | null}
+ */
+function getActiveCampaignId(stateLike) {
+  if (!isPlainObject(stateLike) || !isPlainObject(stateLike.appShell)) return null;
+  return cleanString(stateLike.appShell.activeCampaignId) || null;
+}
+
+/**
+ * @returns {string}
+ */
+function createImportCampaignId() {
+  return `campaign_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
+}
+
+/**
  * @param {unknown} state
  * @returns {void}
  */
@@ -257,6 +354,9 @@ function replaceStateBuckets(target, source) {
   target.combat = /** @type {AppState["combat"]} */ (source.combat);
   target.ui = /** @type {AppState["ui"]} */ (source.ui);
   target.app = /** @type {AppState["app"]} */ (source.app);
+  if (isPlainObject(source.appShell)) {
+    target.appShell = /** @type {AppState["appShell"]} */ (source.appShell);
+  }
 }
 
 /**
@@ -478,7 +578,6 @@ export async function importBackup(e, deps) {
   }
 
   const { incomingState, incomingBlobs, incomingTexts } = normalized;
-  const incomingTextEntries = Object.entries(incomingTexts);
 
   let migrated;
   try {
@@ -489,6 +588,14 @@ export async function importBackup(e, deps) {
     resetFileInput(input);
     return;
   }
+
+  const targetCampaignId =
+    getActiveCampaignId(state)
+    || getActiveCampaignId(migrated)
+    || createImportCampaignId();
+  migrated.appShell = { activeCampaignId: targetCampaignId };
+  const importTexts = remapIncomingSpellNoteTextIds(incomingTexts, migrated, targetCampaignId);
+  const incomingTextEntries = Object.entries(importTexts);
 
   const blobEntries = Object.entries(incomingBlobs);
   if (blobEntries.length > MAX_BLOBS) {
@@ -509,6 +616,9 @@ export async function importBackup(e, deps) {
   // If anything fails after this point we can restore it.
 
   let stateSnapshot;
+  const appShellSnapshot = /** @type {AppState["appShell"]} */ (
+    JSON.parse(JSON.stringify(state.appShell || { activeCampaignId: null }))
+  );
   try {
     stateSnapshot = cloneSanitizedState(sanitizeForSave(state));
   } catch (err) {
@@ -587,6 +697,7 @@ export async function importBackup(e, deps) {
   const rollback = async (err, message) => {
     const restored = cloneSanitizedState(stateSnapshot);
     replaceStateBuckets(state, restored);
+    state.appShell = appShellSnapshot;
     await restorePreviousTexts();
     await abort(err, message);
   };

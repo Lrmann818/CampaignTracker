@@ -582,6 +582,8 @@ Current structured shape:
   - Core keys use panel IDs such as `combatRoundPanel`; embedded keys use `combatEmbeddedPanel_${panelId}`.
   - Defaults to `{}`.
 
+`combat.workspace` is intentionally limited to those composition fields. Migration and save sanitization strip copied spell lists, spell-note bodies, notes bodies, and other mirrored content from this bucket.
+
 ### Encounter
 
 `combat.encounter` owns disposable active-encounter state:

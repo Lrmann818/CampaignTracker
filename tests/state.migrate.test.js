@@ -203,7 +203,7 @@ describe("migrateState", () => {
       expect(migrated.ui.theme).toBe("forest");
     });
 
-    it("repairs malformed combat state without clobbering valid workspace and encounter values", () => {
+    it("repairs malformed combat state while keeping workspace limited to composition data", () => {
       const preserved = migrateState({
         schemaVersion: 3,
         combat: {
@@ -211,7 +211,8 @@ describe("migrateState", () => {
             panelOrder: ["combatCardsPanel", "combatRoundPanel"],
             embeddedPanels: ["vitals"],
             panelCollapsed: { combatRoundPanel: true },
-            customWorkspaceFlag: "keep"
+            copiedSpellNotes: { spell_1: "must not persist here" },
+            spells: [{ id: "spell_1", notes: "must not persist here" }]
           },
           encounter: {
             id: "enc_1",
@@ -256,9 +257,10 @@ describe("migrateState", () => {
       expect(preserved.combat.workspace).toMatchObject({
         panelOrder: ["combatCardsPanel", "combatRoundPanel"],
         embeddedPanels: ["vitals"],
-        panelCollapsed: { combatRoundPanel: true },
-        customWorkspaceFlag: "keep"
+        panelCollapsed: { combatRoundPanel: true }
       });
+      expect(preserved.combat.workspace.copiedSpellNotes).toBeUndefined();
+      expect(preserved.combat.workspace.spells).toBeUndefined();
       expect(preserved.combat.encounter).toMatchObject({
         id: "enc_1",
         createdAt: "2026-04-11T00:00:00.000Z",
