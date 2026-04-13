@@ -142,7 +142,7 @@ describe("initTopTabsNavigation Hub entry", () => {
     vi.unstubAllGlobals();
   });
 
-  it("fires the Hub entry callback on startup when the app lands on Hub without a Hub tab", async () => {
+  it("does not fire the Hub entry callback on startup when the app lands on Hub", async () => {
     const { hubPage, trackerPage } = installNavigationDom();
     const onHubEntry = vi.fn();
     const { initTopTabsNavigation } = await import("../js/ui/navigation.js");
@@ -154,9 +154,33 @@ describe("initTopTabsNavigation Hub entry", () => {
       onHubEntry
     });
 
-    expect(onHubEntry).toHaveBeenCalledTimes(1);
+    expect(onHubEntry).not.toHaveBeenCalled();
     expect(hubPage.hidden).toBe(false);
     expect(trackerPage.hidden).toBe(true);
+  });
+
+  it("does not fire the Hub entry callback when opening campaign content from Hub", async () => {
+    installNavigationDom();
+    const onHubEntry = vi.fn();
+    const state = { ui: {} };
+    let hasActiveCampaign = false;
+    const { initTopTabsNavigation } = await import("../js/ui/navigation.js");
+
+    const api = initTopTabsNavigation({
+      state,
+      defaultTab: "hub",
+      canActivateTab: (tabName) => {
+        if (tabName === "hub") return !hasActiveCampaign;
+        return hasActiveCampaign;
+      },
+      onHubEntry
+    });
+
+    hasActiveCampaign = true;
+    api.applyActiveTab("tracker");
+
+    expect(onHubEntry).not.toHaveBeenCalled();
+    expect(state.ui.activeTab).toBe("tracker");
   });
 
   it("fires once when refreshing from campaign content back into Hub", async () => {

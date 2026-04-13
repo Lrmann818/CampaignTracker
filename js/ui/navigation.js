@@ -219,7 +219,9 @@ export function initTopTabsNavigation(deps = {}) {
     persistActiveTab(active);
 
     setHash(active);
-    if (activeChanged && active === "hub" && typeof onHubEntry === "function") {
+    // Initial route restoration is not a Hub entry; only transitions back from
+    // an already-active non-Hub page count.
+    if (activeChanged && previousActiveTab && previousActiveTab !== "hub" && active === "hub" && typeof onHubEntry === "function") {
       onHubEntry();
     }
     if (doMarkDirty && typeof markDirty === "function") markDirty();

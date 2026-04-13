@@ -81,7 +81,7 @@ import { initTopTabsNavigation } from "./js/ui/navigation.js";
 import { createPopoverManager } from "./js/ui/popovers.js";
 import { initTopbarUI } from "./js/ui/topbar/topbar.js";
 import { createThemeManager } from "./js/ui/theme.js";
-import { playHubOpenSoundForState } from "./js/audio/hubOpenSound.js";
+import { createHubOpenSoundController } from "./js/audio/hubOpenSound.js";
 
 import { setupSettingsPanel } from "./js/ui/settingsPanel.js";
 import { initTrackerPage } from "./js/pages/tracker/trackerPage.js";
@@ -529,6 +529,13 @@ const NOOP_HUB_PAGE_API = {
     return !isCampaignContentTab(tabName) || hasActiveCampaign();
   };
   const getDefaultLandingTab = () => (hasActiveCampaign() ? "tracker" : "hub");
+  const HubOpenSound = createHubOpenSoundController({
+    getState: () => appState,
+    isHubVisible: () => {
+      const hubPage = document.getElementById("page-hub");
+      return !!hubPage && !hubPage.hidden && hubPage.classList.contains("active");
+    }
+  });
 
   const ensureVaultRuntime = () => {
     if (!VaultRuntime.current) {
@@ -726,6 +733,7 @@ const NOOP_HUB_PAGE_API = {
 
   await withAllowedStateMutationAsync(async () => {
     await loadAllPersist(createLoadAllDeps());
+    void HubOpenSound.requestLaunchSound();
     // Wire CSP-safe modal dialogs (replaces window.confirm/prompt)
     runModuleInit("Dialogs", () => initDialogs());
     runModuleInit("Theme", () => Theme.initFromState());
@@ -738,7 +746,7 @@ const NOOP_HUB_PAGE_API = {
         defaultTab: getDefaultLandingTab(),
         canActivateTab,
         onHubEntry: () => {
-          void playHubOpenSoundForState(appState);
+          void HubOpenSound.requestHubEntrySound();
         }
       });
     } catch (err) {
