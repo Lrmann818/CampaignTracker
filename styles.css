@@ -1193,6 +1193,26 @@ input[type="range"].uiRange::-moz-range-thumb {
   flex-wrap: wrap;
 }
 
+.topbarRight>.tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.topbarRight>.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.topbarRight>.tabs>.tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .tab {
   border: 1px solid var(--border);
   background: var(--surface-3);
@@ -2121,6 +2141,14 @@ button.warn:hover {
   display: flex;
   gap: 4px;
   align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.topbarRight>.calcDropdown,
+.topbarRight>.diceDropdown,
+.topbarRight>.settingsBtn {
+  flex: 0 0 auto;
 }
 
 /* Generic dropdown */
@@ -2431,9 +2459,6 @@ label.settingsItem {
     flex-wrap: nowrap;
     /* keep Tracker/Character/Map on one row */
     white-space: nowrap;
-    overflow-x: auto;
-    /* if it *still* can't fit, it scrolls instead of wrapping */
-    -webkit-overflow-scrolling: touch;
     gap: 4px;
     /* slightly tighter */
   }
@@ -2448,7 +2473,7 @@ label.settingsItem {
 @media (max-width: 600px) {
   .topbar {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr);
     /* key change */
     grid-template-rows: auto auto;
     gap: 4px;
@@ -2477,6 +2502,7 @@ label.settingsItem {
     grid-row: 2;
     grid-column: 2;
     justify-content: flex-end;
+    width: 100%;
   }
 
   /* Optional: give title a bit more breathing room on mobile */
