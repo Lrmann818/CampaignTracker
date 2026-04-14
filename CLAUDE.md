@@ -48,6 +48,12 @@ Treat campaign data, app-level data, UI layout state, and combat/session state a
 
 ---
 
+## Active work
+
+Multi-character system (Step 1) is in progress. See `MULTI_CHARACTER_DESIGN.md` in the project root for the full design document. Start there before making changes.
+
+---
+
 ## Architecture
 
 - `app.js` — Composition root. Wires dependencies and injects them downward. Nothing imports `app.js`.
