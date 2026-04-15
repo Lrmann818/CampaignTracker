@@ -6,6 +6,7 @@ import { createStateActions } from "../../../domain/stateActions.js";
 import { requireMany } from "../../../utils/domGuards.js";
 import { replaceStoredBlob } from "../../../storage/blobReplacement.js";
 import { getActiveCharacter } from "../../../domain/characterHelpers.js";
+import { notifyPanelDataChanged, subscribePanelDataChanged } from "../../../ui/panelInvalidation.js";
 
 function formatPossessive(name) {
   const n = (name || "").trim();
@@ -206,9 +207,12 @@ export function initBasicsPanel(deps = {}) {
   if (!getActiveCharacter(state)) return;
   const { updateCharacterField } = createStateActions({ state, SaveManager });
 
+  const basicsPanelSource = {};
+  const notifyCharFields = () => notifyPanelDataChanged("character-fields", { source: basicsPanelSource });
+
   // bindText/bindNumber already queue saves via SaveManager; actions only mutate here.
-  bindText("charName", () => getActiveCharacter(state)?.name, (v) => updateCharacterField("name", v, { queueSave: false }));
-  bindText("charClassLevel", () => getActiveCharacter(state)?.classLevel, (v) => updateCharacterField("classLevel", v, { queueSave: false }));
+  bindText("charName", () => getActiveCharacter(state)?.name, (v) => { updateCharacterField("name", v, { queueSave: false }); notifyCharFields(); });
+  bindText("charClassLevel", () => getActiveCharacter(state)?.classLevel, (v) => { updateCharacterField("classLevel", v, { queueSave: false }); notifyCharFields(); });
   bindText("charRace", () => getActiveCharacter(state)?.race, (v) => updateCharacterField("race", v, { queueSave: false }));
   bindText("charBackground", () => getActiveCharacter(state)?.background, (v) => updateCharacterField("background", v, { queueSave: false }));
   bindText("charAlignment", () => getActiveCharacter(state)?.alignment, (v) => updateCharacterField("alignment", v, { queueSave: false }));
@@ -225,4 +229,16 @@ export function initBasicsPanel(deps = {}) {
     xpInput
   });
   setupCharacterPortrait(deps, { portraitTopEl });
+
+  // Keep character page inputs in sync when a linked tracker card edits the same character field.
+  const unsubCharFields = subscribePanelDataChanged("character-fields", (detail) => {
+    if (detail.source === basicsPanelSource) return;
+    const char = getActiveCharacter(state);
+    if (!char) return;
+    if (nameInput && document.activeElement !== nameInput) nameInput.value = char.name || "";
+    if (classInput && document.activeElement !== classInput) classInput.value = char.classLevel || "";
+    updateTabTitle(state);
+  });
+
+  return { destroy: unsubCharFields };
 }

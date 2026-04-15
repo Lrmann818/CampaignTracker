@@ -200,7 +200,34 @@ function createPartyCardsController(deps = {}) {
     if (result.target === "character" && (field === "hpCurrent" || field === "hpMax")) {
       notifyPanelDataChanged("vitals", { source: partyControllerSource });
     }
+    if (result.target === "character" && (field === "name" || field === "className" || field === "status")) {
+      notifyPanelDataChanged("character-fields", { source: partyControllerSource });
+    }
     if (rerender) renderPartyCards();
+  }
+
+  function patchLinkedCardNameFields() {
+    if (!cardsEl) return;
+    Array.from(cardsEl.querySelectorAll(".trackerCard")).forEach((cardEl) => {
+      const cardId = cardEl.dataset.cardId;
+      if (!cardId) return;
+      const member = getPartyMemberById(cardId);
+      if (!member) return;
+      const display = resolveCardDisplayData(member, state);
+      if (!display.isLinked) return;
+      const nameEl = cardEl.querySelector(".npcNameBig");
+      const classEl = cardEl.querySelector(".npcClass");
+      const statusEl = cardEl.querySelector(".statusInput");
+      if (nameEl instanceof HTMLInputElement && document.activeElement !== nameEl) {
+        nameEl.value = display.name || "";
+      }
+      if (classEl instanceof HTMLInputElement && document.activeElement !== classEl) {
+        classEl.value = display.className || "";
+      }
+      if (statusEl instanceof HTMLInputElement && document.activeElement !== statusEl) {
+        statusEl.value = display.status || "";
+      }
+    });
   }
 
   function patchLinkedCardHpInputs() {
@@ -675,6 +702,11 @@ function createPartyCardsController(deps = {}) {
     addDestroy(subscribePanelDataChanged("vitals", (detail) => {
       if (detail.source === partyControllerSource) return;
       patchLinkedCardHpInputs();
+    }));
+
+    addDestroy(subscribePanelDataChanged("character-fields", (detail) => {
+      if (detail.source === partyControllerSource) return;
+      patchLinkedCardNameFields();
     }));
 
     if (enhanceNumberSteppers) enhanceNumberSteppers(document);

@@ -196,7 +196,34 @@ function createNpcCardsController(deps = {}) {
     if (result.target === "character" && (field === "hpCurrent" || field === "hpMax")) {
       notifyPanelDataChanged("vitals", { source: npcControllerSource });
     }
+    if (result.target === "character" && (field === "name" || field === "className" || field === "status")) {
+      notifyPanelDataChanged("character-fields", { source: npcControllerSource });
+    }
     if (rerender) renderNpcCards();
+  }
+
+  function patchLinkedCardNameFields() {
+    if (!cardsEl) return;
+    Array.from(cardsEl.querySelectorAll(".trackerCard")).forEach((cardEl) => {
+      const cardId = cardEl.dataset.cardId;
+      if (!cardId) return;
+      const npc = getNpcById(cardId);
+      if (!npc) return;
+      const display = resolveCardDisplayData(npc, state);
+      if (!display.isLinked) return;
+      const nameEl = cardEl.querySelector(".npcNameBig");
+      const classEl = cardEl.querySelector(".npcClass");
+      const statusEl = cardEl.querySelector(".statusInput");
+      if (nameEl instanceof HTMLInputElement && document.activeElement !== nameEl) {
+        nameEl.value = display.name || "";
+      }
+      if (classEl instanceof HTMLInputElement && document.activeElement !== classEl) {
+        classEl.value = display.className || "";
+      }
+      if (statusEl instanceof HTMLInputElement && document.activeElement !== statusEl) {
+        statusEl.value = display.status || "";
+      }
+    });
   }
 
   function patchLinkedCardHpInputs() {
@@ -675,6 +702,11 @@ function createNpcCardsController(deps = {}) {
     addDestroy(subscribePanelDataChanged("vitals", (detail) => {
       if (detail.source === npcControllerSource) return;
       patchLinkedCardHpInputs();
+    }));
+
+    addDestroy(subscribePanelDataChanged("character-fields", (detail) => {
+      if (detail.source === npcControllerSource) return;
+      patchLinkedCardNameFields();
     }));
 
     addListener(addBtn, "click", () => {
