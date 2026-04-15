@@ -96,6 +96,8 @@ export function createPopoverManager(cfg) {
   const registrations = new Set();
   /** @type {WeakMap<HTMLElement, PopoverRegistration>} */
   const menuToReg = new WeakMap();
+  /** @type {WeakMap<PopoverRegistration, AbortController>} */
+  const registrationListeners = new WeakMap();
   let installed = false;
   let destroyed = false;
   let raf = 0;
@@ -108,16 +110,52 @@ export function createPopoverManager(cfg) {
 
   const isOpen = (reg) => reg && reg.menu && !reg.menu.hidden;
 
+  /**
+   * @param {HTMLElement | null | undefined} el
+   * @returns {boolean}
+   */
+  const isConnectedElement = (el) => {
+    if (!el) return false;
+    if (typeof el.isConnected === "boolean") return el.isConnected;
+    const doc = el.ownerDocument || document;
+    return !!doc?.body?.contains?.(el) || !!doc?.documentElement?.contains?.(el);
+  };
+
+  /**
+   * @param {HTMLElement | null | undefined} anchor
+   * @returns {DOMRect | null}
+   */
+  const getMeasurableAnchorRect = (anchor) => {
+    if (!isConnectedElement(anchor)) return null;
+
+    const hasClientRects = typeof anchor.getClientRects === "function";
+    if (hasClientRects && anchor.getClientRects().length === 0) return null;
+
+    if (typeof anchor.getBoundingClientRect !== "function") {
+      return /** @type {DOMRect} */ ({ top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 });
+    }
+
+    const rect = anchor.getBoundingClientRect();
+    const hasBox = rect.width > 0 || rect.height > 0;
+    const hasLayoutSize =
+      (typeof anchor.offsetWidth === "number" && anchor.offsetWidth > 0) ||
+      (typeof anchor.offsetHeight === "number" && anchor.offsetHeight > 0);
+    return (hasBox || hasLayoutSize || !hasClientRects) ? rect : null;
+  };
+
   const reposition = (reg) => {
-    if (!reg || !isOpen(reg)) return;
-    if (typeof positionFn !== "function") return;
+    if (!reg || !isOpen(reg)) return false;
+    if (typeof positionFn !== "function") return true;
+    if (!getMeasurableAnchorRect(reg.button)) return false;
     positionFn(reg.menu, reg.button, { preferRight: !!reg.preferRight });
+    return true;
   };
 
   const close = (reg, { focusButton = false } = {}) => {
     if (!reg || !reg.menu || !reg.button) return;
     if (reg.menu.hidden) return;
     reg.menu.hidden = true;
+    reg.menu.setAttribute("aria-hidden", "true");
     reg.button.setAttribute("aria-expanded", "false");
     openAnchorPos.delete(reg);
     try { reg.onClose?.(); } catch (e) { console.warn("popover onClose failed", e); }
@@ -141,6 +179,8 @@ export function createPopoverManager(cfg) {
   const unregister = (reg) => {
     if (!reg) return;
     close(reg);
+    try { registrationListeners.get(reg)?.abort(); } catch { /* noop */ }
+    registrationListeners.delete(reg);
     registrations.delete(reg);
     openAnchorPos.delete(reg);
     if (reg.menu) menuToReg.delete(reg.menu);
@@ -148,19 +188,24 @@ export function createPopoverManager(cfg) {
 
   const open = (reg, { exclusive = true } = {}) => {
     if (!reg || !reg.menu || !reg.button) return;
+    const anchorRect = getMeasurableAnchorRect(reg.button);
+    if (!anchorRect) return;
     if (exclusive) closeAllExcept(reg);
+
+    const previousVisibility = reg.menu.style.visibility;
     reg.menu.hidden = false;
+    reg.menu.setAttribute("aria-hidden", "false");
+    reg.menu.style.visibility = "hidden";
     reg.button.setAttribute("aria-expanded", "true");
     // Record the anchor's position at open; used to decide when to auto-close
     // on scroll (native select behavior).
+    openAnchorPos.set(reg, { top: anchorRect.top, left: anchorRect.left });
     try {
-      const r = reg.button.getBoundingClientRect();
-      openAnchorPos.set(reg, { top: r.top, left: r.left });
-    } catch {
-      // ignore
+      reposition(reg);
+      try { reg.onOpen?.(); } catch (e) { console.warn("popover onOpen failed", e); }
+    } finally {
+      reg.menu.style.visibility = previousVisibility;
     }
-    reposition(reg);
-    try { reg.onOpen?.(); } catch (e) { console.warn("popover onOpen failed", e); }
   };
 
   const toggle = (reg, { exclusive = true } = {}) => {
@@ -266,6 +311,10 @@ export function createPopoverManager(cfg) {
       raf = 0;
     }
     closeAll();
+    registrations.forEach((reg) => {
+      try { registrationListeners.get(reg)?.abort(); } catch { /* noop */ }
+      registrationListeners.delete(reg);
+    });
     registrations.clear();
     openAnchorPos.clear();
     ac.abort();
@@ -299,10 +348,13 @@ export function createPopoverManager(cfg) {
     registrations.add(reg);
     menuToReg.set(reg.menu, reg);
     ensureInstalled();
+    const regAc = new AbortController();
+    registrationListeners.set(reg, regAc);
+    const regSignal = regAc.signal;
 
     // menu click: keep open
     if (reg.stopInsideClick) {
-      reg.menu.addEventListener("click", (e) => e.stopPropagation(), { signal });
+      reg.menu.addEventListener("click", (e) => e.stopPropagation(), { signal: regSignal });
     }
 
     // optional: wire the button click to toggle
@@ -314,7 +366,7 @@ export function createPopoverManager(cfg) {
           e.stopPropagation();
           toggle(reg, { exclusive: true });
         },
-        { signal }
+        { signal: regSignal }
       );
     }
 

@@ -14,10 +14,17 @@ import { numberOrNull } from "../../utils/number.js";
 import { requireMany, getNoopDestroyApi } from "../../utils/domGuards.js";
 import { DEV_MODE } from "../../utils/dev.js";
 import { getActiveCharacter, makeDefaultCharacterEntry } from "../../domain/characterHelpers.js";
+import { notifyActiveCharacterChanged } from "../../domain/characterEvents.js";
 import { createStateActions } from "../../domain/stateActions.js";
 import { safeAsync } from "../../ui/safeAsync.js";
+import { enhanceSelectDropdown } from "../../ui/selectDropdown.js";
 
 let _activeCharacterPageController = null;
+
+export const CHARACTER_SELECTOR_SELECT_CLASSES = "charSelectorSelect panelSelect";
+export const CHARACTER_SELECTOR_BUTTON_CLASSES = "panelSelectBtn charSelectorSelectBtn";
+export const CHARACTER_ACTION_BUTTON_CLASSES = "panelBtnSm charActionMenuBtn";
+export const CHARACTER_ACTION_ITEM_CLASSES = "swatchOption charActionMenuItem";
 
 export function initCharacterPageUI(deps) {
   _activeCharacterPageController?.destroy?.();
@@ -200,14 +207,29 @@ export function initCharacterPageUI(deps) {
   }
 
   /**
-   * Populates the character selector and wires the overflow menu (New / Rename / Delete).
+   * Populates the character selector and wires the overflow action menu (New / Rename / Delete).
    */
   function initCharacterSelectorBar() {
     const selectorEl = /** @type {HTMLSelectElement | null} */ (document.getElementById("charSelector"));
-    const menuBtnEl = document.getElementById("charMenuBtn");
-    if (!selectorEl || !menuBtnEl) return;
+    const actionMenuButtonEl = /** @type {HTMLButtonElement | null} */ (document.getElementById("charActionMenuBtn"));
+    const actionMenuEl = /** @type {HTMLElement | null} */ (document.getElementById("charActionDropdownMenu"));
+    if (!selectorEl || !actionMenuButtonEl || !actionMenuEl) return;
 
     const { mutateState } = createStateActions({ state, SaveManager });
+
+    /**
+     * @param {(state: import("../../state.js").State) => unknown} mutator
+     * @returns {unknown}
+     */
+    function mutateCharactersAndNotify(mutator) {
+      const previousId = state.characters?.activeId ?? null;
+      const result = mutateState(mutator);
+      const activeId = state.characters?.activeId ?? null;
+      if (activeId !== previousId) {
+        notifyActiveCharacterChanged({ previousId, activeId });
+      }
+      return result;
+    }
 
     // --- populate selector ---
     const entries = state.characters?.entries ?? [];
@@ -232,40 +254,115 @@ export function initCharacterPageUI(deps) {
       }
     }
 
+    const enhancedSelector = Popovers ? enhanceSelectDropdown({
+      select: selectorEl,
+      Popovers,
+      buttonClass: CHARACTER_SELECTOR_BUTTON_CLASSES,
+      optionClass: "swatchOption",
+      groupLabelClass: "dropdownGroupLabel",
+      preferRight: false
+    }) : null;
+    addDestroy(() => {
+      try { enhancedSelector?.destroy?.(); } catch { /* noop */ }
+    });
+
+    // --- wire action overflow menu ---
+    const actionButtons = /** @type {HTMLButtonElement[]} */ (
+      Array.from(actionMenuEl.querySelectorAll(".charActionMenuItem"))
+    );
+
+    const setActionMenuClosed = () => {
+      actionMenuEl.hidden = true;
+      actionMenuEl.setAttribute("aria-hidden", "true");
+      actionMenuButtonEl.setAttribute("aria-expanded", "false");
+    };
+
+    const setActionMenuOpen = () => {
+      actionMenuEl.hidden = false;
+      actionMenuEl.setAttribute("aria-hidden", "false");
+      actionMenuButtonEl.setAttribute("aria-expanded", "true");
+    };
+
+    /** @type {any} */
+    let actionPopover = null;
+
+    const focusActionButtonAt = (idx) => {
+      const enabled = actionButtons.filter((button) => !button.disabled);
+      if (!enabled.length) return;
+      const clampedIdx = Math.max(0, Math.min(idx, enabled.length - 1));
+      const target = enabled[clampedIdx];
+      try { target.focus({ preventScroll: true }); } catch { target.focus(); }
+    };
+
+    const openActionMenu = () => {
+      if (actionPopover?.open) {
+        actionPopover.open();
+      } else {
+        setActionMenuOpen();
+        focusActionButtonAt(0);
+      }
+    };
+
+    const closeActionMenu = () => {
+      if (actionPopover?.close) {
+        actionPopover.close();
+      } else {
+        setActionMenuClosed();
+      }
+    };
+
+    setActionMenuClosed();
+
+    const wireFallbackActionMenu = () => {
+      addListener(actionMenuButtonEl, "click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (actionMenuEl.hidden) openActionMenu();
+        else closeActionMenu();
+      });
+    };
+
+    if (Popovers?.register) {
+      actionPopover = Popovers.register({
+        button: actionMenuButtonEl,
+        menu: actionMenuEl,
+        preferRight: true,
+        closeOnOutside: true,
+        closeOnEsc: true,
+        stopInsideClick: true,
+        wireButton: true,
+        onOpen: () => {
+          try { actionPopover?.reposition?.(); } catch { /* noop */ }
+          focusActionButtonAt(0);
+        },
+        onClose: setActionMenuClosed,
+      });
+    }
+    if (!actionPopover) wireFallbackActionMenu();
+
+    addDestroy(() => {
+      try { actionPopover?.destroy?.(); } catch { /* noop */ }
+      setActionMenuClosed();
+    });
+
     // --- wire selector change ---
     addListener(selectorEl, "change", () => {
       const newId = selectorEl.value;
       if (!newId || newId === state.characters?.activeId) return;
-      mutateState((s) => { s.characters.activeId = newId; });
+      mutateCharactersAndNotify((s) => { s.characters.activeId = newId; });
       rerender();
     });
 
-    // --- build overflow menu ---
-    const menu = document.createElement("div");
-    menu.className = "popoverMenu charMenu";
-
-    function addMenuItem(label, handler, isDanger = false) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "popoverMenuItem" + (isDanger ? " danger" : "");
-      btn.textContent = label;
-      addListener(btn, "click", safeAsync(handler, (err) => {
-        console.error(label, "failed:", err);
-        if (typeof setStatus === "function") setStatus(`${label} failed.`);
-      }));
-      menu.appendChild(btn);
-    }
-
-    addMenuItem("New Character", async () => {
+    async function runNewCharacterAction() {
       const entry = makeDefaultCharacterEntry();
-      mutateState((s) => {
+      mutateCharactersAndNotify((s) => {
         s.characters.entries.push(entry);
         s.characters.activeId = entry.id;
       });
       rerender();
-    });
+    }
 
-    addMenuItem("Rename Character", async () => {
+    async function runRenameCharacterAction() {
       const activeChar = getActiveCharacter(state);
       if (!activeChar) return;
       const proposed = await uiPrompt?.("Rename character to:", {
@@ -279,9 +376,9 @@ export function initCharacterPageUI(deps) {
         if (entry) entry.name = name;
       });
       rerender();
-    });
+    }
 
-    addMenuItem("Delete Character", async () => {
+    async function runDeleteCharacterAction() {
       const activeChar = getActiveCharacter(state);
       const charName = activeChar?.name ? `"${activeChar.name}"` : "this character";
       const ok = await uiConfirm?.(`Delete ${charName}? This cannot be undone.`, {
@@ -289,32 +386,78 @@ export function initCharacterPageUI(deps) {
         okText: "Delete"
       });
       if (!ok) return;
-      mutateState((s) => {
+      mutateCharactersAndNotify((s) => {
         const idx = s.characters.entries.findIndex((e) => e.id === s.characters.activeId);
         if (idx !== -1) s.characters.entries.splice(idx, 1);
         const remaining = s.characters.entries;
         s.characters.activeId = remaining.length > 0 ? remaining[0].id : null;
       });
       rerender();
-    }, true);
-
-    document.body.appendChild(menu);
-    addDestroy(() => menu.remove());
-
-    if (Popovers) {
-      const popoverHandle = Popovers.register({
-        button: menuBtnEl,
-        menu,
-        preferRight: false,
-        closeOnOutside: true,
-        closeOnEsc: true,
-        stopInsideClick: false,
-        wireButton: true
-      });
-      addDestroy(() => {
-        try { popoverHandle?.destroy?.(); } catch { /* noop */ }
-      });
     }
+
+    const runCharacterAction = async (action) => {
+      if (action === "new") {
+        await runNewCharacterAction();
+      } else if (action === "rename") {
+        await runRenameCharacterAction();
+      } else if (action === "delete") {
+        await runDeleteCharacterAction();
+      }
+    };
+
+    actionButtons.forEach((button) => {
+      addListener(button, "click", safeAsync(async () => {
+        const action = button.dataset.charAction;
+        if (!action) return;
+        try {
+          await runCharacterAction(action);
+        } finally {
+          closeActionMenu();
+        }
+      }, (err) => {
+        console.error("Character action failed:", err);
+        if (typeof setStatus === "function") setStatus("Character action failed.");
+        closeActionMenu();
+      }));
+    });
+
+    addListener(actionMenuButtonEl, "keydown", (event) => {
+      const e = /** @type {KeyboardEvent} */ (event);
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      e.preventDefault();
+      openActionMenu();
+      focusActionButtonAt(e.key === "ArrowUp" ? actionButtons.length - 1 : 0);
+    });
+
+    addListener(actionMenuEl, "keydown", (event) => {
+      const e = /** @type {KeyboardEvent} */ (event);
+      const enabled = actionButtons.filter((button) => !button.disabled);
+      if (!enabled.length) return;
+      const active = /** @type {HTMLElement | null} */ (document.activeElement);
+      const idx = enabled.findIndex((button) => button === active);
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        focusActionButtonAt((idx >= 0 ? idx : -1) + 1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        focusActionButtonAt((idx >= 0 ? idx : enabled.length) - 1);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        focusActionButtonAt(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        focusActionButtonAt(enabled.length - 1);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        closeActionMenu();
+        try {
+          actionMenuButtonEl.focus({ preventScroll: true });
+        } catch {
+          actionMenuButtonEl.focus();
+        }
+      }
+    });
   }
 
   /**
@@ -343,10 +486,15 @@ export function initCharacterPageUI(deps) {
 
     addListener(yesBtn, "click", () => {
       const entry = makeDefaultCharacterEntry();
+      const previousId = state.characters?.activeId ?? null;
       mutateState((s) => {
         s.characters.entries.push(entry);
         s.characters.activeId = entry.id;
       });
+      const activeId = state.characters?.activeId ?? null;
+      if (activeId !== previousId) {
+        notifyActiveCharacterChanged({ previousId, activeId });
+      }
       rerender();
     });
 

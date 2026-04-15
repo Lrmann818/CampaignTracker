@@ -1,0 +1,618 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../js/pages/character/panels/equipmentPanel.js", () => ({
+  initEquipmentPanel: () => ({ destroy: () => {} })
+}));
+vi.mock("../js/pages/character/panels/attackPanel.js", () => ({
+  initAttacksPanel: () => ({ destroy: () => {} })
+}));
+vi.mock("../js/pages/character/characterSectionReorder.js", () => ({
+  setupCharacterSectionReorder: () => ({ destroy: () => {} })
+}));
+vi.mock("../js/pages/character/panels/spellsPanel.js", () => ({
+  initSpellsPanel: () => ({ destroy: () => {} })
+}));
+vi.mock("../js/pages/character/panels/vitalsPanel.js", () => ({
+  initVitalsPanel: () => ({ destroy: () => {} })
+}));
+vi.mock("../js/pages/character/panels/basicsPanel.js", () => ({
+  initBasicsPanel: () => ({ destroy: () => {} })
+}));
+vi.mock("../js/pages/character/panels/proficienciesPanel.js", () => ({
+  initProficienciesPanel: () => ({ destroy: () => {} })
+}));
+vi.mock("../js/pages/character/panels/abilitiesPanel.js", () => ({
+  initAbilitiesPanel: () => ({ destroy: () => {} })
+}));
+vi.mock("../js/pages/character/panels/personalityPanel.js", () => ({
+  initPersonalityPanel: () => ({ destroy: () => {} }),
+  setupCharacterCollapsibleTextareas: () => ({ destroy: () => {} })
+}));
+
+import {
+  CHARACTER_ACTION_BUTTON_CLASSES,
+  CHARACTER_ACTION_ITEM_CLASSES,
+  CHARACTER_SELECTOR_BUTTON_CLASSES,
+  CHARACTER_SELECTOR_SELECT_CLASSES,
+  initCharacterPageUI
+} from "../js/pages/character/characterPage.js";
+import {
+  ACTIVE_CHARACTER_CHANGED_EVENT,
+  notifyActiveCharacterChanged
+} from "../js/domain/characterEvents.js";
+
+class FakeClassList {
+  constructor(owner) {
+    this.owner = owner;
+    this.values = new Set();
+  }
+
+  add(...tokens) {
+    tokens.forEach((token) => this.values.add(String(token)));
+    this.sync();
+  }
+
+  remove(...tokens) {
+    tokens.forEach((token) => this.values.delete(String(token)));
+    this.sync();
+  }
+
+  contains(token) {
+    return this.values.has(String(token));
+  }
+
+  toggle(token, force) {
+    const shouldAdd = typeof force === "boolean" ? force : !this.values.has(String(token));
+    if (shouldAdd) this.values.add(String(token));
+    else this.values.delete(String(token));
+    this.sync();
+    return shouldAdd;
+  }
+
+  setFromString(value) {
+    this.values = new Set(String(value || "").split(/\s+/).filter(Boolean));
+    this.sync();
+  }
+
+  sync() {
+    this.owner._className = Array.from(this.values).join(" ");
+  }
+}
+
+class FakeElement extends EventTarget {
+  constructor(tagName = "div") {
+    super();
+    this.tagName = tagName.toUpperCase();
+    this.nodeName = this.tagName;
+    this.children = [];
+    this.parentElement = null;
+    this.parentNode = null;
+    this.ownerDocument = null;
+    this.dataset = {};
+    this.attributes = new Map();
+    this.style = {};
+    this.hidden = false;
+    this.disabled = false;
+    this.selected = false;
+    this.value = "";
+    this.type = "";
+    this.title = "";
+    this._id = "";
+    this._className = "";
+    this._textContent = "";
+    this.classList = new FakeClassList(this);
+  }
+
+  get id() { return this._id; }
+  set id(value) {
+    if (this.ownerDocument && this._id) this.ownerDocument.unregisterId(this._id, this);
+    this._id = String(value || "");
+    if (this.ownerDocument && this._id) this.ownerDocument.registerId(this);
+  }
+
+  get className() { return this._className; }
+  set className(value) { this.classList.setFromString(value); }
+
+  get textContent() {
+    if (this.children.length) return this.children.map((child) => child.textContent || "").join("");
+    return this._textContent;
+  }
+  set textContent(value) {
+    this.children = [];
+    this._textContent = String(value ?? "");
+  }
+
+  get innerHTML() {
+    return this.children.map((child) => child.textContent || "").join("");
+  }
+  set innerHTML(_value) {
+    this.children.forEach((child) => {
+      child.parentElement = null;
+      child.parentNode = null;
+    });
+    this.children = [];
+    this._textContent = "";
+    if (this.tagName === "SELECT") this.value = "";
+  }
+
+  get nextElementSibling() {
+    if (!this.parentElement) return null;
+    const siblings = this.parentElement.children;
+    const idx = siblings.indexOf(this);
+    return idx >= 0 ? siblings[idx + 1] || null : null;
+  }
+
+  get selectedOptions() {
+    if (this.tagName !== "SELECT") return [];
+    const options = this.children.filter((child) => child.tagName === "OPTION");
+    return options.filter((option) => option.selected || option.value === this.value);
+  }
+
+  get isConnected() {
+    let node = this;
+    while (node) {
+      if (node === this.ownerDocument?.body || node === this.ownerDocument?.documentElement) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  appendChild(child) {
+    child.parentElement = this;
+    child.parentNode = this;
+    child.ownerDocument = this.ownerDocument;
+    this.children.push(child);
+    if (this.tagName === "SELECT" && child.tagName === "OPTION") {
+      if (!this.value || child.selected) this.value = child.value;
+    }
+    return child;
+  }
+
+  insertAdjacentElement(position, element) {
+    if (position !== "afterend" || !this.parentElement) return null;
+    const siblings = this.parentElement.children;
+    const idx = siblings.indexOf(this);
+    element.parentElement = this.parentElement;
+    element.parentNode = this.parentElement;
+    element.ownerDocument = this.ownerDocument;
+    siblings.splice(idx + 1, 0, element);
+    return element;
+  }
+
+  remove() {
+    if (!this.parentElement) return;
+    const siblings = this.parentElement.children;
+    const idx = siblings.indexOf(this);
+    if (idx >= 0) siblings.splice(idx, 1);
+    this.parentElement = null;
+    this.parentNode = null;
+  }
+
+  setAttribute(name, value) {
+    this.attributes.set(name, String(value));
+    if (name === "id") this.id = value;
+    if (name === "class") this.className = value;
+    if (name === "hidden") this.hidden = true;
+  }
+
+  getAttribute(name) {
+    return this.attributes.get(name) ?? null;
+  }
+
+  removeAttribute(name) {
+    this.attributes.delete(name);
+    if (name === "hidden") this.hidden = false;
+  }
+
+  focus() {
+    if (this.ownerDocument) this.ownerDocument.activeElement = this;
+  }
+
+  contains(node) {
+    if (node === this) return true;
+    return this.children.some((child) => child.contains(node));
+  }
+
+  closest(selector) {
+    if (!selector?.startsWith(".")) return null;
+    const className = selector.slice(1);
+    let node = this;
+    while (node) {
+      if (node.classList?.contains(className)) return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  querySelector(selector) {
+    return this.querySelectorAll(selector)[0] || null;
+  }
+
+  querySelectorAll(selector) {
+    const matches = [];
+    const visit = (node) => {
+      node.children.forEach((child) => {
+        if (matchesSelector(child, selector)) matches.push(child);
+        visit(child);
+      });
+    };
+    visit(this);
+    return matches;
+  }
+
+  getClientRects() {
+    return [{ left: 10, top: 20, right: 130, bottom: 50, width: 120, height: 30 }];
+  }
+
+  getBoundingClientRect() {
+    return { left: 10, top: 20, right: 130, bottom: 50, width: 120, height: 30 };
+  }
+}
+
+class FakeDocument extends EventTarget {
+  constructor() {
+    super();
+    this.elementsById = new Map();
+    this.documentElement = new FakeElement("html");
+    this.body = new FakeElement("body");
+    this.activeElement = this.body;
+    this.documentElement.ownerDocument = this;
+    this.body.ownerDocument = this;
+    this.documentElement.appendChild(this.body);
+  }
+
+  createElement(tagName) {
+    const el = new FakeElement(tagName);
+    el.ownerDocument = this;
+    return el;
+  }
+
+  registerId(el) {
+    this.elementsById.set(el.id, el);
+  }
+
+  unregisterId(id, el) {
+    if (this.elementsById.get(id) === el) this.elementsById.delete(id);
+  }
+
+  getElementById(id) {
+    return this.elementsById.get(id) ?? null;
+  }
+
+  querySelector(selector) {
+    if (selector.startsWith("#")) return this.getElementById(selector.slice(1));
+    return this.body.querySelector(selector);
+  }
+
+  querySelectorAll(selector) {
+    return this.body.querySelectorAll(selector);
+  }
+}
+
+function matchesSelector(el, selector) {
+  if (selector === "button") return el.tagName === "BUTTON";
+  if (selector === "button:not([disabled])") return el.tagName === "BUTTON" && !el.disabled;
+  if (selector === "button.active:not([disabled])") {
+    return el.tagName === "BUTTON" && el.classList.contains("active") && !el.disabled;
+  }
+  if (selector === "[data-select-label]") return el.dataset?.selectLabel === "1";
+  if (selector.startsWith(".")) return el.classList.contains(selector.slice(1));
+  return false;
+}
+
+function appendWithId(document, parent, tagName, id, className = "") {
+  const el = document.createElement(tagName);
+  el.id = id;
+  if (className) el.className = className;
+  parent.appendChild(el);
+  return el;
+}
+
+function installCharacterSelectorDom() {
+  const document = new FakeDocument();
+  const root = appendWithId(document, document.body, "section", "page-character");
+  const emptyState = appendWithId(document, root, "div", "charEmptyState");
+  emptyState.hidden = true;
+  appendWithId(document, emptyState, "button", "charEmptyStateYes");
+  appendWithId(document, emptyState, "button", "charEmptyStateNo");
+  const bar = appendWithId(document, root, "div", "charSelectorBar", "charSelectorBar");
+  const selector = appendWithId(document, bar, "select", "charSelector", CHARACTER_SELECTOR_SELECT_CLASSES);
+  const actionMenu = appendWithId(document, bar, "div", "charActionMenu", "dropdown charActionMenu");
+  const actionMenuButton = appendWithId(document, actionMenu, "button", "charActionMenuBtn", CHARACTER_ACTION_BUTTON_CLASSES);
+  actionMenuButton.type = "button";
+  actionMenuButton.textContent = "...";
+  actionMenuButton.setAttribute("aria-label", "Character actions");
+  actionMenuButton.setAttribute("aria-haspopup", "true");
+  actionMenuButton.setAttribute("aria-expanded", "false");
+  const actionMenuDropdown = appendWithId(document, actionMenu, "div", "charActionDropdownMenu", "dropdownMenu charActionDropdownMenu");
+  actionMenuDropdown.hidden = true;
+  actionMenuDropdown.setAttribute("aria-hidden", "true");
+  [
+    ["charActionNewBtn", "new", "New Character"],
+    ["charActionRenameBtn", "rename", "Rename Character"],
+    ["charActionDeleteBtn", "delete", "Delete Character"],
+  ].forEach(([id, action, label]) => {
+    const button = appendWithId(document, actionMenuDropdown, "button", id, CHARACTER_ACTION_ITEM_CLASSES);
+    button.type = "button";
+    button.dataset.charAction = action;
+    button.textContent = label;
+  });
+
+  const window = new EventTarget();
+  window.document = document;
+  window.innerWidth = 1024;
+  window.innerHeight = 768;
+  window.requestAnimationFrame = (cb) => setTimeout(() => cb(Date.now()), 0);
+  window.cancelAnimationFrame = (id) => clearTimeout(id);
+
+  vi.stubGlobal("document", document);
+  vi.stubGlobal("window", window);
+  vi.stubGlobal("Node", FakeElement);
+  vi.stubGlobal("MutationObserver", class {
+    observe() {}
+    disconnect() {}
+  });
+
+  return { document, selector, actionMenu, actionMenuButton, actionMenuDropdown };
+}
+
+function createFakePopovers() {
+  const handles = [];
+  const setOpen = (reg, open) => {
+    reg.menu.hidden = !open;
+    reg.menu.setAttribute("aria-hidden", open ? "false" : "true");
+    reg.button.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) reg.onOpen?.();
+    else reg.onClose?.();
+  };
+  const api = {
+    handles,
+    register(args) {
+      const reg = {
+        button: args.button,
+        menu: args.menu,
+        preferRight: !!args.preferRight,
+        closeOnOutside: args.closeOnOutside !== false,
+        closeOnEsc: args.closeOnEsc !== false,
+        stopInsideClick: args.stopInsideClick !== false,
+        onOpen: args.onOpen || null,
+        onClose: args.onClose || null,
+      };
+      const handle = {
+        reg,
+        reposition: vi.fn(),
+        close: () => setOpen(reg, false),
+        open: () => setOpen(reg, true),
+        toggle: () => setOpen(reg, reg.menu.hidden),
+        destroy: vi.fn(() => setOpen(reg, false)),
+      };
+      handles.push(handle);
+      if (args.wireButton !== false) {
+        args.button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          handle.toggle();
+        });
+      }
+      return handle;
+    },
+    open(reg) { setOpen(reg, true); },
+    close(reg) { setOpen(reg, false); },
+    toggle(reg) { setOpen(reg, reg.menu.hidden); },
+  };
+  return api;
+}
+
+function createCharacterPageDeps(Popovers) {
+  return {
+    state: {
+      characters: {
+        activeId: "char_a",
+        entries: [
+          { id: "char_a", name: "Ada" },
+          { id: "char_b", name: "Bram" },
+        ],
+      },
+      combat: { workspace: {} },
+    },
+    SaveManager: { markDirty: vi.fn() },
+    Popovers,
+    setStatus: vi.fn(),
+    uiPrompt: vi.fn(),
+    uiAlert: vi.fn(),
+    uiConfirm: vi.fn(),
+  };
+}
+
+function flushPromises() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
+
+describe("character page selector", () => {
+  it("uses shared app select classes for the Character selector", () => {
+    expect(CHARACTER_SELECTOR_SELECT_CLASSES.split(" "))
+      .toEqual(expect.arrayContaining(["charSelectorSelect", "panelSelect"]));
+    expect(CHARACTER_SELECTOR_BUTTON_CLASSES.split(" "))
+      .toEqual(expect.arrayContaining(["panelSelectBtn", "charSelectorSelectBtn"]));
+    expect(CHARACTER_ACTION_BUTTON_CLASSES.split(" "))
+      .toEqual(expect.arrayContaining(["panelBtnSm", "charActionMenuBtn"]));
+    expect(CHARACTER_ACTION_ITEM_CLASSES.split(" "))
+      .toEqual(expect.arrayContaining(["swatchOption", "charActionMenuItem"]));
+
+    const html = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
+    expect(html).toContain('id="charSelector" class="charSelectorSelect panelSelect"');
+    expect(html).toContain('class="panelBtnSm charActionMenuBtn" id="charActionMenuBtn"');
+    expect(html).toContain('class="dropdownMenu charActionDropdownMenu" id="charActionDropdownMenu"');
+    expect(html).not.toContain("charActionSelect");
+    expect(html).not.toContain(">Character Actions<");
+  });
+
+  it("dispatches the app-level active character change event", () => {
+    const calls = [];
+    const target = new EventTarget();
+    target.addEventListener(ACTIVE_CHARACTER_CHANGED_EVENT, (event) => {
+      calls.push(/** @type {CustomEvent} */ (event).detail);
+    });
+    vi.stubGlobal("window", target);
+
+    notifyActiveCharacterChanged({ previousId: "char_a", activeId: "char_b" });
+
+    expect(calls).toEqual([{ previousId: "char_a", activeId: "char_b" }]);
+    vi.unstubAllGlobals();
+  });
+
+  it("initializes the enhanced Character selector closed", () => {
+    const { document, selector } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+
+    const controller = initCharacterPageUI(createCharacterPageDeps(Popovers));
+
+    const wrap = selector.nextElementSibling;
+    const button = wrap?.querySelector(".charSelectorSelectBtn");
+    const menu = wrap?.querySelector(".dropdownMenu");
+
+    expect(wrap?.classList.contains("selectDropdown")).toBe(true);
+    expect(selector.classList.contains("nativeSelectHidden")).toBe(true);
+    expect(button?.getAttribute("aria-expanded")).toBe("false");
+    expect(menu?.hidden).toBe(true);
+    expect(menu?.getAttribute("aria-hidden")).toBe("true");
+    expect(document.querySelectorAll(".dropdownMenu").filter((el) => !el.hidden)).toHaveLength(0);
+    expect(Popovers.handles[0].reposition).not.toHaveBeenCalled();
+
+    button.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    expect(menu.hidden).toBe(false);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(Popovers.handles[0].reposition).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+  });
+
+  it("does not preserve stale enhanced selector open state across Character page rerender", () => {
+    const { document, selector } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const firstController = initCharacterPageUI(deps);
+    const firstWrap = selector.nextElementSibling;
+    const firstButton = firstWrap.querySelector(".charSelectorSelectBtn");
+    const firstMenu = firstWrap.querySelector(".dropdownMenu");
+
+    firstButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    expect(firstMenu.hidden).toBe(false);
+
+    const secondController = initCharacterPageUI(deps);
+    const secondWrap = selector.nextElementSibling;
+    const secondButton = secondWrap.querySelector(".charSelectorSelectBtn");
+    const secondMenu = secondWrap.querySelector(".dropdownMenu");
+
+    expect(firstWrap.isConnected).toBe(false);
+    expect(document.querySelectorAll(".selectDropdown")).toHaveLength(1);
+    expect(document.querySelectorAll(".dropdownMenu").filter((el) => !el.hidden)).toHaveLength(0);
+    expect(secondMenu.hidden).toBe(true);
+    expect(secondMenu.getAttribute("aria-hidden")).toBe("true");
+    expect(secondButton.getAttribute("aria-expanded")).toBe("false");
+    expect(Popovers.handles[0].destroy).toHaveBeenCalledTimes(1);
+
+    firstController.destroy();
+    secondController.destroy();
+  });
+
+  it("initializes the Character action overflow menu closed", () => {
+    const { document, actionMenuButton, actionMenuDropdown } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+
+    const controller = initCharacterPageUI(createCharacterPageDeps(Popovers));
+    const actionItems = actionMenuDropdown.querySelectorAll(".charActionMenuItem");
+
+    expect(document.getElementById("charActionSelect")).toBeNull();
+    expect(actionMenuButton.textContent).toBe("...");
+    expect(actionMenuButton.getAttribute("aria-expanded")).toBe("false");
+    expect(actionMenuDropdown.hidden).toBe(true);
+    expect(actionMenuDropdown.getAttribute("aria-hidden")).toBe("true");
+    expect(actionItems.map((button) => button.textContent)).toEqual([
+      "New Character",
+      "Rename Character",
+      "Delete Character",
+    ]);
+    expect(actionMenuDropdown.textContent).not.toContain("Character Actions");
+    expect(document.querySelectorAll(".dropdownMenu").filter((el) => !el.hidden)).toHaveLength(0);
+    expect(Popovers.handles[1].reposition).not.toHaveBeenCalled();
+
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    expect(actionMenuDropdown.hidden).toBe(false);
+    expect(actionMenuButton.getAttribute("aria-expanded")).toBe("true");
+    expect(Popovers.handles[1].reposition).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(document.getElementById("charActionNewBtn"));
+
+    controller.destroy();
+  });
+
+  it("runs New Character from the action overflow menu", async () => {
+    const { actionMenuButton } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    const entries = deps.state.characters.entries;
+    expect(entries).toHaveLength(3);
+    expect(entries[2].name).toBe("New Character");
+    expect(deps.state.characters.activeId).toBe(entries[2].id);
+    expect(document.getElementById("charActionDropdownMenu").hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("closes the Character action overflow menu when Rename is cancelled", async () => {
+    const { actionMenuButton } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    deps.uiPrompt.mockResolvedValue(null);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionRenameBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    expect(deps.uiPrompt).toHaveBeenCalledWith("Rename character to:", {
+      defaultValue: "Ada",
+      title: "Rename Character"
+    });
+    expect(deps.state.characters.entries[0].name).toBe("Ada");
+    expect(document.getElementById("charActionDropdownMenu").hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("keeps Delete confirmation dangerous and closes when cancelled", async () => {
+    const { actionMenuButton } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    deps.uiConfirm.mockResolvedValue(false);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionDeleteBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    expect(deps.uiConfirm).toHaveBeenCalledWith("Delete \"Ada\"? This cannot be undone.", {
+      title: "Delete Character",
+      okText: "Delete"
+    });
+    expect(deps.state.characters.entries).toHaveLength(2);
+    expect(deps.state.characters.activeId).toBe("char_a");
+    expect(document.getElementById("charActionDropdownMenu").hidden).toBe(true);
+
+    controller.destroy();
+  });
+});

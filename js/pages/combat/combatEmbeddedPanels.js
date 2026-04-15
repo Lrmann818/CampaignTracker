@@ -19,6 +19,7 @@ import { initSpellsPanel } from "../character/panels/spellsPanel.js";
 import { initVitalsPanel } from "../character/panels/vitalsPanel.js";
 import { flipSwapTwo } from "../../ui/flipSwap.js";
 import { getActiveCharacter } from "../../domain/characterHelpers.js";
+import { ACTIVE_CHARACTER_CHANGED_EVENT } from "../../domain/characterEvents.js";
 
 /** @typedef {import("../../state.js").State} State */
 /** @typedef {{ markDirty?: () => void }} SaveManagerLike */
@@ -825,6 +826,31 @@ export function initCombatEmbeddedPanels({
     });
   }
 
+  /**
+   * Rebind currently visible hosted Character panels after state.characters.activeId
+   * changes. The hosted panel modules still resolve data from getActiveCharacter(state).
+   * @returns {void}
+   */
+  function refreshVisibleHostedPanels() {
+    if (destroyed) return;
+    const workspace = getWorkspace();
+    const activePanelIds = /** @type {string[]} */ (workspace.embeddedPanels);
+    const needsFullRender = activePanelIds.some((panelId) => {
+      const def = EMBEDDED_PANEL_DEFS.find((d) => d.id === panelId);
+      const bodyEl = containerEl.querySelector(`[data-embedded-panel-body="${panelId}"]`);
+      return !def || !(bodyEl instanceof HTMLElement);
+    });
+    if (needsFullRender) {
+      render();
+      return;
+    }
+    activePanelIds.forEach((panelId, index) => {
+      const def = EMBEDDED_PANEL_DEFS.find((d) => d.id === panelId);
+      if (!def) return;
+      renderPanelContent(def, index, activePanelIds.length);
+    });
+  }
+
   // ─── Event handling ─────────────────────────────────────────────────────
 
   containerEl.addEventListener("click", (event) => {
@@ -953,6 +979,8 @@ export function initCombatEmbeddedPanels({
       }
     }
   }, { signal });
+
+  window.addEventListener(ACTIVE_CHARACTER_CHANGED_EVENT, refreshVisibleHostedPanels, { signal });
 
   render();
 

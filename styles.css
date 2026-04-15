@@ -1977,25 +1977,49 @@ body[data-shell-mode="hub"] main {
   flex: 1 1 0;
   min-width: 0;
   max-width: 320px;
-  height: var(--panel-control-h);
-  padding: 0 8px;
-  border-radius: var(--panel-control-radius);
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: var(--panel-control-font);
-  cursor: pointer;
 }
 
-.charSelectorSelect:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+.charSelectorSelect+.selectDropdown {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 320px;
 }
 
-.charMenuBtn {
+button.charSelectorSelectBtn {
+  width: 100%;
+  min-width: 0;
+}
+
+button.charSelectorSelectBtn [data-select-label] {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.charActionMenu {
   flex: 0 0 auto;
-  font-size: 1.1em;
-  letter-spacing: 1px;
+  position: relative;
+}
+
+button.charActionMenuBtn {
+  width: var(--panel-control-h);
+  min-width: var(--panel-control-h);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0;
+  font-weight: 700;
+}
+
+.charActionMenu .dropdownMenu {
+  min-width: 160px;
+}
+
+.charActionMenuItem {
+  white-space: nowrap;
 }
 
 .charColumns {

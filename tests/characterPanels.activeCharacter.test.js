@@ -12,10 +12,12 @@ import { initSpellsPanel } from "../js/pages/character/panels/spellsPanel.js";
 import { initVitalsPanel } from "../js/pages/character/panels/vitalsPanel.js";
 import {
   EMBEDDED_PANEL_HOST_SELECTORS,
+  initCombatEmbeddedPanels,
   renderSpellsEmbeddedContent,
   renderVitalsEmbeddedContent,
   renderWeaponsEmbeddedContent
 } from "../js/pages/combat/combatEmbeddedPanels.js";
+import { notifyActiveCharacterChanged } from "../js/domain/characterEvents.js";
 
 events.defaultMaxListeners = 100;
 
@@ -420,8 +422,10 @@ function parseHtmlInto(parent, html) {
 
 function installFakeDom() {
   const document = new FakeDocument();
+  const windowTarget = new EventTarget();
+  windowTarget.requestAnimationFrame = (cb) => setTimeout(cb, 0);
   vi.stubGlobal("document", document);
-  vi.stubGlobal("window", { requestAnimationFrame: (cb) => setTimeout(cb, 0) });
+  vi.stubGlobal("window", windowTarget);
   vi.stubGlobal("requestAnimationFrame", (cb) => setTimeout(cb, 0));
   vi.stubGlobal("getComputedStyle", () => ({
     font: "",
@@ -676,5 +680,31 @@ describe("character panels active character resolution", () => {
     expect(document.getElementById("combatEmbeddedCharHpCur").value).toBe("21");
     expect(spellsHost.querySelector(".spellName").value).toBe("Ray of Frost");
     expect(weaponsHost.querySelector(".attackName").value).toBe("Longsword");
+  });
+
+  it("combat embedded panels refresh visible hosted panels when activeId changes", () => {
+    const state = makeState("char_a");
+    state.combat.workspace.embeddedPanels = ["vitals", "spells", "weapons"];
+    const deps = makeDeps(state);
+    const root = append(document.body, "div", { id: "combatRoot" });
+    append(root, "div", { id: "combatEmbeddedPanels" });
+
+    const api = initCombatEmbeddedPanels({ ...deps, root });
+
+    expect(document.getElementById("combatEmbeddedCharHpCur").value).toBe("7");
+    expect(root.querySelector(".spellName").value).toBe("Shield");
+    expect(root.querySelector(".attackName").value).toBe("Dagger");
+
+    state.characters.activeId = "char_b";
+    notifyActiveCharacterChanged({ previousId: "char_a", activeId: "char_b" });
+
+    expect(document.getElementById("combatEmbeddedCharHpCur").value).toBe("21");
+    expect(root.querySelector(".spellName").value).toBe("Ray of Frost");
+    expect(root.querySelector(".attackName").value).toBe("Longsword");
+
+    api.destroy();
+    state.characters.activeId = "char_a";
+    notifyActiveCharacterChanged({ previousId: "char_b", activeId: "char_a" });
+    expect(document.getElementById("combatEmbeddedCharHpCur")).toBeNull();
   });
 });

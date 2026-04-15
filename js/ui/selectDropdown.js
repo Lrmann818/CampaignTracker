@@ -33,8 +33,20 @@ export function enhanceSelectDropdown(args) {
   // Must be in the DOM (or at least have a parent) so we can insert our wrapper next to it.
   if (!select.parentElement) return null;
 
-  // Prevent double-build
-  if (select.dataset.dropdownEnhanced === "1") return null;
+  // If a previous page/controller was torn down without its JS state (for example
+  // after a hot reload or interrupted re-init), remove the stale wrapper before
+  // building a fresh enhanced select for the same native fallback.
+  if (select.dataset.dropdownEnhanced === "1") {
+    let sibling = select.nextElementSibling;
+    while (sibling?.classList?.contains?.("selectDropdown")) {
+      const next = sibling.nextElementSibling;
+      sibling.remove();
+      sibling = next;
+    }
+    select.classList.remove("nativeSelectHidden");
+    delete select.dataset.dropdownEnhanced;
+  }
+
   select.dataset.dropdownEnhanced = "1";
   const listenerController = new AbortController();
   const listenerSignal = listenerController.signal;
@@ -88,6 +100,7 @@ export function enhanceSelectDropdown(args) {
   const menu = document.createElement("div");
   menu.className = "dropdownMenu";
   menu.hidden = true;
+  menu.setAttribute("aria-hidden", "true");
 
   // Insert after select (so it keeps the same place in layout).
   select.insertAdjacentElement("afterend", wrap);
@@ -102,9 +115,15 @@ export function enhanceSelectDropdown(args) {
   let api = null;
   let popoverApi = null;
   let destroyed = false;
+  const setClosedState = () => {
+    menu.hidden = true;
+    menu.setAttribute("aria-hidden", "true");
+    btn.setAttribute("aria-expanded", "false");
+  };
   const isCardHosted = () => !!btn.closest?.(".trackerCard");
   const closeMenu = () => {
     try { popoverApi?.close?.(); } catch { /* noop */ }
+    setClosedState();
   };
 
   const moveMenuToBody = () => {
@@ -182,6 +201,7 @@ export function enhanceSelectDropdown(args) {
   // If options are populated after init, call this again.
   rebuildMenu();
   syncButton();
+  setClosedState();
 
   // Keep the custom UI synced if something changes the select value.
   select.addEventListener("change", () => {
@@ -222,10 +242,12 @@ export function enhanceSelectDropdown(args) {
       try { active?.focus?.({ preventScroll: true }); } catch { active?.focus?.(); }
     },
     onClose: () => {
+      setClosedState();
       restoreMenuParent();
       cleanupRaised();
     },
   });
+  setClosedState();
 
   // Remove the raised class when the popover closes.
   // (Popovers.register only gives us onOpen here, so we hook close via an observer.)
@@ -333,6 +355,7 @@ export function enhanceSelectDropdown(args) {
   const destroy = () => {
     if (destroyed) return;
     destroyed = true;
+    setClosedState();
     try { popoverApi?.destroy?.(); } catch { /* noop */ }
     mo.disconnect();
     disconnectObserver.disconnect();
