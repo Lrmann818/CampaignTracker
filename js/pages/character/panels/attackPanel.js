@@ -10,6 +10,7 @@ import { createStateActions } from "../../../domain/stateActions.js";
 import { flipSwapTwo } from "../../../ui/flipSwap.js";
 import { requireMany } from "../../../utils/domGuards.js";
 import { getActiveCharacter } from "../../../domain/characterHelpers.js";
+import { notifyPanelDataChanged, subscribePanelDataChanged } from "../../../ui/panelInvalidation.js";
 
 const ATTACK_FIELD_BY_CLASS = Object.freeze({
   attackName: "name",
@@ -61,6 +62,7 @@ export function initAttacksPanel(deps = {}) {
   addDestroy(() => listenerController.abort());
 
   let destroyed = false;
+  const panelInstance = {};
 
   const addListener = (target, type, handler, options) => {
     if (!target || typeof target.addEventListener !== "function") return;
@@ -78,6 +80,10 @@ export function initAttacksPanel(deps = {}) {
   function getAttacks() {
     const currentCharacter = getActiveCharacter(state);
     return Array.isArray(currentCharacter?.attacks) ? currentCharacter.attacks : [];
+  }
+
+  function markAttacksChanged() {
+    notifyPanelDataChanged("weapons", { source: panelInstance });
   }
 
   function createMoveButton(direction, disabled) {
@@ -218,13 +224,19 @@ export function initAttacksPanel(deps = {}) {
 
   function patchAttack(id, patch) {
     if (destroyed) return false;
-    return mutateCharacter((character) => {
+    const updated = mutateCharacter((character) => {
       if (!Array.isArray(character.attacks)) return false;
       const idx = character.attacks.findIndex((item) => item.id === id);
       if (idx === -1) return false;
+      const current = character.attacks[idx];
+      const nextEntries = Object.entries(patch);
+      const changed = nextEntries.some(([key, value]) => current?.[key] !== value);
+      if (!changed) return false;
       character.attacks[idx] = { ...character.attacks[idx], ...patch };
       return true;
     });
+    if (updated) markAttacksChanged();
+    return updated;
   }
 
   async function deleteAttack(id) {
@@ -235,19 +247,21 @@ export function initAttacksPanel(deps = {}) {
       if (destroyed || !ok) return;
     }
 
-    mutateCharacter((character) => {
+    const removed = mutateCharacter((character) => {
       if (!Array.isArray(character.attacks)) character.attacks = [];
+      const before = character.attacks.length;
       character.attacks = character.attacks.filter((item) => item.id !== id);
-      return true;
+      return character.attacks.length !== before;
     });
-    if (destroyed) return;
+    if (!removed || destroyed) return;
+    markAttacksChanged();
     renderAttacks();
   }
 
   function addAttack() {
     if (destroyed) return;
 
-    mutateCharacter((character) => {
+    const added = mutateCharacter((character) => {
       if (!Array.isArray(character.attacks)) character.attacks = [];
       character.attacks.unshift({
         id: newAttackId(),
@@ -260,6 +274,8 @@ export function initAttacksPanel(deps = {}) {
       });
       return true;
     });
+    if (!added) return;
+    markAttacksChanged();
     renderAttacks();
   }
 
@@ -287,6 +303,7 @@ export function initAttacksPanel(deps = {}) {
     }, { queueSave: false });
     if (!didMove) return;
     SaveManager.markDirty();
+    markAttacksChanged();
 
     const prevListScroll = listEl.scrollTop;
     const prevPanelScroll = panelEl.scrollTop;
@@ -371,6 +388,11 @@ export function initAttacksPanel(deps = {}) {
   );
 
   renderAttacks();
+
+  addDestroy(subscribePanelDataChanged("weapons", (detail) => {
+    if (destroyed || detail.source === panelInstance) return;
+    renderAttacks();
+  }));
 
   return {
     destroy() {

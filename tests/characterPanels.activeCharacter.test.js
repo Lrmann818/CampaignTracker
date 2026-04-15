@@ -18,6 +18,7 @@ import {
   renderWeaponsEmbeddedContent
 } from "../js/pages/combat/combatEmbeddedPanels.js";
 import { notifyActiveCharacterChanged } from "../js/domain/characterEvents.js";
+import { notifyPanelDataChanged } from "../js/ui/panelInvalidation.js";
 
 events.defaultMaxListeners = 100;
 
@@ -606,6 +607,15 @@ function initAllCharacterPanels(deps) {
   ].filter(Boolean);
 }
 
+function dispatchInput(target, dispatchTarget = target) {
+  class TargetedInputEvent extends Event {
+    get target() {
+      return target;
+    }
+  }
+  dispatchTarget.dispatchEvent(new TargetedInputEvent("input", { bubbles: true, cancelable: true }));
+}
+
 describe("character panels active character resolution", () => {
   let document;
 
@@ -630,9 +640,11 @@ describe("character panels active character resolution", () => {
     const state = { characters: { activeId: entry.id, entries: [entry] }, combat: { workspace: {} } };
     const deps = makeDeps(state);
 
-    expect(() => initAllCharacterPanels(deps)).not.toThrow();
+    let apis = [];
+    expect(() => { apis = initAllCharacterPanels(deps); }).not.toThrow();
     expect(document.getElementById("charName").value).toBe("New Hero");
     expect(document.getElementById("charHpCur").value).toBe("9");
+    apis.forEach((api) => api?.destroy?.());
   });
 
   it("re-initializes with the newly active character's data after a switch", () => {
@@ -645,7 +657,7 @@ describe("character panels active character resolution", () => {
 
     apis.forEach((api) => api?.destroy?.());
     state.characters.activeId = "char_b";
-    initAllCharacterPanels(makeDeps(state));
+    const nextApis = initAllCharacterPanels(makeDeps(state));
 
     expect(document.getElementById("charName").value).toBe("Bryn");
     expect(document.getElementById("charHpCur").value).toBe("21");
@@ -654,6 +666,7 @@ describe("character panels active character resolution", () => {
     expect(document.getElementById("inventoryNotesBox").value).toBe("chalk");
     expect(document.getElementById("charArmorProf").value).toBe("Medium");
     expect(document.getElementById("charTraits").value).toBe("Bold");
+    nextApis.forEach((api) => api?.destroy?.());
   });
 
   it("combat embedded vitals, spells, and weapons initialize after a character switch", () => {
@@ -668,18 +681,25 @@ describe("character panels active character resolution", () => {
     renderSpellsEmbeddedContent(spellsHost);
     renderWeaponsEmbeddedContent(weaponsHost);
 
-    initVitalsPanel({ ...deps, root: vitalsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.vitals });
-    initSpellsPanel({ ...deps, root: spellsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.spells, noteTextareaIdPrefix: "combat_" });
-    initAttacksPanel({ ...deps, root: weaponsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.weapons });
+    const firstApis = [
+      initVitalsPanel({ ...deps, root: vitalsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.vitals }),
+      initSpellsPanel({ ...deps, root: spellsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.spells, noteTextareaIdPrefix: "combat_" }),
+      initAttacksPanel({ ...deps, root: weaponsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.weapons })
+    ].filter(Boolean);
 
     state.characters.activeId = "char_b";
-    initVitalsPanel({ ...makeDeps(state), root: vitalsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.vitals });
-    initSpellsPanel({ ...makeDeps(state), root: spellsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.spells, noteTextareaIdPrefix: "combat_" });
-    initAttacksPanel({ ...makeDeps(state), root: weaponsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.weapons });
+    firstApis.forEach((api) => api?.destroy?.());
+    const secondDeps = makeDeps(state);
+    const secondApis = [
+      initVitalsPanel({ ...secondDeps, root: vitalsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.vitals }),
+      initSpellsPanel({ ...secondDeps, root: spellsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.spells, noteTextareaIdPrefix: "combat_" }),
+      initAttacksPanel({ ...secondDeps, root: weaponsHost, selectors: EMBEDDED_PANEL_HOST_SELECTORS.weapons })
+    ].filter(Boolean);
 
     expect(document.getElementById("combatEmbeddedCharHpCur").value).toBe("21");
     expect(spellsHost.querySelector(".spellName").value).toBe("Ray of Frost");
     expect(weaponsHost.querySelector(".attackName").value).toBe("Longsword");
+    secondApis.forEach((api) => api?.destroy?.());
   });
 
   it("combat embedded panels refresh visible hosted panels when activeId changes", () => {
@@ -706,5 +726,100 @@ describe("character panels active character resolution", () => {
     state.characters.activeId = "char_a";
     notifyActiveCharacterChanged({ previousId: "char_b", activeId: "char_a" });
     expect(document.getElementById("combatEmbeddedCharHpCur")).toBeNull();
+  });
+
+  it("vitals edits on the Character page update mounted Combat embedded Vitals", () => {
+    const state = makeState("char_a");
+    state.combat.workspace.embeddedPanels = ["vitals"];
+    const deps = makeDeps(state);
+    const root = append(document.body, "div", { id: "combatRoot" });
+    append(root, "div", { id: "combatEmbeddedPanels" });
+    const combatApi = initCombatEmbeddedPanels({ ...deps, root });
+    const characterApi = initVitalsPanel(deps);
+
+    const characterHp = document.getElementById("charHpCur");
+    const embeddedHp = document.getElementById("combatEmbeddedCharHpCur");
+    expect(embeddedHp.value).toBe("7");
+
+    characterHp.value = "18";
+    dispatchInput(characterHp);
+
+    expect(state.characters.entries[0].hpCur).toBe(18);
+    expect(document.getElementById("combatEmbeddedCharHpCur")).toBe(embeddedHp);
+    expect(embeddedHp.value).toBe("18");
+
+    characterApi.destroy();
+    combatApi.destroy();
+  });
+
+  it("weapon edits on the Character page update mounted Combat embedded Weapons", () => {
+    const state = makeState("char_a");
+    state.combat.workspace.embeddedPanels = ["weapons"];
+    const deps = makeDeps(state);
+    const root = append(document.body, "div", { id: "combatRoot" });
+    append(root, "div", { id: "combatEmbeddedPanels" });
+    const combatApi = initCombatEmbeddedPanels({ ...deps, root });
+    const characterApi = initAttacksPanel(deps);
+
+    const characterName = document.getElementById("attackList").querySelector(".attackName");
+    const characterList = document.getElementById("attackList");
+    const embeddedName = root.querySelector("#combatEmbeddedAttackList .attackName");
+    expect(embeddedName.value).toBe("Dagger");
+
+    characterName.value = "Rapier";
+    dispatchInput(characterName, characterList);
+
+    expect(state.characters.entries[0].attacks[0].name).toBe("Rapier");
+    expect(root.querySelector("#combatEmbeddedAttackList .attackName")).not.toBe(embeddedName);
+    expect(root.querySelector("#combatEmbeddedAttackList .attackName").value).toBe("Rapier");
+
+    characterApi.destroy();
+    combatApi.destroy();
+  });
+
+  it("spell edits keep updating mounted Combat embedded Spells", () => {
+    const state = makeState("char_a");
+    state.combat.workspace.embeddedPanels = ["spells"];
+    const deps = makeDeps(state);
+    const root = append(document.body, "div", { id: "combatRoot" });
+    append(root, "div", { id: "combatEmbeddedPanels" });
+    const combatApi = initCombatEmbeddedPanels({ ...deps, root });
+    const characterApi = initSpellsPanel(deps);
+
+    const characterSpell = document.getElementById("spellLevels").querySelector(".spellName");
+    const embeddedSpell = root.querySelector("#combatEmbeddedSpellLevels .spellName");
+    expect(embeddedSpell.value).toBe("Shield");
+
+    characterSpell.value = "Absorb Elements";
+    dispatchInput(characterSpell);
+
+    expect(state.characters.entries[0].spells.levels[0].spells[0].name).toBe("Absorb Elements");
+    expect(root.querySelector("#combatEmbeddedSpellLevels .spellName")).not.toBe(embeddedSpell);
+    expect(root.querySelector("#combatEmbeddedSpellLevels .spellName").value).toBe("Absorb Elements");
+
+    characterApi.destroy();
+    combatApi.destroy();
+  });
+
+  it("combat embedded panel rerenders clean up panel invalidation listeners", () => {
+    const state = makeState("char_a");
+    state.combat.workspace.embeddedPanels = ["vitals"];
+    const deps = makeDeps(state);
+    const root = append(document.body, "div", { id: "combatRoot" });
+    append(root, "div", { id: "combatEmbeddedPanels" });
+    const combatApi = initCombatEmbeddedPanels({ ...deps, root });
+    const characterApi = initVitalsPanel(deps);
+
+    expect(notifyPanelDataChanged("vitals")).toBe(2);
+
+    state.characters.activeId = "char_b";
+    notifyActiveCharacterChanged({ previousId: "char_a", activeId: "char_b" });
+    expect(notifyPanelDataChanged("vitals")).toBe(2);
+
+    combatApi.destroy();
+    expect(notifyPanelDataChanged("vitals")).toBe(1);
+
+    characterApi.destroy();
+    expect(notifyPanelDataChanged("vitals")).toBe(0);
   });
 });

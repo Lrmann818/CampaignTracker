@@ -7,6 +7,7 @@ import { createStateActions } from "../../../domain/stateActions.js";
 import { requireMany, getNoopDestroyApi } from "../../../utils/domGuards.js";
 import { flipSwapTwo } from "../../../ui/flipSwap.js";
 import { getActiveCharacter } from "../../../domain/characterHelpers.js";
+import { notifyPanelDataChanged, subscribePanelDataChanged } from "../../../ui/panelInvalidation.js";
 
 function notifyStatus(setStatus, message) {
   if (typeof setStatus === "function") {
@@ -149,6 +150,7 @@ export function initVitalsPanel(deps = {}) {
   addDestroy(() => listenerController.abort());
 
   let destroyed = false;
+  const panelInstance = {};
 
   const addListener = (target, type, handler, options) => {
     if (!target || typeof target.addEventListener !== "function") return;
@@ -161,6 +163,11 @@ export function initVitalsPanel(deps = {}) {
 
   function markDirty() {
     try { SaveManager.markDirty(); } catch { /* ignore */ }
+  }
+
+  function markVitalsChanged() {
+    markDirty();
+    notifyPanelDataChanged("vitals", { source: panelInstance });
   }
 
   function getCurrentCharacter() {
@@ -180,8 +187,8 @@ export function initVitalsPanel(deps = {}) {
     { id: "charSpellDC", path: "spellDC", getValue: () => getCurrentCharacter()?.spellDC },
   ];
 
-  function bindVitalsNumbers() {
-    vitalNumberFields.forEach(({ id, path, getValue }) => {
+  function refreshVitalsNumbers() {
+    vitalNumberFields.forEach(({ id, getValue }) => {
       const el = guard.els[id];
       if (!el) return;
 
@@ -193,12 +200,30 @@ export function initVitalsPanel(deps = {}) {
         el.classList.add("autosize");
         autoSizeInput(el, autosizeOpts);
       }
+    });
+  }
+
+  function bindVitalsNumbers() {
+    refreshVitalsNumbers();
+
+    vitalNumberFields.forEach(({ id, path, getValue }) => {
+      const el = guard.els[id];
+      if (!el) return;
+
+      const autosizeOpts = { min: 30, max: 60 };
 
       addListener(el, "input", () => {
         if (destroyed) return;
-        updateCharacterField(path, numberOrNull(el.value), { queueSave: false });
+        const nextValue = numberOrNull(el.value);
+        const currentValue = getValue();
+        if ((currentValue ?? null) === nextValue) {
+          if (typeof autoSizeInput === "function") autoSizeInput(el, autosizeOpts);
+          return;
+        }
+        const updated = updateCharacterField(path, nextValue, { queueSave: false });
+        if (!updated) return;
         if (typeof autoSizeInput === "function") autoSizeInput(el, autosizeOpts);
-        markDirty();
+        markVitalsChanged();
       });
     });
   }
@@ -255,7 +280,7 @@ export function initVitalsPanel(deps = {}) {
       return true;
     }, { queueSave: false });
     if (!moved) return;
-    markDirty();
+    markVitalsChanged();
 
     const prevScroll = panelEl.scrollTop;
     const didSwap = flipSwapTwo(tileEl, adjacentEl, {
@@ -319,14 +344,16 @@ export function initVitalsPanel(deps = {}) {
 
       addListener(title, "input", () => {
         if (destroyed) return;
+        const nextName = title.textContent ?? "";
         const updated = mutateCharacter((character) => {
           const resource = character.resources?.find((item) => item?.id === r.id);
           if (!resource) return false;
-          resource.name = title.textContent ?? "";
+          if ((resource.name ?? "") === nextName) return false;
+          resource.name = nextName;
           return true;
         }, { queueSave: false });
         if (!updated) return;
-        markDirty();
+        markVitalsChanged();
       });
 
       addListener(title, "blur", () => {
@@ -358,7 +385,7 @@ export function initVitalsPanel(deps = {}) {
             return true;
           }, { queueSave: false });
           if (!removed) return;
-          markDirty();
+          markVitalsChanged();
           renderResources();
         }, (err) => {
           console.error(err);
@@ -382,15 +409,17 @@ export function initVitalsPanel(deps = {}) {
       autoSizeInput?.(cur, { min: 30, max: 60 });
       addListener(cur, "input", () => {
         if (destroyed) return;
+        const nextCur = numberOrNull(cur.value);
         const updated = mutateCharacter((character) => {
           const resource = character.resources?.find((item) => item?.id === r.id);
           if (!resource) return false;
-          resource.cur = numberOrNull(cur.value);
+          if ((resource.cur ?? null) === nextCur) return false;
+          resource.cur = nextCur;
           return true;
         }, { queueSave: false });
         if (!updated) return;
         autoSizeInput?.(cur, { min: 30, max: 60 });
-        markDirty();
+        markVitalsChanged();
       });
 
       const slash = document.createElement("span");
@@ -405,15 +434,17 @@ export function initVitalsPanel(deps = {}) {
       autoSizeInput?.(max, { min: 30, max: 60 });
       addListener(max, "input", () => {
         if (destroyed) return;
+        const nextMax = numberOrNull(max.value);
         const updated = mutateCharacter((character) => {
           const resource = character.resources?.find((item) => item?.id === r.id);
           if (!resource) return false;
-          resource.max = numberOrNull(max.value);
+          if ((resource.max ?? null) === nextMax) return false;
+          resource.max = nextMax;
           return true;
         }, { queueSave: false });
         if (!updated) return;
         autoSizeInput?.(max, { min: 30, max: 60 });
-        markDirty();
+        markVitalsChanged();
       });
 
       nums.appendChild(cur);
@@ -448,7 +479,7 @@ export function initVitalsPanel(deps = {}) {
       character.resources.push(newResource());
       return true;
     }, { queueSave: false });
-    markDirty();
+    markVitalsChanged();
     renderResources();
   });
 
@@ -477,6 +508,12 @@ export function initVitalsPanel(deps = {}) {
     actions: { updateCharacterField, mutateCharacter }
   });
   renderResources();
+
+  addDestroy(subscribePanelDataChanged("vitals", (detail) => {
+    if (destroyed || detail.source === panelInstance) return;
+    refreshVitalsNumbers();
+    renderResources();
+  }));
 
   return {
     destroy() {
