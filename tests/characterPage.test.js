@@ -332,6 +332,8 @@ function installCharacterSelectorDom() {
   [
     ["charActionNewBtn", "new", "New Character"],
     ["charActionRenameBtn", "rename", "Rename Character"],
+    ["charActionAddNpcBtn", "add-npc", "Add to NPCs"],
+    ["charActionAddPartyBtn", "add-party", "Add to Party"],
     ["charActionDeleteBtn", "delete", "Delete Character"],
   ].forEach(([id, action, label]) => {
     const button = appendWithId(document, actionMenuDropdown, "button", id, CHARACTER_ACTION_ITEM_CLASSES);
@@ -411,9 +413,16 @@ function createCharacterPageDeps(Popovers) {
       characters: {
         activeId: "char_a",
         entries: [
-          { id: "char_a", name: "Ada" },
+          { id: "char_a", name: "Ada", classLevel: "Wizard 5", hpCur: 7, hpMax: 20, status: "Poisoned", imgBlobId: "blob_ada" },
           { id: "char_b", name: "Bram" },
         ],
+      },
+      tracker: {
+        npcs: [],
+        party: [],
+        locationsList: [],
+        npcActiveSectionId: "npc_main",
+        partyActiveSectionId: "party_main"
       },
       combat: { workspace: {} },
     },
@@ -539,6 +548,8 @@ describe("character page selector", () => {
     expect(actionItems.map((button) => button.textContent)).toEqual([
       "New Character",
       "Rename Character",
+      "Add to NPCs",
+      "Add to Party",
       "Delete Character",
     ]);
     expect(actionMenuDropdown.textContent).not.toContain("Character Actions");
@@ -550,6 +561,63 @@ describe("character page selector", () => {
     expect(actionMenuButton.getAttribute("aria-expanded")).toBe("true");
     expect(Popovers.handles[1].reposition).toHaveBeenCalledTimes(1);
     expect(document.activeElement).toBe(document.getElementById("charActionNewBtn"));
+
+    controller.destroy();
+  });
+
+  it("creates linked NPC and Party cards from the action overflow menu", async () => {
+    const { actionMenuButton } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionAddNpcBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionAddPartyBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    expect(deps.state.tracker.npcs).toHaveLength(1);
+    expect(deps.state.tracker.party).toHaveLength(1);
+    expect(deps.state.tracker.npcs[0]).toMatchObject({
+      characterId: "char_a",
+      sectionId: "npc_main",
+      name: "Ada",
+      className: "Wizard 5",
+      hpCurrent: 7,
+      hpMax: 20,
+      status: "Poisoned",
+      imgBlobId: "blob_ada"
+    });
+    expect(deps.state.tracker.party[0]).toMatchObject({
+      characterId: "char_a",
+      sectionId: "party_main",
+      name: "Ada",
+      className: "Wizard 5",
+      hpCurrent: 7,
+      hpMax: 20,
+      status: "Poisoned",
+      imgBlobId: "blob_ada"
+    });
+    expect(deps.setStatus).toHaveBeenCalledWith("Added to NPCs", { stickyMs: 2000 });
+    expect(deps.setStatus).toHaveBeenCalledWith("Added to Party", { stickyMs: 2000 });
+    expect(deps.state.characters.activeId).toBe("char_a");
+
+    controller.destroy();
+  });
+
+  it("disables add-to-tracker actions when there is no active character", () => {
+    installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    deps.state.characters = { activeId: null, entries: [] };
+
+    const controller = initCharacterPageUI(deps);
+
+    expect(document.getElementById("charActionAddNpcBtn").disabled).toBe(true);
+    expect(document.getElementById("charActionAddPartyBtn").disabled).toBe(true);
 
     controller.destroy();
   });
@@ -633,6 +701,73 @@ describe("character page selector", () => {
     expect(deps.state.characters.entries).toHaveLength(2);
     expect(deps.state.characters.activeId).toBe("char_a");
     expect(document.getElementById("charActionDropdownMenu").hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("snapshots and unlinks cards before deleting a linked character", async () => {
+    const { actionMenuButton } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    deps.state.tracker.npcs = [
+      {
+        id: "npc_1",
+        characterId: "char_a",
+        name: "Old NPC",
+        className: "Old Role",
+        hpCurrent: 1,
+        hpMax: 2,
+        status: "Old",
+        imgBlobId: "old-npc-portrait",
+        notes: "NPC note"
+      }
+    ];
+    deps.state.tracker.party = [
+      {
+        id: "party_1",
+        characterId: "char_a",
+        name: "Old Party",
+        className: "Old Class",
+        hpCurrent: 3,
+        hpMax: 4,
+        status: "Old Party",
+        imgBlobId: "old-party-portrait",
+        notes: "Party note"
+      }
+    ];
+    deps.uiConfirm.mockResolvedValue(true);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionDeleteBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    expect(deps.uiConfirm).toHaveBeenCalledWith(
+      "Delete \"Ada\"? This cannot be undone.\n\nThis character has linked cards in: NPCs (1), Party (1). Linked cards will keep their last known data and become standalone.",
+      { title: "Delete Character", okText: "Delete" }
+    );
+    expect(deps.state.characters.entries.map((entry) => entry.id)).toEqual(["char_b"]);
+    expect(deps.state.characters.activeId).toBe("char_b");
+    expect(deps.state.tracker.npcs[0]).toMatchObject({
+      characterId: null,
+      name: "Ada",
+      className: "Wizard 5",
+      hpCurrent: 7,
+      hpMax: 20,
+      status: "Poisoned",
+      imgBlobId: "blob_ada",
+      notes: "NPC note"
+    });
+    expect(deps.state.tracker.party[0]).toMatchObject({
+      characterId: null,
+      name: "Ada",
+      className: "Wizard 5",
+      hpCurrent: 7,
+      hpMax: 20,
+      status: "Poisoned",
+      imgBlobId: "blob_ada",
+      notes: "Party note"
+    });
 
     controller.destroy();
   });

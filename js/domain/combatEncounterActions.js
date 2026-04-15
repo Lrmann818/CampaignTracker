@@ -14,6 +14,7 @@ import {
   normalizeStatusDurationMode,
   undoLastTurnAdvance
 } from "./combat.js";
+import { writeCardLinkedField } from "./cardLinking.js";
 import { withAllowedStateMutation } from "../utils/dev.js";
 
 /** @typedef {import("../state.js").State} State */
@@ -126,9 +127,9 @@ function writeParticipantHpToCanonicalSource(state, participant) {
   const source = findCombatSource(tracker, participant.source);
   if (!source) return false;
 
-  source.card.hpCurrent = participant.hpCurrent;
+  const hpWrite = writeCardLinkedField(source.card, "hpCurrent", participant.hpCurrent, state, { queueSave: false });
   source.card.tempHp = participant.tempHp;
-  return true;
+  return hpWrite.written;
 }
 
 /**
@@ -148,11 +149,11 @@ function writeParticipantStatusToCanonicalSource(state, participant) {
   const source = findCombatSource(tracker, participant.source);
   if (!source || source.type === "location") return false;
 
-  source.card.status = participant.statusEffects
+  const statusText = participant.statusEffects
     .map((effect) => cleanString(effect.label))
     .filter(Boolean)
     .join(", ");
-  return true;
+  return writeCardLinkedField(source.card, "status", statusText, state, { queueSave: false }).written;
 }
 
 /**

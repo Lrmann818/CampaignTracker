@@ -7,7 +7,7 @@ export const STORAGE_KEY = "localCampaignTracker_v1";
 export const ACTIVE_TAB_KEY = "localCampaignTracker_activeTab";
 
 // Save schema versioning
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 /** @typedef {import("./domain/factories.js").NpcCard & PortraitRef} NpcCard */
 /** @typedef {import("./domain/factories.js").PartyMemberCard & PortraitRef} PartyMemberCard */
@@ -45,6 +45,11 @@ export const SCHEMA_MIGRATION_HISTORY = Object.freeze([
     version: 4,
     date: "2026-04-14",
     changes: "Migrated singleton character to characters collection { activeId, entries[] } for multi-character support."
+  },
+  {
+    version: 5,
+    date: "2026-04-15",
+    changes: "Added character-linked NPC/Party card references and character status field."
   }
 ]);
 
@@ -301,6 +306,7 @@ export const SCHEMA_MIGRATION_HISTORY = Object.freeze([
  *   imgDataUrl?: string,
  *   name: string,
  *   classLevel: string,
+ *   status: string,
  *   race: string,
  *   background: string,
  *   alignment: string,
@@ -1196,11 +1202,38 @@ export function migrateState(raw) {
     if ("character" in data) delete data.character;
   }
 
+  function migrateToV5() {
+    const tracker = ensureObj(data, "tracker");
+    const ensureCardCharacterIds = (items) => {
+      if (!Array.isArray(items)) return;
+      for (const item of items) {
+        if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+        const card = /** @type {Record<string, unknown>} */ (item);
+        if (!("characterId" in card)) card.characterId = null;
+        else if (typeof card.characterId !== "string") card.characterId = null;
+      }
+    };
+
+    ensureCardCharacterIds(tracker.npcs);
+    ensureCardCharacterIds(tracker.party);
+
+    const characters = data.characters && typeof data.characters === "object" && !Array.isArray(data.characters)
+      ? /** @type {CharactersCollection & Record<string, unknown>} */ (data.characters)
+      : null;
+    const entries = Array.isArray(characters?.entries) ? characters.entries : [];
+    for (const entry of entries) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+      const character = /** @type {Record<string, unknown>} */ (entry);
+      if (typeof character.status !== "string") character.status = "";
+    }
+  }
+
   const SCHEMA_MIGRATIONS = Object.freeze({
     0: migrateToV1,
     1: migrateToV2,
     2: migrateToV3,
-    3: migrateToV4
+    3: migrateToV4,
+    4: migrateToV5
   });
 
   function applyMigrationStep(version) {
@@ -1228,6 +1261,7 @@ export function migrateState(raw) {
   // migrateToV4 is idempotent: if characters already exists, it normalizes it
   // and removes any stale character key that migrateToV1 may have re-created.
   migrateToV4();
+  migrateToV5();
 
   data.schemaVersion = CURRENT_SCHEMA_VERSION;
   return normalizeState(/** @type {State} */ (data));

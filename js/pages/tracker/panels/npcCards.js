@@ -16,6 +16,7 @@ import { createCardIncrementalDomPatcher } from "./cards/shared/cardIncrementalP
 import { notifyCombatEncounterChanged } from "../../combat/combatEvents.js";
 import { addTrackerCardToCombatEncounter } from "../../../domain/combatTrackerActions.js";
 import { createStateActions } from "../../../domain/stateActions.js";
+import { getLinkedCharacter, resolveCardDisplayData, writeCardLinkedField } from "../../../domain/cardLinking.js";
 import { requireMany } from "../../../utils/domGuards.js";
 import { startJumpDebugRun, queueJumpDebugCheckpoints } from "../../../ui/jumpDebug.js";
 import * as masonry from "../../../ui/masonryLayout.js";
@@ -96,7 +97,7 @@ function createNpcCardsController(deps = {}) {
     const query = getSearchQuery();
     return state.tracker.npcs
       .filter((npc) => (npc.sectionId || "") === sectionId)
-      .filter((npc) => matchesSearch(npc, query));
+      .filter((npc) => matchesSearch(resolveCardDisplayData(npc, state), query));
   };
   const cardDomPatcher = createCardIncrementalDomPatcher({
     cardsEl,
@@ -111,8 +112,8 @@ function createNpcCardsController(deps = {}) {
     hidden,
     focusEl,
     getItemById: getNpcById,
-    getBlobId: (npc) => npc.imgBlobId,
-    getAltText: (npc) => npc.name || "NPC Portrait",
+    getBlobId: (npc) => resolveCardDisplayData(npc, state).imgBlobId,
+    getAltText: (npc) => resolveCardDisplayData(npc, state).name || "NPC Portrait",
     onPick: (npc) => pickNpcImage(npc.id),
     onToggleHidden: (npc, nextHidden) => setNpcPortraitHidden(npc.id, nextHidden),
   });
@@ -186,6 +187,13 @@ function createNpcCardsController(deps = {}) {
     if (rerender) renderNpcCards();
   }
 
+  function updateNpcLinkedField(npc, field, value, rerender = false) {
+    const result = writeCardLinkedField(npc, field, value, state, { SaveManager, queueSave: false });
+    if (!result.written) return;
+    SaveManager.markDirty();
+    if (rerender) renderNpcCards();
+  }
+
   function setNpcPortraitHidden(id, hidden) {
     if (!setCardPortraitHidden("npc", id, hidden, { queueSave: false })) return;
     SaveManager.markDirty();
@@ -248,8 +256,8 @@ function createNpcCardsController(deps = {}) {
     const ok = await pickAndStorePortrait({
       itemId: npcId,
       getItemById: getNpcById,
-      getBlobId: (npc) => npc.imgBlobId,
-      setBlobId: (_npc, blobId) => updateTrackerCardField("npc", npcId, "imgBlobId", blobId, { queueSave: false }),
+      getBlobId: (npc) => resolveCardDisplayData(npc, state).imgBlobId,
+      setBlobId: (npc, blobId) => writeCardLinkedField(npc, "imgBlobId", blobId, state, { queueSave: false }),
       deps: {
         pickCropStorePortrait,
         ImagePicker,
@@ -279,7 +287,11 @@ function createNpcCardsController(deps = {}) {
       const deleted = await deleteTrackerCardWithBlobCleanup({
         type: "npc",
         itemId: id,
-        getItemById: getNpcById,
+        getItemById: (itemId) => {
+          const item = getNpcById(itemId);
+          if (!item || getLinkedCharacter(item, state)) return item ? { ...item, imgBlobId: null } : null;
+          return item;
+        },
         mutateTracker,
         SaveManager,
         deleteBlob,
@@ -294,6 +306,7 @@ function createNpcCardsController(deps = {}) {
   }
 
   function renderNpcCard(npc) {
+    const display = resolveCardDisplayData(npc, state);
     const card = document.createElement("div");
     card.className = "trackerCard npcCard npcCardStack";
     card.dataset.npcId = npc.id;
@@ -311,8 +324,8 @@ function createNpcCardsController(deps = {}) {
     const nameInput = document.createElement("input");
     nameInput.className = "npcField npcNameBig";
     nameInput.placeholder = "Name";
-    nameInput.value = npc.name || "";
-    nameInput.addEventListener("input", () => updateNpc(npc.id, { name: nameInput.value }, false));
+    nameInput.value = display.name || "";
+    nameInput.addEventListener("input", () => updateNpcLinkedField(npc, "name", nameInput.value, false));
 
     const moveUp = createMoveButton({
       direction: -1,
@@ -366,12 +379,21 @@ function createNpcCardsController(deps = {}) {
     });
 
     headerRow.appendChild(nameInput);
+    if (display.isLinked || display.isOrphanedLink) {
+      const linkedBadge = document.createElement("span");
+      linkedBadge.className = `linkedCardBadge${display.isOrphanedLink ? " isOrphaned" : ""}`;
+      linkedBadge.textContent = display.isOrphanedLink ? "⚠" : "🔗";
+      linkedBadge.title = display.isOrphanedLink
+        ? "Character not found — showing last known data."
+        : `Linked to ${display.linkedCharacterName || "character"}`;
+      headerRow.appendChild(linkedBadge);
+    }
     headerRow.appendChild(moveUp);
     headerRow.appendChild(moveDown);
 
     const portrait = renderCardPortrait({
-      blobId: npc.imgBlobId,
-      altText: npc.name || "NPC Portrait",
+      blobId: display.imgBlobId,
+      altText: display.name || "NPC Portrait",
       blobIdToObjectUrl,
       onPick: () => pickNpcImage(npc.id),
       isHidden: !!npc.portraitHidden,
@@ -392,10 +414,10 @@ function createNpcCardsController(deps = {}) {
     const classInput = document.createElement("input");
     classInput.className = "npcField npcClass";
     classInput.placeholder = "Class / Role";
-    classInput.value = npc.className || "";
+    classInput.value = display.className || "";
     classInput.classList.add("autosize");
     autoSizeInput(classInput, { min: 60, max: 200 });
-    classInput.addEventListener("input", () => updateNpc(npc.id, { className: classInput.value }, false));
+    classInput.addEventListener("input", () => updateNpcLinkedField(npc, "className", classInput.value, false));
 
     const classBlock = document.createElement("div");
     classBlock.className = "npcRowBlock";
@@ -418,11 +440,11 @@ function createNpcCardsController(deps = {}) {
     hpCur.classList.add("autosize");
     hpCur.type = "number";
     hpCur.placeholder = "Cur";
-    hpCur.value = npc.hpCurrent ?? "";
+    hpCur.value = display.hpCurrent ?? "";
     autoSizeInput(hpCur, { min: 30, max: 70 });
     hpCur.addEventListener("input", () => {
       autoSizeInput(hpCur, { min: 30, max: 70 });
-      updateNpc(npc.id, { hpCurrent: numberOrNull(hpCur.value) }, false);
+      updateNpcLinkedField(npc, "hpCurrent", numberOrNull(hpCur.value), false);
     });
 
     const slash = document.createElement("span");
@@ -435,11 +457,11 @@ function createNpcCardsController(deps = {}) {
     hpMax.classList.add("autosize");
     hpMax.type = "number";
     hpMax.placeholder = "Max";
-    hpMax.value = npc.hpMax ?? "";
+    hpMax.value = display.hpMax ?? "";
     autoSizeInput(hpMax, { min: 30, max: 70 });
     hpMax.addEventListener("input", () => {
       autoSizeInput(hpMax, { min: 30, max: 70 });
-      updateNpc(npc.id, { hpMax: numberOrNull(hpMax.value) }, false);
+      updateNpcLinkedField(npc, "hpMax", numberOrNull(hpMax.value), false);
     });
 
     hpWrap.appendChild(hpCur);
@@ -460,9 +482,16 @@ function createNpcCardsController(deps = {}) {
     statusInput.className = "npcField";
     statusInput.classList.add("statusInput");
     statusInput.placeholder = "Poisoned, Charmed…";
-    statusInput.value = npc.status || "";
+    statusInput.value = display.status || "";
     autoSizeInput(statusInput, { min: 60, max: 300 });
-    statusInput.addEventListener("input", () => updateNpc(npc.id, { status: statusInput.value }, false));
+    statusInput.addEventListener("input", () => updateNpcLinkedField(npc, "status", statusInput.value, false));
+
+    if (display.isOrphanedLink) {
+      const orphanHint = document.createElement("div");
+      orphanHint.className = "linkedCardWarning";
+      orphanHint.textContent = "Character not found — showing last known data.";
+      statusBlock.appendChild(orphanHint);
+    }
 
     statusBlock.appendChild(statusLabel);
     statusBlock.appendChild(statusInput);
@@ -552,7 +581,7 @@ function createNpcCardsController(deps = {}) {
       query: state.tracker.npcSearch || "",
       tabClass: "npcTab",
       sectionMatches: (sec, query) =>
-        state.tracker.npcs.some((npc) => npc.sectionId === sec.id && matchesSearch(npc, query)),
+        state.tracker.npcs.some((npc) => npc.sectionId === sec.id && matchesSearch(resolveCardDisplayData(npc, state), query)),
       onSelect: (id) => setActiveSection(id),
     });
   }

@@ -11,6 +11,7 @@
  * @typedef {{
  *   id: string,
  *   sectionId: string,
+ *   characterId: string | null,
  *   notes: string,
  *   imgBlobId: string | null,
  *   portraitHidden: boolean,
@@ -28,7 +29,8 @@
 /**
  * @typedef {SectionNotesInit & {
  *   group?: string,
- *   name?: string
+ *   name?: string,
+ *   characterId?: string | null
  * }} NpcInit
  */
 /**
@@ -39,7 +41,8 @@
  */
 /**
  * @typedef {SectionNotesInit & {
- *   name?: string
+ *   name?: string,
+ *   characterId?: string | null
  * }} PartyMemberInit
  */
 /**
@@ -73,12 +76,13 @@ export function makeId(prefix) {
  * @param {NpcInit} [input]
  * @returns {NpcCard}
  */
-export function makeNpc({ sectionId = "", group = "undecided", name = "", notes = "" } = {}) {
+export function makeNpc({ sectionId = "", group = "undecided", name = "", notes = "", characterId = null } = {}) {
   return {
     id: makeId("npc"),
     // sectionId is the primary grouping field for current saves.
     // We keep `group` for backwards-compat / older saves.
     sectionId,
+    characterId,
     group,
     name,
     notes,
@@ -96,10 +100,11 @@ export function makeNpc({ sectionId = "", group = "undecided", name = "", notes 
  * @param {PartyMemberInit} [input]
  * @returns {PartyMemberCard}
  */
-export function makePartyMember({ sectionId = "party", name = "", notes = "" } = {}) {
+export function makePartyMember({ sectionId = "party", name = "", notes = "", characterId = null } = {}) {
   return {
     id: makeId("party"),
     sectionId,
+    characterId,
     name,
     notes,
     status: "",

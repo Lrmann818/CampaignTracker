@@ -109,6 +109,44 @@ describe("combat encounter actions", () => {
     });
   });
 
+  it("writes combat HP and status changes through linked tracker cards to characters", () => {
+    const state = makeState();
+    state.characters = {
+      activeId: "char_a",
+      entries: [{
+        id: "char_a",
+        name: "Arlen",
+        hpCur: 10,
+        hpMax: 12,
+        status: "Poisoned",
+        imgBlobId: "char-portrait"
+      }]
+    };
+    state.tracker.npcs[0].characterId = "char_a";
+    state.tracker.npcs[0].hpCurrent = 1;
+    state.tracker.npcs[0].status = "Fallback";
+
+    const hpResult = applyCombatParticipantHpAction(state, "cmb_1", "damage", 5);
+    const statusResult = addCombatParticipantStatusEffect(
+      state,
+      "cmb_1",
+      { label: "Bless", durationMode: "none" },
+      { id: "s_bless" }
+    );
+
+    expect(hpResult.wroteCanonical).toBe(true);
+    expect(statusResult.wroteCanonical).toBe(true);
+    expect(state.characters.entries[0]).toMatchObject({
+      hpCur: 8,
+      status: "Haste, Bless"
+    });
+    expect(state.tracker.npcs[0]).toMatchObject({
+      hpCurrent: 1,
+      tempHp: 0,
+      status: "Fallback"
+    });
+  });
+
   it("adds, edits, and removes participant statuses while writing back only canonical status text", () => {
     const state = makeState();
 

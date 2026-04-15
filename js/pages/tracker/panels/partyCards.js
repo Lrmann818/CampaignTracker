@@ -16,6 +16,7 @@ import { createCardIncrementalDomPatcher } from "./cards/shared/cardIncrementalP
 import { notifyCombatEncounterChanged } from "../../combat/combatEvents.js";
 import { addTrackerCardToCombatEncounter } from "../../../domain/combatTrackerActions.js";
 import { createStateActions } from "../../../domain/stateActions.js";
+import { getLinkedCharacter, resolveCardDisplayData, writeCardLinkedField } from "../../../domain/cardLinking.js";
 import { requireMany } from "../../../utils/domGuards.js";
 import { startJumpDebugRun, queueJumpDebugCheckpoints } from "../../../ui/jumpDebug.js";
 import * as masonry from "../../../ui/masonryLayout.js";
@@ -101,7 +102,7 @@ function createPartyCardsController(deps = {}) {
     const query = getSearchQuery();
     return state.tracker.party
       .filter((member) => member.sectionId === sectionId)
-      .filter((member) => matchesSearch(member, query));
+      .filter((member) => matchesSearch(resolveCardDisplayData(member, state), query));
   };
   const cardDomPatcher = createCardIncrementalDomPatcher({
     cardsEl,
@@ -116,8 +117,8 @@ function createPartyCardsController(deps = {}) {
     hidden,
     focusEl,
     getItemById: getPartyMemberById,
-    getBlobId: (member) => member.imgBlobId,
-    getAltText: (member) => member.name || "Party Member Portrait",
+    getBlobId: (member) => resolveCardDisplayData(member, state).imgBlobId,
+    getAltText: (member) => resolveCardDisplayData(member, state).name || "Party Member Portrait",
     onPick: (member) => pickPartyImage(member.id),
     onToggleHidden: (member, nextHidden) => setPartyPortraitHidden(member.id, nextHidden),
   });
@@ -190,6 +191,13 @@ function createPartyCardsController(deps = {}) {
     if (rerender) renderPartyCards();
   }
 
+  function updatePartyLinkedField(member, field, value, rerender = false) {
+    const result = writeCardLinkedField(member, field, value, state, { SaveManager, queueSave: false });
+    if (!result.written) return;
+    SaveManager.markDirty();
+    if (rerender) renderPartyCards();
+  }
+
   function setPartyPortraitHidden(id, hidden) {
     if (!setCardPortraitHidden("party", id, hidden, { queueSave: false })) return;
     SaveManager.markDirty();
@@ -252,8 +260,8 @@ function createPartyCardsController(deps = {}) {
     const ok = await pickAndStorePortrait({
       itemId: memberId,
       getItemById: getPartyMemberById,
-      getBlobId: (member) => member.imgBlobId,
-      setBlobId: (_member, blobId) => updateTrackerCardField("party", memberId, "imgBlobId", blobId, { queueSave: false }),
+      getBlobId: (member) => resolveCardDisplayData(member, state).imgBlobId,
+      setBlobId: (member, blobId) => writeCardLinkedField(member, "imgBlobId", blobId, state, { queueSave: false }),
       deps: {
         pickCropStorePortrait,
         ImagePicker,
@@ -283,7 +291,11 @@ function createPartyCardsController(deps = {}) {
       const deleted = await deleteTrackerCardWithBlobCleanup({
         type: "party",
         itemId: id,
-        getItemById: getPartyMemberById,
+        getItemById: (itemId) => {
+          const item = getPartyMemberById(itemId);
+          if (!item || getLinkedCharacter(item, state)) return item ? { ...item, imgBlobId: null } : null;
+          return item;
+        },
         mutateTracker,
         SaveManager,
         deleteBlob,
@@ -298,6 +310,7 @@ function createPartyCardsController(deps = {}) {
   }
 
   function renderPartyCard(member) {
+    const display = resolveCardDisplayData(member, state);
     const card = document.createElement("div");
     card.className = "trackerCard npcCardStack";
     card.dataset.cardId = member.id;
@@ -314,8 +327,8 @@ function createPartyCardsController(deps = {}) {
     const nameInput = document.createElement("input");
     nameInput.className = "npcField npcNameBig";
     nameInput.placeholder = "Name";
-    nameInput.value = member.name || "";
-    nameInput.addEventListener("input", () => updateParty(member.id, { name: nameInput.value }, false));
+    nameInput.value = display.name || "";
+    nameInput.addEventListener("input", () => updatePartyLinkedField(member, "name", nameInput.value, false));
 
     const moveUp = createMoveButton({
       direction: -1,
@@ -363,12 +376,21 @@ function createPartyCardsController(deps = {}) {
     });
 
     headerRow.appendChild(nameInput);
+    if (display.isLinked || display.isOrphanedLink) {
+      const linkedBadge = document.createElement("span");
+      linkedBadge.className = `linkedCardBadge${display.isOrphanedLink ? " isOrphaned" : ""}`;
+      linkedBadge.textContent = display.isOrphanedLink ? "⚠" : "🔗";
+      linkedBadge.title = display.isOrphanedLink
+        ? "Character not found — showing last known data."
+        : `Linked to ${display.linkedCharacterName || "character"}`;
+      headerRow.appendChild(linkedBadge);
+    }
     headerRow.appendChild(moveUp);
     headerRow.appendChild(moveDown);
 
     const portrait = renderCardPortrait({
-      blobId: member.imgBlobId,
-      altText: member.name || "Party Member Portrait",
+      blobId: display.imgBlobId,
+      altText: display.name || "Party Member Portrait",
       blobIdToObjectUrl,
       onPick: () => pickPartyImage(member.id),
       isHidden: !!member.portraitHidden,
@@ -392,10 +414,10 @@ function createPartyCardsController(deps = {}) {
     const classInput = document.createElement("input");
     classInput.className = "npcField npcClass";
     classInput.placeholder = "Class / Role";
-    classInput.value = member.className || "";
+    classInput.value = display.className || "";
     classInput.classList.add("autosize");
     autoSizeInput(classInput, { min: 60, max: 200 });
-    classInput.addEventListener("input", () => updateParty(member.id, { className: classInput.value }, false));
+    classInput.addEventListener("input", () => updatePartyLinkedField(member, "className", classInput.value, false));
 
     classRow.appendChild(classLabel);
     classRow.appendChild(classInput);
@@ -416,11 +438,11 @@ function createPartyCardsController(deps = {}) {
     hpCur.classList.add("autosize");
     hpCur.type = "number";
     hpCur.placeholder = "Cur";
-    hpCur.value = member.hpCurrent ?? "";
+    hpCur.value = display.hpCurrent ?? "";
     autoSizeInput(hpCur, { min: 30, max: 70 });
     hpCur.addEventListener("input", () => {
       autoSizeInput(hpCur, { min: 30, max: 70 });
-      updateParty(member.id, { hpCurrent: parseNumberOrNull(hpCur.value) }, false);
+      updatePartyLinkedField(member, "hpCurrent", parseNumberOrNull(hpCur.value), false);
     });
 
     const slash = document.createElement("span");
@@ -433,11 +455,11 @@ function createPartyCardsController(deps = {}) {
     hpMax.classList.add("autosize");
     hpMax.type = "number";
     hpMax.placeholder = "Max";
-    hpMax.value = member.hpMax ?? "";
+    hpMax.value = display.hpMax ?? "";
     autoSizeInput(hpMax, { min: 30, max: 70 });
     hpMax.addEventListener("input", () => {
       autoSizeInput(hpMax, { min: 30, max: 70 });
-      updateParty(member.id, { hpMax: parseNumberOrNull(hpMax.value) }, false);
+      updatePartyLinkedField(member, "hpMax", parseNumberOrNull(hpMax.value), false);
     });
 
     hpWrap.appendChild(hpCur);
@@ -458,9 +480,16 @@ function createPartyCardsController(deps = {}) {
     statusInput.className = "npcField";
     statusInput.classList.add("statusInput");
     statusInput.placeholder = "Poisoned, Charmed…";
-    statusInput.value = member.status || "";
+    statusInput.value = display.status || "";
     autoSizeInput(statusInput, { min: 60, max: 300 });
-    statusInput.addEventListener("input", () => updateParty(member.id, { status: statusInput.value }, false));
+    statusInput.addEventListener("input", () => updatePartyLinkedField(member, "status", statusInput.value, false));
+
+    if (display.isOrphanedLink) {
+      const orphanHint = document.createElement("div");
+      orphanHint.className = "linkedCardWarning";
+      orphanHint.textContent = "Character not found — showing last known data.";
+      statusRow.appendChild(orphanHint);
+    }
 
     statusRow.appendChild(statusLabel);
     statusRow.appendChild(statusInput);
@@ -550,7 +579,7 @@ function createPartyCardsController(deps = {}) {
       query: state.tracker.partySearch || "",
       tabClass: "npcTab",
       sectionMatches: (sec, query) =>
-        state.tracker.party.some((member) => member.sectionId === sec.id && matchesSearch(member, query)),
+        state.tracker.party.some((member) => member.sectionId === sec.id && matchesSearch(resolveCardDisplayData(member, state), query)),
       onSelect: (id) => setActiveSection(id),
     });
   }

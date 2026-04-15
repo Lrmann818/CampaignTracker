@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getActiveCharacter, getCharacterById } from "../js/domain/characterHelpers.js";
+import { getActiveCharacter, getCharacterById, makeDefaultCharacterEntry } from "../js/domain/characterHelpers.js";
 
 function makeState(overrides = {}) {
   return {
@@ -51,6 +51,15 @@ describe("getActiveCharacter", () => {
     const b = { id: "char_b", name: "Arlen" };
     const state = makeState({ activeId: "char_b", entries: [a, b] });
     expect(getActiveCharacter(state)).toBe(b);
+  });
+});
+
+describe("makeDefaultCharacterEntry", () => {
+  it("seeds the Step 2 status field", () => {
+    expect(makeDefaultCharacterEntry("Mira")).toMatchObject({
+      name: "Mira",
+      status: ""
+    });
   });
 });
 

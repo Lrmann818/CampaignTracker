@@ -121,6 +121,51 @@ describe("tracker add-to-combat actions", () => {
     });
   });
 
+  it("creates participants from linked character display data", () => {
+    const state = {
+      characters: {
+        activeId: "char_a",
+        entries: [{
+          id: "char_a",
+          name: "Arlen",
+          classLevel: "Wizard 5",
+          hpCur: 14,
+          hpMax: 20,
+          status: "Blessed",
+          imgBlobId: "char-portrait"
+        }]
+      },
+      tracker: {
+        npcs: [{
+          id: "npc_1",
+          characterId: "char_a",
+          name: "Fallback",
+          hpCurrent: 1,
+          hpMax: 2,
+          status: "Fallback",
+          sectionId: "sec_foe"
+        }],
+        npcSections: [{ id: "sec_foe", name: "Foes" }]
+      }
+    };
+
+    const result = addTrackerCardToCombatEncounter(state, { type: "npc", id: "npc_1" }, {
+      now: "2026-04-11T11:00:00.000Z",
+      encounterId: "enc_linked",
+      participantId: "cmb_linked"
+    });
+
+    expect(result.added).toBe(true);
+    expect(state.combat.encounter.participants[0]).toMatchObject({
+      id: "cmb_linked",
+      name: "Arlen",
+      hpCurrent: 14,
+      hpMax: 20,
+      statusEffects: [expect.objectContaining({ label: "Blessed" })],
+      source: { type: "npc", id: "npc_1", sectionId: "sec_foe", group: "" }
+    });
+  });
+
   it("repairs malformed combat buckets defensively while keeping canonical tracker data separate", () => {
     const state = {
       tracker: {

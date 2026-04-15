@@ -203,12 +203,33 @@ describe("migrateState", () => {
       });
 
       expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-      expect(CURRENT_SCHEMA_VERSION).toBe(4);
+      expect(CURRENT_SCHEMA_VERSION).toBe(5);
       expect(migrated.combat).toEqual(DEFAULT_COMBAT_STATE);
       expect(migrated.tracker.campaignTitle).toBe("Moonfall");
       expect(migrated.tracker.misc).toBe("Preserve this");
       expect(activeEntry(migrated).inventoryItems).toEqual([{ title: "Inventory", notes: "Rations" }]);
       expect(migrated.ui.theme).toBe("forest");
+    });
+
+    it("upgrades schema v4 saves into v5 linked-card metadata", () => {
+      const migrated = migrateState({
+        schemaVersion: 4,
+        tracker: {
+          npcs: [{ id: "npc_1", name: "Scout" }],
+          party: [{ id: "party_1", name: "Tess" }],
+          locationsList: [{ id: "loc_1", title: "Old Mill" }]
+        },
+        characters: {
+          activeId: "char_a",
+          entries: [{ id: "char_a", name: "Arlen" }]
+        }
+      });
+
+      expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+      expect(migrated.tracker.npcs[0].characterId).toBeNull();
+      expect(migrated.tracker.party[0].characterId).toBeNull();
+      expect(migrated.tracker.locationsList[0].characterId).toBeUndefined();
+      expect(activeEntry(migrated).status).toBe("");
     });
 
     it("repairs malformed combat state while keeping workspace limited to composition data", () => {

@@ -123,14 +123,45 @@ function addReferencedId(target, maybeId) {
 }
 
 /**
+ * @param {BackupStateLike | null | undefined} stateLike
+ * @returns {Record<string, unknown>[]}
+ */
+function getCharacterEntries(stateLike) {
+  if (!isPlainObject(stateLike)) return [];
+  const charactersCollection = isPlainObject(stateLike.characters) ? stateLike.characters : null;
+  const characterEntries = Array.isArray(charactersCollection?.entries) ? charactersCollection.entries : [];
+  const legacySingleChar = characterEntries.length === 0 && isPlainObject(stateLike.character) ? stateLike.character : null;
+  return /** @type {Record<string, unknown>[]} */ (
+    characterEntries.length > 0 ? characterEntries.filter(isPlainObject) : (legacySingleChar ? [legacySingleChar] : [])
+  );
+}
+
+/**
+ * @param {BackupStateLike | null | undefined} stateLike
+ * @returns {Map<string, Record<string, unknown>>}
+ */
+function getCharacterEntryMap(stateLike) {
+  const entries = getCharacterEntries(stateLike);
+  const out = new Map();
+  for (const entry of entries) {
+    const id = cleanString(entry.id);
+    if (id) out.set(id, entry);
+  }
+  return out;
+}
+
+/**
  * @param {Set<string>} target
  * @param {unknown} items
+ * @param {Map<string, Record<string, unknown>>} characterById
  * @returns {void}
  */
-function collectPortraitBlobIds(target, items) {
+function collectTrackerPortraitBlobIds(target, items, characterById) {
   if (!Array.isArray(items)) return;
   for (const item of items) {
     if (!isPlainObject(item)) continue;
+    const linkedCharacterId = cleanString(item.characterId);
+    if (linkedCharacterId && characterById.has(linkedCharacterId)) continue;
     addReferencedId(target, item.imgBlobId);
   }
 }
@@ -144,19 +175,16 @@ export function collectReferencedBlobIds(stateLike) {
   if (!isPlainObject(stateLike)) return ids;
 
   const tracker = isPlainObject(stateLike.tracker) ? stateLike.tracker : null;
+  const characterById = getCharacterEntryMap(stateLike);
   if (tracker) {
-    collectPortraitBlobIds(ids, tracker.npcs);
-    collectPortraitBlobIds(ids, tracker.party);
-    collectPortraitBlobIds(ids, tracker.locationsList);
+    collectTrackerPortraitBlobIds(ids, tracker.npcs, characterById);
+    collectTrackerPortraitBlobIds(ids, tracker.party, characterById);
+    collectTrackerPortraitBlobIds(ids, tracker.locationsList, new Map());
   }
 
   // Support both new shape (characters.entries[]) and legacy shape (character).
-  const charactersCollection = isPlainObject(stateLike.characters) ? stateLike.characters : null;
-  const characterEntries = Array.isArray(charactersCollection?.entries) ? charactersCollection.entries : [];
-  const legacySingleChar = characterEntries.length === 0 && isPlainObject(stateLike.character) ? stateLike.character : null;
-  const allCharEntries = characterEntries.length > 0 ? characterEntries : (legacySingleChar ? [legacySingleChar] : []);
-  for (const ch of allCharEntries) {
-    if (isPlainObject(ch)) addReferencedId(ids, ch.imgBlobId);
+  for (const ch of getCharacterEntries(stateLike)) {
+    addReferencedId(ids, ch.imgBlobId);
   }
 
   const map = isPlainObject(stateLike.map) ? stateLike.map : null;
@@ -391,12 +419,18 @@ function replaceStateBuckets(target, source) {
 function remapBlobIds(target, idMap) {
   if (idMap.size === 0) return;
   const remap = (id) => (id ? (idMap.get(id) || id) : id);
+  const characterById = getCharacterEntryMap(target);
+  const shouldRemapCardPortrait = (card) => {
+    if (!isPlainObject(card)) return false;
+    const linkedCharacterId = cleanString(card.characterId);
+    return !(linkedCharacterId && characterById.has(linkedCharacterId));
+  };
 
   for (const npc of target.tracker.npcs) {
-    if (npc.imgBlobId) npc.imgBlobId = remap(npc.imgBlobId);
+    if (npc.imgBlobId && shouldRemapCardPortrait(npc)) npc.imgBlobId = remap(npc.imgBlobId);
   }
   for (const partyMember of target.tracker.party) {
-    if (partyMember.imgBlobId) partyMember.imgBlobId = remap(partyMember.imgBlobId);
+    if (partyMember.imgBlobId && shouldRemapCardPortrait(partyMember)) partyMember.imgBlobId = remap(partyMember.imgBlobId);
   }
   for (const location of target.tracker.locationsList) {
     if (location.imgBlobId) location.imgBlobId = remap(location.imgBlobId);

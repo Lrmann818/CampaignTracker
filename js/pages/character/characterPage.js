@@ -16,6 +16,8 @@ import { DEV_MODE } from "../../utils/dev.js";
 import { getActiveCharacter, makeDefaultCharacterEntry } from "../../domain/characterHelpers.js";
 import { notifyActiveCharacterChanged } from "../../domain/characterEvents.js";
 import { createStateActions } from "../../domain/stateActions.js";
+import { makeNpc, makePartyMember } from "../../domain/factories.js";
+import { LINKED_FIELD_MAP, getLinkedCards, linkCardToCharacter, snapshotLinkedFieldsToCard } from "../../domain/cardLinking.js";
 import { safeAsync } from "../../ui/safeAsync.js";
 import { enhanceSelectDropdown } from "../../ui/selectDropdown.js";
 
@@ -223,7 +225,7 @@ export function initCharacterPageUI(deps) {
     const actionMenuEl = /** @type {HTMLElement | null} */ (document.getElementById("charActionDropdownMenu"));
     if (!selectorEl || !actionMenuButtonEl || !actionMenuEl) return;
 
-    const { mutateState } = createStateActions({ state, SaveManager });
+    const { addTrackerCard, mutateState } = createStateActions({ state, SaveManager });
 
     /**
      * @param {(state: import("../../state.js").State) => unknown} mutator
@@ -278,6 +280,14 @@ export function initCharacterPageUI(deps) {
     const actionButtons = /** @type {HTMLButtonElement[]} */ (
       Array.from(actionMenuEl.querySelectorAll(".charActionMenuItem"))
     );
+    const addToTrackerButtons = actionButtons.filter((button) => (
+      button.dataset.charAction === "add-npc" || button.dataset.charAction === "add-party"
+    ));
+    const activeCharacterForActions = getActiveCharacter(state);
+    addToTrackerButtons.forEach((button) => {
+      button.disabled = !activeCharacterForActions;
+      button.setAttribute("aria-disabled", (!activeCharacterForActions).toString());
+    });
 
     const setActionMenuClosed = () => {
       actionMenuEl.hidden = true;
@@ -386,15 +396,51 @@ export function initCharacterPageUI(deps) {
       rerender();
     }
 
+    function snapshotCharacterFieldsToCard(card, character) {
+      for (const [cardField, characterField] of Object.entries(LINKED_FIELD_MAP)) {
+        card[cardField] = character[characterField];
+      }
+    }
+
+    function runAddCharacterToTrackerAction(type) {
+      const activeChar = getActiveCharacter(state);
+      if (!activeChar) return;
+      const isNpc = type === "npc";
+      const card = isNpc
+        ? makeNpc({ sectionId: state.tracker?.npcActiveSectionId || "" })
+        : makePartyMember({ sectionId: state.tracker?.partyActiveSectionId || "party" });
+
+      snapshotCharacterFieldsToCard(card, activeChar);
+      linkCardToCharacter(card, activeChar.id);
+
+      const added = addTrackerCard(isNpc ? "npc" : "party", card, { atStart: true });
+      if (!added) return;
+      if (typeof setStatus === "function") {
+        setStatus(isNpc ? "Added to NPCs" : "Added to Party", { stickyMs: 2000 });
+      }
+    }
+
     async function runDeleteCharacterAction() {
       const activeChar = getActiveCharacter(state);
+      if (!activeChar) return;
       const charName = activeChar?.name ? `"${activeChar.name}"` : "this character";
-      const ok = await uiConfirm?.(`Delete ${charName}? This cannot be undone.`, {
+      const linkedCards = getLinkedCards(state, activeChar.id);
+      const npcCount = linkedCards.filter((entry) => entry.type === "npc").length;
+      const partyCount = linkedCards.filter((entry) => entry.type === "party").length;
+      const linkedSummary = [
+        npcCount ? `NPCs (${npcCount})` : "",
+        partyCount ? `Party (${partyCount})` : ""
+      ].filter(Boolean).join(", ");
+      const linkedWarning = linkedSummary
+        ? `\n\nThis character has linked cards in: ${linkedSummary}. Linked cards will keep their last known data and become standalone.`
+        : "";
+      const ok = await uiConfirm?.(`Delete ${charName}? This cannot be undone.${linkedWarning}`, {
         title: "Delete Character",
         okText: "Delete"
       });
       if (!ok) return;
       mutateCharactersAndNotify((s) => {
+        linkedCards.forEach(({ card }) => snapshotLinkedFieldsToCard(card, s));
         const idx = s.characters.entries.findIndex((e) => e.id === s.characters.activeId);
         if (idx !== -1) s.characters.entries.splice(idx, 1);
         const remaining = s.characters.entries;
@@ -408,6 +454,10 @@ export function initCharacterPageUI(deps) {
         await runNewCharacterAction();
       } else if (action === "rename") {
         await runRenameCharacterAction();
+      } else if (action === "add-npc") {
+        runAddCharacterToTrackerAction("npc");
+      } else if (action === "add-party") {
+        runAddCharacterToTrackerAction("party");
       } else if (action === "delete") {
         await runDeleteCharacterAction();
       }

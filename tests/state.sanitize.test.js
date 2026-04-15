@@ -19,11 +19,12 @@ describe("sanitizeForSave", () => {
     const charEntry = {
       id: "char_test",
       name: "Arlen",
+      status: "Poisoned",
       inventoryItems: [{ title: "Inventory", notes: "50 ft. rope" }]
     };
     state.characters = { activeId: "char_test", entries: [charEntry] };
     state.tracker.campaignTitle = "Moonfall";
-    state.tracker.npcs = [{ id: "npc_1", name: "Miri" }];
+    state.tracker.npcs = [{ id: "npc_1", name: "Miri", characterId: "char_test" }];
 
     const sanitized = sanitizeForSave(state);
 
@@ -31,6 +32,8 @@ describe("sanitizeForSave", () => {
     expect(sanitized.characters).not.toBe(state.characters);
     expect(sanitized.tracker).toEqual(state.tracker);
     expect(sanitized.characters).toEqual(state.characters);
+    expect(sanitized.tracker.npcs[0].characterId).toBe("char_test");
+    expect(sanitized.characters.entries[0].status).toBe("Poisoned");
 
     sanitized.tracker.campaignTitle = "Changed in payload";
     sanitized.characters.activeId = "changed";
@@ -111,7 +114,7 @@ describe("sanitizeForSave", () => {
 
   it("defaults missing app-level preferences to false in the save payload", () => {
     const sanitized = sanitizeForSave({
-      schemaVersion: 4,
+      schemaVersion: 5,
       tracker: {},
       characters: { activeId: null, entries: [] },
       map: {},
@@ -120,5 +123,25 @@ describe("sanitizeForSave", () => {
     });
 
     expect(sanitized.app.preferences.playHubOpenSound).toBe(false);
+  });
+
+  it("preserves linked card ids and character status through sanitize and migrate", () => {
+    const state = makeState();
+    state.tracker.npcs = [{ id: "npc_1", name: "Scout", characterId: "char_test" }];
+    state.tracker.party = [{ id: "party_1", name: "Tess", characterId: "char_test" }];
+    state.characters = {
+      activeId: "char_test",
+      entries: [{ id: "char_test", name: "Arlen", status: "Charmed" }]
+    };
+
+    const sanitized = sanitizeForSave(state);
+    const migratedAgain = migrateState(sanitized);
+
+    expect(sanitized.tracker.npcs[0].characterId).toBe("char_test");
+    expect(sanitized.tracker.party[0].characterId).toBe("char_test");
+    expect(sanitized.characters.entries[0].status).toBe("Charmed");
+    expect(migratedAgain.tracker.npcs[0].characterId).toBe("char_test");
+    expect(migratedAgain.tracker.party[0].characterId).toBe("char_test");
+    expect(migratedAgain.characters.entries[0].status).toBe("Charmed");
   });
 });

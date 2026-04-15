@@ -157,10 +157,51 @@ describe("schema version", () => {
   it("always sets schemaVersion to the current version after migration", () => {
     const fromLegacy = migrateState({ character: { name: "Arlen" } });
     expect(fromLegacy.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(CURRENT_SCHEMA_VERSION).toBe(4);
+    expect(CURRENT_SCHEMA_VERSION).toBe(5);
 
     const fromEmpty = migrateState({});
     expect(fromEmpty.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+  });
+});
+
+describe("migrateToV5 — character-linked tracker card fields", () => {
+  it("adds characterId to NPC and Party cards and status to character entries", () => {
+    const migrated = migrateState({
+      schemaVersion: 4,
+      tracker: {
+        npcs: [{ id: "npc_1", name: "Mira" }],
+        party: [{ id: "party_1", name: "Arlen" }],
+        locationsList: [{ id: "loc_1", title: "Docks" }]
+      },
+      characters: {
+        activeId: "char_a",
+        entries: [{ id: "char_a", name: "Arlen" }]
+      }
+    });
+
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrated.tracker.npcs[0].characterId).toBeNull();
+    expect(migrated.tracker.party[0].characterId).toBeNull();
+    expect(migrated.tracker.locationsList[0].characterId).toBeUndefined();
+    expect(migrated.characters.entries[0].status).toBe("");
+  });
+
+  it("preserves existing linked ids and character status values", () => {
+    const migrated = migrateState({
+      schemaVersion: 4,
+      tracker: {
+        npcs: [{ id: "npc_1", characterId: "char_a", name: "Fallback" }],
+        party: [{ id: "party_1", characterId: "char_a", name: "Fallback" }]
+      },
+      characters: {
+        activeId: "char_a",
+        entries: [{ id: "char_a", name: "Arlen", status: "Poisoned" }]
+      }
+    });
+
+    expect(migrated.tracker.npcs[0].characterId).toBe("char_a");
+    expect(migrated.tracker.party[0].characterId).toBe("char_a");
+    expect(migrated.characters.entries[0].status).toBe("Poisoned");
   });
 });
 
@@ -177,16 +218,23 @@ describe("round-trip stability", () => {
     expect(entry.id).toBe(first.characters.activeId);
     expect(entry.name).toBe("Arlen");
     expect(entry.hpMax).toBe(20);
+    expect(entry.status).toBe("");
   });
 
   it("round-tripping an already-current state is stable", () => {
-    const migrated = migrateState({ characters: { activeId: "char_a", entries: [{ id: "char_a", name: "Mira" }] } });
+    const migrated = migrateState({
+      characters: { activeId: "char_a", entries: [{ id: "char_a", name: "Mira" }] },
+      tracker: { npcs: [{ id: "npc_1", name: "Scout" }], party: [{ id: "party_1", name: "Tess" }] }
+    });
     const sanitized = sanitizeForSave(migrated);
     const again = migrateState(sanitized);
 
     expect(again.characters.entries).toHaveLength(1);
     expect(again.characters.activeId).toBe("char_a");
     expect(activeEntry(again).name).toBe("Mira");
+    expect(activeEntry(again).status).toBe("");
+    expect(again.tracker.npcs[0].characterId).toBeNull();
+    expect(again.tracker.party[0].characterId).toBeNull();
   });
 
   it("round-tripping an empty-character state stays empty", () => {

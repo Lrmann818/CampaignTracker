@@ -7,6 +7,7 @@ import {
   makeCombatId,
   normalizeCombatEncounter
 } from "./combat.js";
+import { resolveCardDisplayData } from "./cardLinking.js";
 
 /** @typedef {import("./combat.js").CombatParticipant} CombatParticipant */
 /** @typedef {import("./combat.js").CombatEncounter} CombatEncounter */
@@ -102,7 +103,8 @@ export function addTrackerCardToCombatEncounter(state, sourceRef, options = {}) 
   const now = cleanString(options.now) || new Date().toISOString();
   const combat = ensureCombatBuckets(state);
   const encounter = normalizeCombatEncounter(combat.encounter);
-  const participant = createCombatParticipantFromSource(source.card, {
+  const sourceDisplay = resolveCardDisplayData(source.card, /** @type {Record<string, unknown>} */ (state));
+  const participant = createCombatParticipantFromSource(sourceDisplay, {
     id: options.participantId,
     sourceType: source.type,
     sections: getSectionsForSourceType(tracker, source.type)

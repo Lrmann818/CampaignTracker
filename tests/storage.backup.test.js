@@ -151,6 +151,31 @@ describe("collectReferencedBlobIds", () => {
     ]);
   });
 
+  it("uses character portraits for valid linked cards and card fallbacks for orphaned links", () => {
+    const ids = collectReferencedBlobIds({
+      tracker: {
+        npcs: [
+          { id: "npc_linked", characterId: "char_a", imgBlobId: "stale-npc" },
+          { id: "npc_orphan", characterId: "char_missing", imgBlobId: "orphan-npc" }
+        ],
+        party: [
+          { id: "party_linked", characterId: "char_a", imgBlobId: "stale-party" },
+          { id: "party_free", characterId: null, imgBlobId: "party-free" }
+        ]
+      },
+      characters: {
+        activeId: "char_a",
+        entries: [{ id: "char_a", imgBlobId: "char-portrait" }]
+      }
+    });
+
+    expect([...ids].sort()).toEqual([
+      "char-portrait",
+      "orphan-npc",
+      "party-free"
+    ]);
+  });
+
 });
 
 describe("collectReferencedTextIds", () => {
@@ -385,6 +410,48 @@ describe("importBackup", () => {
       { title: "Import complete" }
     );
     expect(input.value).toBe("");
+  });
+
+  it("imports linked cards with character links preserved", async () => {
+    const state = makeState();
+    const importedState = makeState();
+    importedState.characters = {
+      activeId: "char_linked",
+      entries: [{ id: "char_linked", name: "Linked Hero", status: "Poisoned", imgBlobId: "char-portrait" }]
+    };
+    importedState.tracker.npcs = [
+      { id: "npc_1", characterId: "char_linked", name: "Snapshot", imgBlobId: "stale-card-portrait" }
+    ];
+    importedState.tracker.party = [
+      { id: "party_1", characterId: "char_linked", name: "Snapshot", imgBlobId: "stale-party-portrait" }
+    ];
+
+    const input = makeInput({
+      version: 2,
+      state: sanitizeForSave(importedState),
+      blobs: {
+        "char-portrait": "data:image/png;base64,QQ=="
+      },
+      texts: {}
+    });
+
+    await importBackup(
+      { target: input },
+      makeImportDeps({
+        state,
+        migrateState,
+        dataUrlToBlob: vi.fn(() => ({ type: "image/png" })),
+        putBlob: vi.fn(async (_blob, id) => id)
+      })
+    );
+
+    expect(state.tracker.npcs[0].characterId).toBe("char_linked");
+    expect(state.tracker.party[0].characterId).toBe("char_linked");
+    expect(state.characters.entries[0]).toMatchObject({
+      id: "char_linked",
+      status: "Poisoned",
+      imgBlobId: "char-portrait"
+    });
   });
 
   it("writes staged blobs and texts before swapping state, then cleans old assets after save", async () => {
@@ -822,6 +889,54 @@ describe("importBackup", () => {
     expect(state.tracker.npcs).toEqual([{ name: "After", imgBlobId: "remapped-blob" }]);
     expect(deleteBlob).toHaveBeenCalledWith("old-live-blob");
     expect(deleteBlob).not.toHaveBeenCalledWith("remapped-blob");
+  });
+
+  it("remaps linked character portraits but not stale linked card snapshots", async () => {
+    const state = makeState();
+    const importedState = makeState();
+    importedState.characters = {
+      activeId: "char_linked",
+      entries: [{ id: "char_linked", name: "Linked", imgBlobId: "incoming-char" }]
+    };
+    importedState.tracker.npcs = [
+      { id: "npc_linked", characterId: "char_linked", name: "Linked Snapshot", imgBlobId: "stale-linked-card" },
+      { id: "npc_orphan", characterId: "missing", name: "Orphan Snapshot", imgBlobId: "incoming-orphan-card" }
+    ];
+
+    const input = makeInput({
+      version: 2,
+      state: sanitizeForSave(importedState),
+      blobs: {
+        "incoming-char": "data:image/png;base64,QQ==",
+        "stale-linked-card": "data:image/png;base64,Qg==",
+        "incoming-orphan-card": "data:image/png;base64,Qw=="
+      },
+      texts: {}
+    });
+
+    const putBlob = vi.fn(async (_blob, id) => {
+      throw new Error(`collision:${id || "generated"}`);
+    })
+      .mockImplementationOnce(async () => { throw new Error("char collision"); })
+      .mockImplementationOnce(async () => "remapped-char")
+      .mockImplementationOnce(async () => { throw new Error("stale collision"); })
+      .mockImplementationOnce(async () => "remapped-stale")
+      .mockImplementationOnce(async () => { throw new Error("orphan collision"); })
+      .mockImplementationOnce(async () => "remapped-orphan");
+
+    await importBackup(
+      { target: input },
+      makeImportDeps({
+        state,
+        migrateState: vi.fn(() => importedState),
+        putBlob,
+        dataUrlToBlob: vi.fn(() => ({ type: "image/png" }))
+      })
+    );
+
+    expect(state.characters.entries[0].imgBlobId).toBe("remapped-char");
+    expect(state.tracker.npcs[0].imgBlobId).toBe("stale-linked-card");
+    expect(state.tracker.npcs[1].imgBlobId).toBe("remapped-orphan");
   });
 
   it("runs success completion behavior after a no-image import", async () => {

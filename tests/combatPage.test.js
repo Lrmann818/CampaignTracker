@@ -289,6 +289,52 @@ describe("combat page shell helpers", () => {
     expect(cards[0].portraitBlobId).toBeNull();
   });
 
+  it("resolves combat card portrait and canonical max HP through linked characters", () => {
+    const cards = getCombatCardViewModels({
+      characters: {
+        activeId: "char_a",
+        entries: [{
+          id: "char_a",
+          name: "Arlen",
+          hpCur: 14,
+          hpMax: 20,
+          status: "",
+          imgBlobId: "char-portrait"
+        }]
+      },
+      tracker: {
+        npcs: [{
+          id: "npc_1",
+          characterId: "char_a",
+          name: "Fallback",
+          hpCurrent: 1,
+          hpMax: 2,
+          imgBlobId: "fallback-portrait"
+        }]
+      },
+      combat: {
+        encounter: {
+          participants: [{
+            id: "cmb_1",
+            name: "Arlen",
+            role: "npc",
+            source: { type: "npc", id: "npc_1", sectionId: "", group: "" },
+            hpCurrent: 14,
+            hpMax: 2,
+            tempHp: 0,
+            statusEffects: []
+          }]
+        }
+      }
+    });
+
+    expect(cards[0]).toMatchObject({
+      portraitBlobId: "char-portrait",
+      hpMaxLabel: "20",
+      hpCurrentLabel: "14"
+    });
+  });
+
   it("uses a single combat-card HP display value of current plus temp HP and tracks temp HP as color state only", () => {
     const cards = getCombatCardViewModels({
       tracker: {

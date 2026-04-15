@@ -46,6 +46,7 @@ export function makeDefaultCharacterEntry(name = "New Character") {
     imgBlobId: null,
     name,
     classLevel: "",
+    status: "",
     race: "",
     background: "",
     alignment: "",

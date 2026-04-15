@@ -29,6 +29,7 @@ import {
   getCombatHpFromSource,
   normalizeCombatEncounter
 } from "../../domain/combat.js";
+import { resolveCardDisplayData } from "../../domain/cardLinking.js";
 import { flipSwapTwo } from "../../ui/flipSwap.js";
 import { enhanceSelectDropdown } from "../../ui/selectDropdown.js";
 import { getNoopDestroyApi, requireMany } from "../../utils/domGuards.js";
@@ -270,12 +271,13 @@ export function getCombatCardViewModels(state) {
         : null,
       participant.source
     );
-    const sourceBlobId = source?.card?.imgBlobId;
+    const sourceDisplay = source ? resolveCardDisplayData(source.card, /** @type {Record<string, unknown>} */ (s)) : null;
+    const sourceBlobId = sourceDisplay?.imgBlobId;
     if (typeof sourceBlobId === "string" && sourceBlobId) {
       portraitBlobId = sourceBlobId;
     }
 
-    const sourceHp = source ? getCombatHpFromSource(source.card) : null;
+    const sourceHp = sourceDisplay ? getCombatHpFromSource(sourceDisplay) : null;
     const canonicalMax = sourceHp?.hpMax ?? participant.hpMax;
     const currentHp = participant.hpCurrent;
     const tempHp = Math.max(0, Math.trunc(Number(participant.tempHp) || 0));
