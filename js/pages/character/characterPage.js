@@ -18,6 +18,7 @@ import { notifyActiveCharacterChanged } from "../../domain/characterEvents.js";
 import { createStateActions } from "../../domain/stateActions.js";
 import { makeNpc, makePartyMember } from "../../domain/factories.js";
 import { LINKED_FIELD_MAP, getLinkedCards, linkCardToCharacter, snapshotLinkedFieldsToCard } from "../../domain/cardLinking.js";
+import { notifyPanelDataChanged } from "../../ui/panelInvalidation.js";
 import { safeAsync } from "../../ui/safeAsync.js";
 import { enhanceSelectDropdown } from "../../ui/selectDropdown.js";
 
@@ -413,8 +414,9 @@ export function initCharacterPageUI(deps) {
       snapshotCharacterFieldsToCard(card, activeChar);
       linkCardToCharacter(card, activeChar.id);
 
-      const added = addTrackerCard(isNpc ? "npc" : "party", card, { atStart: true });
+      const added = addTrackerCard(isNpc ? "npc" : "party", /** @type {any} */ (card), { atStart: true });
       if (!added) return;
+      notifyPanelDataChanged("tracker-cards");
       if (typeof setStatus === "function") {
         setStatus(isNpc ? "Added to NPCs" : "Added to Party", { stickyMs: 2000 });
       }

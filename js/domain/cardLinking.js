@@ -176,7 +176,8 @@ export function getLinkedCards(state, characterId) {
   const id = typeof characterId === "string" ? characterId : "";
   if (!id) return [];
   const tracker = isPlainObject(state?.tracker) ? state.tracker : {};
-  const out = /** @type {Array<{ type: "npc" | "party", card: LinkedTrackerCard }>} */ ([]);
+  /** @type {Array<{ type: "npc" | "party", card: LinkedTrackerCard }>} */
+  const out = [];
 
   if (Array.isArray(tracker.npcs)) {
     for (const card of tracker.npcs) {

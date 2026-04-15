@@ -12,6 +12,7 @@ import { initLocationsPanel } from "./panels/locationCards.js";
 import { initCharacterPageUI } from "../character/characterPage.js";
 import { COMBAT_ENCOUNTER_CHANGED_EVENT } from "../combat/combatEvents.js";
 import { initPanelHeaderCollapse } from "../../ui/panelHeaderCollapse.js";
+import { subscribePanelDataChanged } from "../../ui/panelInvalidation.js";
 import { requireMany, getNoopDestroyApi } from "../../utils/domGuards.js";
 import { DEV_MODE } from "../../utils/dev.js";
 
@@ -329,6 +330,10 @@ export function initTrackerPage(deps = {}) {
     if (!(event instanceof CustomEvent) || event.detail?.canonicalWriteback !== true) return;
     cardPanelRenderFns.forEach((renderPanel) => renderPanel());
   });
+
+  addDestroy(subscribePanelDataChanged("tracker-cards", () => {
+    cardPanelRenderFns.forEach((renderPanel) => renderPanel());
+  }));
 
   // ----- Character sheet UI -----
   runPanelInit("Character page", () => initCharacterPageUI({

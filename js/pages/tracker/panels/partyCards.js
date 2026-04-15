@@ -242,10 +242,10 @@ function createPartyCardsController(deps = {}) {
       const hpCurEl = cardEl.querySelector("[data-linked-field='hpCurrent']");
       const hpMaxEl = cardEl.querySelector("[data-linked-field='hpMax']");
       if (hpCurEl instanceof HTMLInputElement && document.activeElement !== hpCurEl) {
-        hpCurEl.value = String(display.hpCurrent ?? "");
+        hpCurEl.value = display.hpCurrent != null ? String(display.hpCurrent) : "";
       }
       if (hpMaxEl instanceof HTMLInputElement && document.activeElement !== hpMaxEl) {
-        hpMaxEl.value = String(display.hpMax ?? "");
+        hpMaxEl.value = display.hpMax != null ? String(display.hpMax) : "";
       }
     });
   }
@@ -491,7 +491,7 @@ function createPartyCardsController(deps = {}) {
     hpCur.type = "number";
     hpCur.placeholder = "Cur";
     hpCur.dataset.linkedField = "hpCurrent";
-    hpCur.value = String(display.hpCurrent ?? "");
+    hpCur.value = display.hpCurrent != null ? String(display.hpCurrent) : "";
     autoSizeInput(hpCur, { min: 30, max: 70 });
     hpCur.addEventListener("input", () => {
       autoSizeInput(hpCur, { min: 30, max: 70 });
@@ -509,7 +509,7 @@ function createPartyCardsController(deps = {}) {
     hpMax.type = "number";
     hpMax.placeholder = "Max";
     hpMax.dataset.linkedField = "hpMax";
-    hpMax.value = String(display.hpMax ?? "");
+    hpMax.value = display.hpMax != null ? String(display.hpMax) : "";
     autoSizeInput(hpMax, { min: 30, max: 70 });
     hpMax.addEventListener("input", () => {
       autoSizeInput(hpMax, { min: 30, max: 70 });
