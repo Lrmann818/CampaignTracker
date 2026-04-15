@@ -131,6 +131,26 @@ describe("migrateToV4 — already-migrated state passes through safely", () => {
 
     expect(migrated.characters.activeId).toBeNull();
   });
+
+  it("repairs missing or duplicate entry ids in an existing characters collection", () => {
+    const migrated = migrateState({
+      characters: {
+        activeId: "char_dup",
+        entries: [
+          { id: "char_dup", name: "First" },
+          { id: "", name: "Missing" },
+          { id: "char_dup", name: "Duplicate" }
+        ]
+      }
+    });
+
+    const ids = migrated.characters.entries.map((entry) => entry.id);
+    expect(ids).toHaveLength(3);
+    expect(ids[0]).toBe("char_dup");
+    expect(new Set(ids).size).toBe(3);
+    expect(ids.every((id) => typeof id === "string" && id.startsWith("char_"))).toBe(true);
+    expect(migrated.characters.activeId).toBe("char_dup");
+  });
 });
 
 describe("schema version", () => {

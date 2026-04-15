@@ -573,6 +573,27 @@ describe("character page selector", () => {
     controller.destroy();
   });
 
+  it("keeps the empty-state prompt dismissed across Character page re-init for the same campaign", () => {
+    const { document } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    deps.state.appShell = { activeCampaignId: "campaign_empty_prompt" };
+    deps.state.characters = { activeId: null, entries: [] };
+
+    const firstController = initCharacterPageUI(deps);
+    const emptyState = document.getElementById("charEmptyState");
+    expect(emptyState.hidden).toBe(false);
+
+    document.getElementById("charEmptyStateNo").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    expect(emptyState.hidden).toBe(true);
+
+    firstController.destroy();
+    const secondController = initCharacterPageUI(deps);
+    expect(document.getElementById("charEmptyState").hidden).toBe(true);
+
+    secondController.destroy();
+  });
+
   it("closes the Character action overflow menu when Rename is cancelled", async () => {
     const { actionMenuButton } = installCharacterSelectorDom();
     const Popovers = createFakePopovers();

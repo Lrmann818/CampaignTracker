@@ -1152,6 +1152,8 @@ export function migrateState(raw) {
   }
 
   function migrateToV4() {
+    const newCharacterId = () => `char_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
+
     // If the new `characters` shape already exists and is valid, we're already migrated.
     // Clean up any stale `character` key (may be re-created by migrateToV1's ensureObj).
     const existingRaw = data.characters;
@@ -1160,6 +1162,17 @@ export function migrateState(raw) {
       : null;
     if (existing && Array.isArray(existing.entries)) {
       // Already new shape — ensure shape integrity and remove stale character key.
+      const seenIds = new Set();
+      existing.entries = /** @type {CharacterEntry[]} */ (existing.entries
+        .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
+        .map((entry) => {
+          const normalized = /** @type {CharacterEntry & Record<string, unknown>} */ (entry);
+          const currentId = typeof normalized.id === "string" ? normalized.id.trim() : "";
+          const nextId = currentId && !seenIds.has(currentId) ? currentId : newCharacterId();
+          normalized.id = nextId;
+          seenIds.add(nextId);
+          return normalized;
+        }));
       if (existing.activeId !== null && typeof existing.activeId !== "string") {
         existing.activeId = null;
       }
@@ -1175,7 +1188,7 @@ export function migrateState(raw) {
     // Migrate from old character key to new characters shape.
     const c = data.character;
     if (isCharacterMeaningful(c)) {
-      const id = `char_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
+      const id = newCharacterId();
       data.characters = { activeId: id, entries: [{ id, .../** @type {object} */ (c) }] };
     } else {
       data.characters = { activeId: null, entries: [] };

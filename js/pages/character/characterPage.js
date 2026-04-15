@@ -20,6 +20,14 @@ import { safeAsync } from "../../ui/safeAsync.js";
 import { enhanceSelectDropdown } from "../../ui/selectDropdown.js";
 
 let _activeCharacterPageController = null;
+const _dismissedEmptyStateCampaignIds = new Set();
+
+function getEmptyStateDismissalKey(state) {
+  const campaignId = typeof state?.appShell?.activeCampaignId === "string"
+    ? state.appShell.activeCampaignId.trim()
+    : "";
+  return campaignId || "__default__";
+}
 
 export const CHARACTER_SELECTOR_SELECT_CLASSES = "charSelectorSelect panelSelect";
 export const CHARACTER_SELECTOR_BUTTON_CLASSES = "panelSelectBtn charSelectorSelectBtn";
@@ -472,7 +480,8 @@ export function initCharacterPageUI(deps) {
     if (!emptyEl || !yesBtn || !noBtn) return;
 
     const hasEntries = (state.characters?.entries?.length ?? 0) > 0;
-    if (hasEntries) {
+    const dismissalKey = getEmptyStateDismissalKey(state);
+    if (hasEntries || _dismissedEmptyStateCampaignIds.has(dismissalKey)) {
       emptyEl.hidden = true;
       return;
     }
@@ -481,6 +490,7 @@ export function initCharacterPageUI(deps) {
     const { mutateState } = createStateActions({ state, SaveManager });
 
     function dismiss() {
+      _dismissedEmptyStateCampaignIds.add(dismissalKey);
       emptyEl.hidden = true;
     }
 
