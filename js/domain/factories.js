@@ -125,6 +125,7 @@ export function makeLocation({ sectionId = "", title = "", notes = "", type = "t
   return {
     id: makeId("loc"),
     sectionId,
+    characterId: null,
     title,
     notes,
     type,
