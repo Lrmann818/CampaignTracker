@@ -3,7 +3,7 @@
 import { DEV_MODE, withAllowedStateMutation } from "../utils/dev.js";
 
 /** @typedef {import("../state.js").State} State */
-/** @typedef {typeof import("../state.js").state["tracker"]["npcs"][number]} TrackerCard */
+/** @typedef {import("./factories.js").NpcCard | import("./factories.js").PartyMemberCard | import("./factories.js").LocationCard} TrackerCard */
 /** @typedef {"party" | "npcs" | "locationsList"} TrackerCardListKey */
 /** @typedef {"party" | "npc" | "npcs" | "location" | "locations" | "locationslist"} TrackerCardType */
 /** @typedef {{ queueSave?: boolean, atStart?: boolean }} MutationOptions */
