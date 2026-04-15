@@ -30,6 +30,7 @@ import {
   normalizeCombatEncounter
 } from "../../domain/combat.js";
 import { resolveCardDisplayData } from "../../domain/cardLinking.js";
+import { subscribePanelDataChanged } from "../../ui/panelInvalidation.js";
 import { flipSwapTwo } from "../../ui/flipSwap.js";
 import { enhanceSelectDropdown } from "../../ui/selectDropdown.js";
 import { getNoopDestroyApi, requireMany } from "../../utils/domGuards.js";
@@ -289,7 +290,7 @@ export function getCombatCardViewModels(state) {
 
     return {
       id: participant.id,
-      name: participant.name || "Unnamed participant",
+      name: (sourceDisplay?.name || participant.name) || "Unnamed participant",
       role: participant.role,
       roleLabel: COMBAT_ROLE_OPTIONS.find((option) => option.value === participant.role)?.label || "NPC",
       isActive: participant.id === encounter.activeParticipantId,
@@ -1516,6 +1517,8 @@ export function initCombatPage(deps = {}) {
   }, { signal });
 
   window.addEventListener(COMBAT_ENCOUNTER_CHANGED_EVENT, render, { signal });
+  addDestroy(subscribePanelDataChanged("vitals", render));
+  addDestroy(subscribePanelDataChanged("character-fields", render));
   render();
 
   const api = {
