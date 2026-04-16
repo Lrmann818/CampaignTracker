@@ -3242,10 +3242,15 @@ button.panelSelectBtn:hover {
 #combatEmbeddedPanels {
   display: grid;
   gap: 10px;
+  /* flex child of .combatCol — must not escape column width on iOS PWA */
+  min-width: 0;
 }
 
 .combatEmbeddedPanel {
   margin-top: 0;
+  /* implicit grid item — suppress min-content floor so hosted panels can't
+     widen the track beyond the viewport */
+  min-width: 0;
 }
 
 .combatEmbeddedMoves {
@@ -3264,10 +3269,17 @@ button.panelSelectBtn:hover {
 
 .combatEmbeddedPanelBody {
   display: block;
+  min-width: 0;
 }
 
 .combatEmbeddedSourcePanel {
   margin-top: 0;
+}
+
+/* Equipment embedded: allow the "Pockets" label + controls row to wrap on
+   narrow viewports instead of forcing the panel wider */
+.combatEmbeddedEquipmentHost .sessionHeader {
+  flex-wrap: wrap;
 }
 
 /* ── Vitals embedded content ───────────────────────────────────────────────── */
