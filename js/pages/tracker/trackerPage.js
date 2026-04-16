@@ -27,6 +27,8 @@ import { DEV_MODE } from "../../utils/dev.js";
 /** @typedef {typeof import("../../utils/number.js").numberOrNull} NumberOrNullFn */
 /** @typedef {typeof import("../../storage/blobs.js").deleteBlob} DeleteBlobFn */
 /** @typedef {typeof import("../../storage/blobs.js").putBlob} PutBlobFn */
+/** @typedef {typeof import("../../storage/blobs.js").getBlob} GetBlobFn */
+/** @typedef {typeof import("../../storage/blobs.js").dataUrlToBlob} DataUrlToBlobFn */
 /** @typedef {typeof import("../../storage/blobs.js").blobIdToObjectUrl} BlobIdToObjectUrlFn */
 /** @typedef {typeof import("../../storage/texts-idb.js").textKey_spellNotes} TextKeySpellNotesFn */
 /** @typedef {typeof import("../../storage/texts-idb.js").putText} PutTextFn */
@@ -64,8 +66,10 @@ import { DEV_MODE } from "../../utils/dev.js";
  *   numberOrNull?: NumberOrNullFn,
  *   pickCropStorePortrait?: unknown,
  *   ImagePicker?: unknown,
+ *   getBlob?: GetBlobFn,
  *   deleteBlob?: DeleteBlobFn,
  *   putBlob?: PutBlobFn,
+ *   dataUrlToBlob?: DataUrlToBlobFn,
  *   cropImageModal?: unknown,
  *   getPortraitAspect?: unknown,
  *   blobIdToObjectUrl?: BlobIdToObjectUrlFn,
@@ -124,8 +128,10 @@ export function initTrackerPage(deps = {}) {
     // portraits/images
     pickCropStorePortrait,
     ImagePicker,
+    getBlob,
     deleteBlob,
     putBlob,
+    dataUrlToBlob,
     cropImageModal,
     getPortraitAspect,
     blobIdToObjectUrl,
@@ -273,8 +279,10 @@ export function initTrackerPage(deps = {}) {
     numberOrNull,
     pickCropStorePortrait,
     ImagePicker,
+    getBlob,
     deleteBlob,
     putBlob,
+    dataUrlToBlob,
     cropImageModal,
     getPortraitAspect,
     blobIdToObjectUrl,
@@ -342,6 +350,7 @@ export function initTrackerPage(deps = {}) {
     Popovers,
     ImagePicker,
     pickCropStorePortrait,
+    getBlob,
     deleteBlob,
     putBlob,
     cropImageModal,

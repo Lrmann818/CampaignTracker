@@ -30,6 +30,12 @@ vi.mock("../js/pages/character/panels/personalityPanel.js", () => ({
   initPersonalityPanel: () => ({ destroy: () => {} }),
   setupCharacterCollapsibleTextareas: () => ({ destroy: () => {} })
 }));
+vi.mock("../js/domain/characterPortability.js", () => ({
+  MAX_IMPORT_FILE_SIZE: 10 * 1024 * 1024,
+  commitImport: vi.fn(),
+  exportActiveCharacter: vi.fn(),
+  parseAndValidateImport: vi.fn(),
+}));
 
 import {
   CHARACTER_ACTION_BUTTON_CLASSES,
@@ -42,6 +48,12 @@ import {
   ACTIVE_CHARACTER_CHANGED_EVENT,
   notifyActiveCharacterChanged
 } from "../js/domain/characterEvents.js";
+import {
+  MAX_IMPORT_FILE_SIZE,
+  commitImport,
+  exportActiveCharacter,
+  parseAndValidateImport
+} from "../js/domain/characterPortability.js";
 
 class FakeClassList {
   constructor(owner) {
@@ -98,6 +110,10 @@ class FakeElement extends EventTarget {
     this.selected = false;
     this.value = "";
     this.type = "";
+    this.accept = "";
+    this.files = [];
+    this.href = "";
+    this.download = "";
     this.title = "";
     this._id = "";
     this._className = "";
@@ -208,6 +224,10 @@ class FakeElement extends EventTarget {
 
   focus() {
     if (this.ownerDocument) this.ownerDocument.activeElement = this;
+  }
+
+  click() {
+    this.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
   }
 
   contains(node) {
@@ -334,6 +354,8 @@ function installCharacterSelectorDom() {
     ["charActionRenameBtn", "rename", "Rename Character"],
     ["charActionAddNpcBtn", "add-npc", "Add to NPCs"],
     ["charActionAddPartyBtn", "add-party", "Add to Party"],
+    ["charActionExportBtn", "export", "Export Character"],
+    ["charActionImportBtn", "import", "Import Character"],
     ["charActionDeleteBtn", "delete", "Delete Character"],
   ].forEach(([id, action, label]) => {
     const button = appendWithId(document, actionMenuDropdown, "button", id, CHARACTER_ACTION_ITEM_CLASSES);
@@ -410,6 +432,7 @@ function createFakePopovers() {
 function createCharacterPageDeps(Popovers) {
   return {
     state: {
+      appShell: { activeCampaignId: "campaign_alpha" },
       characters: {
         activeId: "char_a",
         entries: [
@@ -432,11 +455,31 @@ function createCharacterPageDeps(Popovers) {
     uiPrompt: vi.fn(),
     uiAlert: vi.fn(),
     uiConfirm: vi.fn(),
+    getBlob: vi.fn(),
+    deleteBlob: vi.fn(),
+    putBlob: vi.fn(),
+    dataUrlToBlob: vi.fn(),
+    getText: vi.fn(),
+    putText: vi.fn(),
   };
 }
 
 function flushPromises() {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function findImportInput(document) {
+  return document.body.children.find((el) => el.tagName === "INPUT" && el.type === "file") || null;
+}
+
+function makeImportObject(name = "Mira") {
+  return {
+    formatVersion: 1,
+    type: "lore-ledger-character",
+    character: { id: "char_source", name },
+    portrait: null,
+    spellNotes: {}
+  };
 }
 
 afterEach(() => {
@@ -461,6 +504,19 @@ describe("character page selector", () => {
     expect(html).toContain('class="dropdownMenu charActionDropdownMenu" id="charActionDropdownMenu"');
     expect(html).not.toContain("charActionSelect");
     expect(html).not.toContain(">Character Actions<");
+
+    const menuHtml = html.match(/id="charActionDropdownMenu"[\s\S]*?<\/div>/)?.[0] || "";
+    const actions = Array.from(menuHtml.matchAll(/data-char-action="([^"]+)">([^<]+)<\/button>/g))
+      .map((match) => ({ action: match[1], label: match[2] }));
+    expect(actions).toEqual([
+      { action: "new", label: "New Character" },
+      { action: "rename", label: "Rename Character" },
+      { action: "add-npc", label: "Add to NPCs" },
+      { action: "add-party", label: "Add to Party" },
+      { action: "export", label: "Export Character" },
+      { action: "import", label: "Import Character" },
+      { action: "delete", label: "Delete Character" },
+    ]);
   });
 
   it("dispatches the app-level active character change event", () => {
@@ -550,6 +606,8 @@ describe("character page selector", () => {
       "Rename Character",
       "Add to NPCs",
       "Add to Party",
+      "Export Character",
+      "Import Character",
       "Delete Character",
     ]);
     expect(actionMenuDropdown.textContent).not.toContain("Character Actions");
@@ -608,7 +666,7 @@ describe("character page selector", () => {
     controller.destroy();
   });
 
-  it("disables add-to-tracker actions when there is no active character", () => {
+  it("disables active-character actions when there is no active character", async () => {
     installCharacterSelectorDom();
     const Popovers = createFakePopovers();
     const deps = createCharacterPageDeps(Popovers);
@@ -618,6 +676,222 @@ describe("character page selector", () => {
 
     expect(document.getElementById("charActionAddNpcBtn").disabled).toBe(true);
     expect(document.getElementById("charActionAddPartyBtn").disabled).toBe(true);
+    expect(document.getElementById("charActionExportBtn").disabled).toBe(true);
+
+    document.getElementById("charActionExportBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+    expect(exportActiveCharacter).not.toHaveBeenCalled();
+
+    controller.destroy();
+  });
+
+  it("exports the active character with a pretty JSON download", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    const anchors = [];
+    const originalCreateElement = document.createElement.bind(document);
+    document.createElement = (tagName) => {
+      const el = originalCreateElement(tagName);
+      if (String(tagName).toLowerCase() === "a") anchors.push(el);
+      return el;
+    };
+    const createdUrls = [];
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn((blob) => {
+        createdUrls.push(blob);
+        return "blob:character-export";
+      }),
+      revokeObjectURL: vi.fn()
+    });
+    exportActiveCharacter.mockResolvedValue({
+      formatVersion: 1,
+      type: "lore-ledger-character",
+      character: { id: "char_a", name: "Ada" },
+      portrait: null,
+      spellNotes: {}
+    });
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionExportBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+    await flushPromises();
+
+    expect(exportActiveCharacter).toHaveBeenCalledWith({
+      state: deps.state,
+      getBlob: deps.getBlob,
+      getText: deps.getText
+    });
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:character-export");
+    expect(anchors[0]).toMatchObject({
+      href: "blob:character-export",
+      download: "ada-a.ll-character.json"
+    });
+    expect(JSON.parse(await createdUrls[0].text())).toEqual({
+      formatVersion: 1,
+      type: "lore-ledger-character",
+      character: { id: "char_a", name: "Ada" },
+      portrait: null,
+      spellNotes: {}
+    });
+    expect(await createdUrls[0].text()).toContain('\n  "character"');
+    expect(deps.setStatus).toHaveBeenCalledWith("Character exported.", { stickyMs: 2000 });
+
+    controller.destroy();
+  });
+
+  it("cancels an import confirmation without committing or rerendering", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    const importObject = makeImportObject("Mira");
+    parseAndValidateImport.mockResolvedValue(importObject);
+    deps.uiConfirm.mockResolvedValue(false);
+
+    const controller = initCharacterPageUI(deps);
+    const initialHandleCount = Popovers.handles.length;
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionImportBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    const input = findImportInput(document);
+    expect(input).not.toBeNull();
+    input.files = [{ size: 128, text: vi.fn(async () => "{}") }];
+    input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    await flushPromises();
+    await flushPromises();
+
+    expect(parseAndValidateImport).toHaveBeenCalledWith(input.files[0]);
+    expect(deps.uiConfirm).toHaveBeenCalledWith(
+      'Import "Mira" into this campaign?\n\n- A new character will be added to this campaign.\n- Linked card connections from the original campaign are not imported.',
+      { title: "Import Character", okText: "Import" }
+    );
+    expect(commitImport).not.toHaveBeenCalled();
+    expect(deps.putBlob).not.toHaveBeenCalled();
+    expect(deps.putText).not.toHaveBeenCalled();
+    expect(deps.setStatus).not.toHaveBeenCalledWith('Imported "Mira"', expect.anything());
+    expect(Popovers.handles).toHaveLength(initialHandleCount);
+    expect(deps.state.characters.entries).toHaveLength(2);
+
+    controller.destroy();
+  });
+
+  it("commits a confirmed import, rerenders, and reports success", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    const importObject = makeImportObject("Mira");
+    parseAndValidateImport.mockResolvedValue(importObject);
+    deps.uiConfirm.mockResolvedValue(true);
+    commitImport.mockImplementation(async (_importObject, commitDeps) => {
+      commitDeps.state.characters.entries.push({ id: "char_imported", name: "Mira" });
+      commitDeps.state.characters.activeId = "char_imported";
+      return "char_imported";
+    });
+
+    const controller = initCharacterPageUI(deps);
+    const initialHandleCount = Popovers.handles.length;
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionImportBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    const input = findImportInput(document);
+    input.files = [{ size: 128, text: vi.fn(async () => "{}") }];
+    input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    await flushPromises();
+    await flushPromises();
+
+    expect(commitImport).toHaveBeenCalledWith(importObject, {
+      state: deps.state,
+      SaveManager: deps.SaveManager,
+      putBlob: deps.putBlob,
+      deleteBlob: deps.deleteBlob,
+      putText: deps.putText,
+      dataUrlToBlob: deps.dataUrlToBlob,
+      mutateState: expect.any(Function)
+    });
+    expect(deps.state.characters.activeId).toBe("char_imported");
+    expect(Popovers.handles.length).toBeGreaterThan(initialHandleCount);
+    expect(deps.setStatus).toHaveBeenCalledWith('Imported "Mira"', { stickyMs: 2000 });
+    expect(deps.uiAlert).not.toHaveBeenCalled();
+
+    controller.destroy();
+  });
+
+  it("surfaces commit errors without rerendering", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    const importObject = makeImportObject("Mira");
+    parseAndValidateImport.mockResolvedValue(importObject);
+    deps.uiConfirm.mockResolvedValue(true);
+    commitImport.mockRejectedValue(new Error("Failed to store portrait."));
+
+    const controller = initCharacterPageUI(deps);
+    const initialHandleCount = Popovers.handles.length;
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionImportBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    const input = findImportInput(document);
+    input.files = [{ size: 128, text: vi.fn(async () => "{}") }];
+    input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    await flushPromises();
+    await flushPromises();
+
+    expect(deps.uiAlert).toHaveBeenCalledWith("Failed to store portrait.", { title: "Import failed" });
+    expect(Popovers.handles).toHaveLength(initialHandleCount);
+    expect(deps.setStatus).not.toHaveBeenCalledWith('Imported "Mira"', expect.anything());
+
+    controller.destroy();
+  });
+
+  it("rejects oversized import files before parsing", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionImportBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    const file = { size: MAX_IMPORT_FILE_SIZE + 1, text: vi.fn(async () => "{}") };
+    const input = findImportInput(document);
+    input.files = [file];
+    input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    expect(parseAndValidateImport).not.toHaveBeenCalled();
+    expect(file.text).not.toHaveBeenCalled();
+    expect(deps.uiAlert).toHaveBeenCalledWith(
+      "Character file is too large. Please check that this is a valid Lore Ledger character file.",
+      { title: "Import failed" }
+    );
+    expect(commitImport).not.toHaveBeenCalled();
+
+    controller.destroy();
+  });
+
+  it("handles invalid JSON or invalid character files gracefully", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    parseAndValidateImport.mockRejectedValue(new Error("Invalid JSON file."));
+
+    const controller = initCharacterPageUI(deps);
+    const initialHandleCount = Popovers.handles.length;
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionImportBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    const input = findImportInput(document);
+    input.files = [{ size: 128, text: vi.fn(async () => "{not json") }];
+    input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    await flushPromises();
+    await flushPromises();
+
+    expect(deps.uiAlert).toHaveBeenCalledWith("Invalid JSON file.", { title: "Import failed" });
+    expect(deps.uiConfirm).not.toHaveBeenCalled();
+    expect(commitImport).not.toHaveBeenCalled();
+    expect(Popovers.handles).toHaveLength(initialHandleCount);
 
     controller.destroy();
   });

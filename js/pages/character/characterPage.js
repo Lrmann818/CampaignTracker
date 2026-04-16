@@ -18,9 +18,16 @@ import { notifyActiveCharacterChanged } from "../../domain/characterEvents.js";
 import { createStateActions } from "../../domain/stateActions.js";
 import { makeNpc, makePartyMember } from "../../domain/factories.js";
 import { LINKED_FIELD_MAP, getLinkedCards, linkCardToCharacter, snapshotLinkedFieldsToCard } from "../../domain/cardLinking.js";
+import {
+  MAX_IMPORT_FILE_SIZE,
+  commitImport,
+  exportActiveCharacter,
+  parseAndValidateImport
+} from "../../domain/characterPortability.js";
 import { notifyPanelDataChanged } from "../../ui/panelInvalidation.js";
 import { safeAsync } from "../../ui/safeAsync.js";
 import { enhanceSelectDropdown } from "../../ui/selectDropdown.js";
+import { dataUrlToBlob as defaultDataUrlToBlob } from "../../storage/blobs.js";
 
 let _activeCharacterPageController = null;
 const _dismissedEmptyStateCampaignIds = new Set();
@@ -49,11 +56,15 @@ export function initCharacterPageUI(deps) {
     // Character portrait flow
     ImagePicker,
     pickCropStorePortrait,
+    getBlob,
     deleteBlob,
     putBlob,
+    dataUrlToBlob = defaultDataUrlToBlob,
     cropImageModal,
     getPortraitAspect,
     blobIdToObjectUrl,
+    getText,
+    putText,
 
     // Common UI helpers
     autoSizeInput,
@@ -284,8 +295,9 @@ export function initCharacterPageUI(deps) {
     const addToTrackerButtons = actionButtons.filter((button) => (
       button.dataset.charAction === "add-npc" || button.dataset.charAction === "add-party"
     ));
+    const exportButtons = actionButtons.filter((button) => button.dataset.charAction === "export");
     const activeCharacterForActions = getActiveCharacter(state);
-    addToTrackerButtons.forEach((button) => {
+    [...addToTrackerButtons, ...exportButtons].forEach((button) => {
       button.disabled = !activeCharacterForActions;
       button.setAttribute("aria-disabled", (!activeCharacterForActions).toString());
     });
@@ -422,6 +434,150 @@ export function initCharacterPageUI(deps) {
       }
     }
 
+    function sanitizeFilenameSegment(value, fallback) {
+      const cleaned = String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      return cleaned || fallback;
+    }
+
+    function shortCharacterId(value) {
+      const cleaned = String(value || "")
+        .replace(/^char[_-]?/i, "")
+        .replace(/[^a-z0-9]/gi, "")
+        .slice(0, 8);
+      return cleaned || "character";
+    }
+
+    function getErrorMessage(err, fallback = "Character import failed.") {
+      return err instanceof Error && err.message ? err.message : fallback;
+    }
+
+    function triggerCharacterDownload(text, filename) {
+      const fileBlob = new Blob([text], { type: "application/json" });
+      const url = URL.createObjectURL(fileBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      try {
+        a.click();
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    async function runExportCharacterAction() {
+      const activeChar = getActiveCharacter(state);
+      if (!activeChar) return;
+
+      const exportObject = await exportActiveCharacter({ state, getBlob, getText });
+      const json = JSON.stringify(exportObject, null, 2);
+      const namePart = sanitizeFilenameSegment(activeChar.name, "character");
+      const idPart = shortCharacterId(activeChar.id);
+      triggerCharacterDownload(json, `${namePart}-${idPart}.ll-character.json`);
+      if (typeof setStatus === "function") {
+        setStatus("Character exported.", { stickyMs: 2000 });
+      }
+    }
+
+    function pickCharacterImportFile() {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".json,application/json";
+      input.style.display = "none";
+      document.body.appendChild(input);
+
+      return new Promise((resolve, reject) => {
+        let settled = false;
+
+        const cleanup = () => {
+          input.removeEventListener("change", onChange);
+          input.removeEventListener("cancel", onCancel);
+          input.remove();
+        };
+
+        const finish = (file) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          resolve(file);
+        };
+
+        const onChange = () => {
+          finish(input.files?.[0] || null);
+        };
+
+        const onCancel = () => {
+          finish(null);
+        };
+
+        input.addEventListener("change", onChange);
+        input.addEventListener("cancel", onCancel);
+
+        try {
+          input.click();
+        } catch (err) {
+          if (!settled) {
+            settled = true;
+            cleanup();
+            reject(err);
+          }
+        }
+      });
+    }
+
+    async function runImportCharacterAction() {
+      const file = await pickCharacterImportFile();
+      if (!file) return;
+
+      if (typeof file.size === "number" && file.size > MAX_IMPORT_FILE_SIZE) {
+        await uiAlert?.(
+          "Character file is too large. Please check that this is a valid Lore Ledger character file.",
+          { title: "Import failed" }
+        );
+        return;
+      }
+
+      let parsedObject;
+      try {
+        parsedObject = await parseAndValidateImport(file);
+      } catch (err) {
+        await uiAlert?.(getErrorMessage(err, "Invalid character import file."), { title: "Import failed" });
+        return;
+      }
+
+      const importName = String(parsedObject.character?.name || "").trim() || "Unnamed Character";
+      const confirmed = await uiConfirm?.(
+        `Import "${importName}" into this campaign?\n\n- A new character will be added to this campaign.\n- Linked card connections from the original campaign are not imported.`,
+        { title: "Import Character", okText: "Import" }
+      );
+      if (!confirmed) return;
+
+      const previousId = state.characters?.activeId ?? null;
+      try {
+        const newId = await commitImport(parsedObject, {
+          state,
+          SaveManager,
+          putBlob,
+          deleteBlob,
+          putText,
+          dataUrlToBlob,
+          mutateState
+        });
+        if (newId !== previousId) {
+          notifyActiveCharacterChanged({ previousId, activeId: newId });
+        }
+        rerender();
+        if (typeof setStatus === "function") {
+          setStatus(`Imported "${importName}"`, { stickyMs: 2000 });
+        }
+      } catch (err) {
+        await uiAlert?.(getErrorMessage(err), { title: "Import failed" });
+      }
+    }
+
     async function runDeleteCharacterAction() {
       const activeChar = getActiveCharacter(state);
       if (!activeChar) return;
@@ -460,6 +616,10 @@ export function initCharacterPageUI(deps) {
         runAddCharacterToTrackerAction("npc");
       } else if (action === "add-party") {
         runAddCharacterToTrackerAction("party");
+      } else if (action === "export") {
+        await runExportCharacterAction();
+      } else if (action === "import") {
+        await runImportCharacterAction();
       } else if (action === "delete") {
         await runDeleteCharacterAction();
       }

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Cross-campaign character import/export (Step 4): the Character page can export the active character as a `.ll-character.json` file with portrait data and spell notes, then import it into another campaign as a new standalone character with a fresh character ID and destination-scoped blob/text records.
 - Multi-character tracker card linking (Step 2): NPC and Party cards can be linked to a character entry via a `characterId` field. Linked cards read and write name, HP, class, status, and portrait through the canonical character entry (`js/domain/cardLinking.js`).
 - Schema v5 migration: all tracker cards gain `characterId: null`; all character entries gain `status: ""`.
 - Character deletion now shows a warning when linked tracker cards exist and snapshots their last known character data before unlinking.

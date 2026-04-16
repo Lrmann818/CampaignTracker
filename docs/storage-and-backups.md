@@ -13,6 +13,7 @@ Source-of-truth modules for this behavior:
 - `js/storage/persistence.js`
 - `js/storage/saveManager.js`
 - `js/storage/backup.js`
+- `js/domain/characterPortability.js`
 - `js/ui/navigation.js`
 - `js/ui/dataPanel.js`
 - `js/features/autosize.js`
@@ -235,6 +236,8 @@ Exit/save hooks are best-effort only:
 ## 8. Backup export flow
 
 Export lives in [`js/storage/backup.js`](../js/storage/backup.js).
+
+Single-character portability is a separate, narrower file flow owned by [`js/domain/characterPortability.js`](../js/domain/characterPortability.js). It exports one active character to `.ll-character.json` with a portrait data URL and bundled spell notes, then imports that file as a new standalone character in the active campaign. See [`docs/character-portability.md`](character-portability.md) for the file format and import-ordering rationale.
 
 Current flow:
 
