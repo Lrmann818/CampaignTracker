@@ -81,7 +81,7 @@ A tracker that only supports one campaign is a prototype, not a tool. The vault 
 
 ## Phase 3 — Combat Workspace
 
-**Status:** [~] Mostly complete — two embedded panels remain  
+**Status:** [x] Complete  
 **Priority:** High (active)
 
 ### Objectives
@@ -94,8 +94,8 @@ A tracker that only supports one campaign is a prototype, not a tool. The vault 
 - [x] Embedded Spells panel (spell levels, spell slots, add spell)
 - [x] Embedded Weapons / Attacks panel (attack list, add attack)
 - [x] Panel picker UI and reorder support (`js/pages/combat/combatSectionReorder.js`)
-- [ ] Embedded Equipment panel
-- [ ] Embedded Abilities / Skills panel
+- [x] Embedded Equipment panel
+- [x] Embedded Abilities / Skills panel
 
 ### Acceptance goals
 
@@ -103,13 +103,13 @@ All five embedded character panels are available in the combat workspace. Every 
 
 ### Why this phase matters
 
-Combat is the highest-frequency interaction in a tabletop session. A dedicated workspace with character data in reach removes the need to switch between views mid-fight. The three shipped panels handle the most critical real-time needs; the remaining two (Equipment, Abilities/Skills) complete the picture.
+Combat is the highest-frequency interaction in a tabletop session. A dedicated workspace with character data in reach removes the need to switch between views mid-fight. With the vitals, spells, weapons, equipment, and abilities/skills panels all shipping, players have comprehensive control over their characters without ever leaving the combat page.
 
 ---
 
 ## Phase 4 — Map Tool Enhancement
 
-**Status:** [ ] Planned  
+**Status:** [~] Mostly complete — stamp tool remains  
 **Priority:** Medium
 
 ### Objectives
@@ -177,24 +177,22 @@ This is the largest remaining feature in the product. It touches nearly every ch
 
 ### Step 4 — Cross-Campaign Character Import / Export
 
-**Status:** [ ] Planned
+**Status:** [x] Complete
 
-- [ ] Export a single character (plus portrait) as a portable JSON file
-- [ ] Import that file into a different campaign
-- [ ] Validate on import before touching live state
-- [ ] Portrait blob handled safely across campaign boundaries
+- [x] Export a single character (plus portrait) as a portable `.ll-character.json` file
+- [x] Import that file into a different campaign
+- [x] Validate on import before touching live state
+- [x] Portrait blob and spell notes handled safely across campaign boundaries
 
-Small and contained relative to Step 3. Delivers real user value (sharing characters between campaigns or backing up a single character) with minimal blast radius.
+Players can now share characters between campaigns or back up a single character independently of a full campaign. The app bundles portrait data and spell notes into the exported file, validates the format before import, stores any imported assets in the destination campaign, and assigns a fresh character ID to avoid collisions.
 
 ---
 
 ## Near-Term Recommended Order
 
-1. [ ] Finish combat embedded panels — Equipment and Abilities / Skills
-2. [ ] Step 4 — Cross-campaign character import / export
-3. [ ] Step 3 — Rules engine and character builder
-4. [ ] Phase 4 — Map stamp tool
-5. [!] Ongoing quality hardening (continuous, not gated on the above)
+1. [ ] Step 3 — Rules engine and character builder
+2. [ ] Phase 4 — Map stamp tool
+3. [!] Ongoing quality hardening (continuous, not gated on the above)
 
 ---
 
@@ -211,4 +209,4 @@ Small and contained relative to Step 3. Delivers real user value (sharing charac
 
 ## Definition of Success
 
-When someone asks "What have you built?" the answer should be: a production-quality, offline-capable, installable app with clean architecture, versioned migrations, campaign-scoped backups, thoughtful UX, and stable feature growth — built without frameworks, without tech debt shortcuts, and without ever breaking a user's saved data.
+When someone asks “What have you built?” the answer should be: a production-quality, offline-capable, installable app with clean architecture, versioned migrations, campaign-scoped backups, thoughtful UX, and stable feature growth — built without frameworks, without tech debt shortcuts, and without ever breaking a user’s saved data.
