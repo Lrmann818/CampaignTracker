@@ -174,7 +174,7 @@ A portfolio project that accumulates silent regressions is not a portfolio proje
 - [x] Accessible informational Builder Mode badge
 - [x] Display-only Builder Summary panel for builder characters
 - [x] Minimal Builder Identity editor for builtin species, class, background, and level
-- [x] Manual Builder Abilities editor for builder base ability scores
+- [x] Phase 3C: Manual Builder Abilities editor for builder characters
 - [ ] Full character creation wizard
 - [ ] Content pickers beyond the minimal identity/abilities editors and later choices
 - [ ] Level-up flow
