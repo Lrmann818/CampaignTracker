@@ -1049,6 +1049,274 @@ describe("character panels active character resolution", () => {
     api.destroy();
   });
 
+  it("displays builder-derived Vitals speed and hit dice without materializing stale flat fields", () => {
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
+    builder.build.speciesId = "species_human";
+    builder.build.classId = "class_fighter";
+    builder.build.level = 5;
+    builder.speed = 99;
+    builder.hitDieAmt = 99;
+    builder.hitDieSize = 99;
+    builder.hpCur = 7;
+    builder.hpMax = 11;
+    builder.ac = 13;
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+
+    expect(document.getElementById("charSpeed").value).toBe("30");
+    expect(document.getElementById("hitDieAmt").value).toBe("5");
+    expect(document.getElementById("hitDieSize").value).toBe("10");
+    ["charSpeed", "hitDieAmt", "hitDieSize"].forEach((id) => {
+      const input = document.getElementById(id);
+      expect(input.readOnly).toBe(true);
+      expect(input.disabled).toBe(true);
+      expect(input.dataset.builderOwned).toBe("true");
+      expect(input.getAttribute("aria-readonly")).toBe("true");
+    });
+    expect(document.getElementById("charHpCur").value).toBe("7");
+    expect(document.getElementById("charHpMax").value).toBe("11");
+    expect(document.getElementById("charAC").value).toBe("13");
+    expect(builder.speed).toBe(99);
+    expect(builder.hitDieAmt).toBe(99);
+    expect(builder.hitDieSize).toBe(99);
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    api.destroy();
+  });
+
+  it("ignores attempted builder Vitals speed and hit dice input without mutating or marking dirty", () => {
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
+    builder.build.speciesId = "species_human";
+    builder.build.classId = "class_fighter";
+    builder.build.level = 5;
+    builder.speed = 99;
+    builder.hitDieAmt = 99;
+    builder.hitDieSize = 99;
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+
+    document.getElementById("charSpeed").value = "45";
+    dispatchInput(document.getElementById("charSpeed"));
+    document.getElementById("hitDieAmt").value = "12";
+    dispatchInput(document.getElementById("hitDieAmt"));
+    document.getElementById("hitDieSize").value = "12";
+    dispatchInput(document.getElementById("hitDieSize"));
+
+    expect(document.getElementById("charSpeed").value).toBe("30");
+    expect(document.getElementById("hitDieAmt").value).toBe("5");
+    expect(document.getElementById("hitDieSize").value).toBe("10");
+    expect(builder.speed).toBe(99);
+    expect(builder.hitDieAmt).toBe(99);
+    expect(builder.hitDieSize).toBe(99);
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    api.destroy();
+  });
+
+  it("refreshes builder-derived Vitals speed and hit dice after Builder Identity edits", () => {
+    installBuilderIdentityPanelDom(document);
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
+    builder.build.speciesId = null;
+    builder.build.classId = "class_fighter";
+    builder.build.level = 5;
+    builder.speed = 99;
+    builder.hitDieAmt = 99;
+    builder.hitDieSize = 99;
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const vitalsApi = initVitalsPanel(deps);
+    const identityApi = initBuilderIdentityPanel(deps);
+
+    expect(document.getElementById("charSpeed").value).toBe("");
+    expect(document.getElementById("hitDieAmt").value).toBe("5");
+    expect(document.getElementById("hitDieSize").value).toBe("10");
+
+    const speciesSelect = document.getElementById("charBuilderSpeciesSelect");
+    speciesSelect.value = "species_human";
+    dispatchChange(speciesSelect);
+    const classSelect = document.getElementById("charBuilderClassSelect");
+    classSelect.value = "class_wizard";
+    dispatchChange(classSelect);
+    const levelInput = document.getElementById("charBuilderLevelInput");
+    levelInput.value = "9";
+    dispatchChange(levelInput);
+
+    expect(builder.build.speciesId).toBe("species_human");
+    expect(builder.build.classId).toBe("class_wizard");
+    expect(builder.build.level).toBe(9);
+    expect(document.getElementById("charSpeed").value).toBe("30");
+    expect(document.getElementById("hitDieAmt").value).toBe("9");
+    expect(document.getElementById("hitDieSize").value).toBe("6");
+    expect(builder.speed).toBe(99);
+    expect(builder.hitDieAmt).toBe(99);
+    expect(builder.hitDieSize).toBe(99);
+
+    identityApi.destroy();
+    vitalsApi.destroy();
+  });
+
+  it("keeps malformed builder Vitals speed and hit dice blank, owned, and non-mutating", () => {
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
+    builder.build.speciesId = "species_missing";
+    builder.build.classId = "class_missing";
+    builder.build.level = Symbol("bad-level");
+    builder.speed = 99;
+    builder.hitDieAmt = 99;
+    builder.hitDieSize = 99;
+    const beforeFlat = {
+      speed: builder.speed,
+      hitDieAmt: builder.hitDieAmt,
+      hitDieSize: builder.hitDieSize
+    };
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+
+    ["charSpeed", "hitDieAmt", "hitDieSize"].forEach((id) => {
+      const input = document.getElementById(id);
+      expect(input.value).toBe("");
+      expect(input.readOnly).toBe(true);
+      expect(input.disabled).toBe(true);
+      expect(input.dataset.builderOwned).toBe("true");
+      input.value = "42";
+      dispatchInput(input);
+      expect(input.value).toBe("");
+    });
+    expect(builder.speed).toBe(beforeFlat.speed);
+    expect(builder.hitDieAmt).toBe(beforeFlat.hitDieAmt);
+    expect(builder.hitDieSize).toBe(beforeFlat.hitDieSize);
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    api.destroy();
+  });
+
+  it("restores Vitals speed and hit dice ownership and source when switching builder and freeform characters", () => {
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
+    builder.build.speciesId = "species_human";
+    builder.build.classId = "class_fighter";
+    builder.build.level = 5;
+    builder.speed = 99;
+    builder.hitDieAmt = 99;
+    builder.hitDieSize = 99;
+    const freeform = makeCharacter("char_free", "Freeform", {
+      build: null,
+      speed: 25,
+      hitDieAmt: 2,
+      hitDieSize: 8
+    });
+    const state = { characters: { activeId: "char_builder", entries: [builder, freeform] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+
+    expect(document.getElementById("charSpeed").value).toBe("30");
+    expect(document.getElementById("charSpeed").disabled).toBe(true);
+
+    state.characters.activeId = "char_free";
+    notifyPanelDataChanged("vitals", { source: {} });
+
+    expect(document.getElementById("charSpeed").value).toBe("25");
+    expect(document.getElementById("hitDieAmt").value).toBe("2");
+    expect(document.getElementById("hitDieSize").value).toBe("8");
+    ["charSpeed", "hitDieAmt", "hitDieSize"].forEach((id) => {
+      expect(document.getElementById(id).disabled).toBe(false);
+      expect(document.getElementById(id).readOnly).toBe(false);
+      expect(document.getElementById(id).dataset.builderOwned).toBeUndefined();
+    });
+
+    document.getElementById("charSpeed").value = "35";
+    dispatchInput(document.getElementById("charSpeed"));
+    expect(freeform.speed).toBe(35);
+
+    state.characters.activeId = "char_builder";
+    notifyPanelDataChanged("vitals", { source: {} });
+
+    expect(document.getElementById("charSpeed").value).toBe("30");
+    expect(document.getElementById("hitDieAmt").value).toBe("5");
+    expect(document.getElementById("hitDieSize").value).toBe("10");
+    expect(document.getElementById("charSpeed").disabled).toBe(true);
+    expect(builder.speed).toBe(99);
+
+    api.destroy();
+  });
+
+  it("keeps freeform Vitals speed and hit dice editable against flat fields only", () => {
+    const freeform = makeCharacter("char_free", "Freeform", {
+      build: null,
+      speed: 25,
+      hitDieAmt: 2,
+      hitDieSize: 8
+    });
+    const state = { characters: { activeId: "char_free", entries: [freeform] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+
+    expect(document.getElementById("charSpeed").value).toBe("25");
+    expect(document.getElementById("hitDieAmt").value).toBe("2");
+    expect(document.getElementById("hitDieSize").value).toBe("8");
+    ["charSpeed", "hitDieAmt", "hitDieSize"].forEach((id) => {
+      expect(document.getElementById(id).readOnly).toBe(false);
+      expect(document.getElementById(id).disabled).toBe(false);
+    });
+
+    document.getElementById("charSpeed").value = "35";
+    dispatchInput(document.getElementById("charSpeed"));
+    document.getElementById("hitDieAmt").value = "3";
+    dispatchInput(document.getElementById("hitDieAmt"));
+    document.getElementById("hitDieSize").value = "10";
+    dispatchInput(document.getElementById("hitDieSize"));
+
+    expect(freeform.speed).toBe(35);
+    expect(freeform.hitDieAmt).toBe(3);
+    expect(freeform.hitDieSize).toBe(10);
+    expect(freeform.build).toBeNull();
+    expect(deps.SaveManager.markDirty).toHaveBeenCalledTimes(3);
+
+    api.destroy();
+  });
+
+  it("keeps builder HP and AC manual while speed and hit dice are builder-owned", () => {
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
+    builder.build.speciesId = "species_human";
+    builder.build.classId = "class_fighter";
+    builder.build.level = 5;
+    builder.hpCur = 7;
+    builder.hpMax = 11;
+    builder.ac = 13;
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+
+    expect(document.getElementById("charHpCur").readOnly).toBe(false);
+    expect(document.getElementById("charHpMax").readOnly).toBe(false);
+    expect(document.getElementById("charAC").readOnly).toBe(false);
+
+    document.getElementById("charHpCur").value = "8";
+    dispatchInput(document.getElementById("charHpCur"));
+    document.getElementById("charHpMax").value = "12";
+    dispatchInput(document.getElementById("charHpMax"));
+    document.getElementById("charAC").value = "14";
+    dispatchInput(document.getElementById("charAC"));
+
+    expect(builder.hpCur).toBe(8);
+    expect(builder.hpMax).toBe(12);
+    expect(builder.ac).toBe(14);
+    expect(document.getElementById("charSpeed").value).toBe("30");
+    expect(document.getElementById("hitDieAmt").value).toBe("5");
+    expect(document.getElementById("hitDieSize").value).toBe("10");
+    expect(deps.SaveManager.markDirty).toHaveBeenCalledTimes(3);
+
+    api.destroy();
+  });
+
   it("displays builder-derived Vitals proficiency without materializing stale flat proficiency", () => {
     const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
     builder.build.level = 5;
@@ -1185,6 +1453,42 @@ describe("character panels active character resolution", () => {
     expect(prof.disabled).toBe(true);
     expect(prof.dataset.builderOwned).toBe("true");
     expect(builder.proficiency).toBe(1);
+
+    api.destroy();
+  });
+
+  it("displays builder-derived speed and hit dice in embedded Combat Vitals", () => {
+    const host = append(document.body, "div", { id: "combatVitalsHost" });
+    renderVitalsEmbeddedContent(host);
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
+    builder.build.speciesId = "species_human";
+    builder.build.classId = "class_wizard";
+    builder.build.level = 9;
+    builder.speed = 99;
+    builder.hitDieAmt = 99;
+    builder.hitDieSize = 99;
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel({
+      ...deps,
+      root: host,
+      selectors: EMBEDDED_PANEL_HOST_SELECTORS.vitals
+    });
+
+    expect(document.getElementById("combatEmbeddedCharSpeed").value).toBe("30");
+    expect(document.getElementById("combatEmbeddedHitDieAmt").value).toBe("9");
+    expect(document.getElementById("combatEmbeddedHitDieSize").value).toBe("6");
+    ["combatEmbeddedCharSpeed", "combatEmbeddedHitDieAmt", "combatEmbeddedHitDieSize"].forEach((id) => {
+      const input = document.getElementById(id);
+      expect(input.readOnly).toBe(true);
+      expect(input.disabled).toBe(true);
+      expect(input.dataset.builderOwned).toBe("true");
+    });
+    expect(builder.speed).toBe(99);
+    expect(builder.hitDieAmt).toBe(99);
+    expect(builder.hitDieSize).toBe(99);
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
 
     api.destroy();
   });

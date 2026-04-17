@@ -141,7 +141,7 @@ Drawing tools are expressive but imprecise for structured campaign content. Stam
 
 ### Objectives
 
-- [!] Vitest unit and regression suite (30 test files, 417 tests — all passing)
+- [!] Vitest unit and regression suite (30 test files, 478 tests — all passing)
 - [!] Playwright smoke tests for UI / navigation / PWA behavior
 - [!] Architecture documentation in `docs/`
 - [!] `MULTI-CHARACTER_DESIGN.md` kept current with schema and panel decisions
@@ -179,6 +179,7 @@ A portfolio project that accumulates silent regressions is not a portfolio proje
 - [x] Phase 3E: Existing Abilities & Skills adjustment controls write builder ability adjustments only
 - [x] Phase 3F: Display-only builder-derived Basics identity integration
 - [x] Phase 3G: Display-only builder-derived Vitals proficiency and builder-only Abilities/Skills proficiency scalar
+- [x] Phase 3H: No-schema-change builder-derived Vitals speed and hit-dice display in normal and embedded Vitals
 - [ ] Full character creation wizard
 - [ ] Content pickers beyond the minimal identity/abilities editors and later choices
 - [ ] Level-up flow
@@ -189,7 +190,7 @@ A portfolio project that accumulates silent regressions is not a portfolio proje
 - [ ] Content registry licensing attribution
 - [ ] Short rest / long rest mechanics
 
-This remains the largest active feature in the product. The foundation is now in place, but the shipped Step 3 UI is intentionally limited to minimal builder-character creation, an informational badge, a builtin-ID-only Builder Identity editor for species/class/background/level, a manual Builder Abilities editor for base scores, a display-only summary, builder-derived identity display in the normal Basics panel, builder-derived proficiency display in the normal Vitals panel, builder-derived ability score/modifier display in the normal Abilities/Skills panel, builder-only use of the derived proficiency scalar in existing Abilities/Skills formulas, and builder-aware ability adjustments through the existing Abilities & Skills controls. Builder Identity remains temporary scaffolding for editing builder identity inputs, and Phase 3G adds no schema change or derived-field materialization. The full builder wizard, subclass choices, save/skill override expansion, custom content, save/skill automation, HP/AC automation, spell/combat automation, and materialization are not shipped yet.
+This remains the largest active feature in the product. The foundation is now in place, but the shipped Step 3 UI is intentionally limited to minimal builder-character creation, an informational badge, a builtin-ID-only Builder Identity editor for species/class/background/level, a manual Builder Abilities editor for base scores, a display-only summary, builder-derived identity display in the normal Basics panel, builder-derived proficiency plus speed and hit-dice display in normal and embedded Vitals, builder-derived ability score/modifier display in the normal Abilities/Skills panel, builder-only use of the derived proficiency scalar in existing Abilities/Skills formulas, and builder-aware ability adjustments through the existing Abilities & Skills controls. Builder Identity remains temporary scaffolding for editing builder identity inputs, and Phase 3H adds no schema change or derived-field materialization. HP/AC automation, combat/card linking changes, new overrides, schema migration, materialization, the full builder wizard, subclass choices, save/skill override expansion, custom content, save/skill automation, and spell/combat automation are not shipped yet.
 
 ### Step 4 — Cross-Campaign Character Import / Export
 

@@ -67,6 +67,14 @@ function finiteNumberOrZero(value) {
  * @param {unknown} value
  * @returns {number | null}
  */
+function finitePositiveNumberOrNull(value) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {number | null}
+ */
 export function abilityModifier(value) {
   const score = finiteNumberOrNull(value);
   return score == null ? null : Math.floor((score - 10) / 2);
@@ -77,7 +85,14 @@ export function abilityModifier(value) {
  * @returns {number | null}
  */
 function normalizeLevel(value) {
-  const n = Number(value);
+  if (value == null) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+  let n;
+  try {
+    n = Number(value);
+  } catch {
+    return null;
+  }
   if (!Number.isFinite(n)) return null;
   return Math.max(1, Math.min(20, Math.trunc(n)));
 }
@@ -172,6 +187,7 @@ function freeformSaveOptionsBonus(character, key, abilities) {
  *   labels: { classLevel: string, race: string, background: string },
  *   level: number | null,
  *   proficiencyBonus: number | null,
+ *   vitals: { speed: number | null, hitDieAmt: number | null, hitDieSize: number | null },
  *   abilities: Record<string, { base: number | null, override: number, total: number | null, modifier: number | null }>,
  *   saves: Record<string, { proficient: boolean, misc: number, total: number | null }>,
  *   skills: Record<string, { ability: string, level: string, misc: number, override: number, total: number | null }>,
@@ -199,11 +215,23 @@ export function deriveCharacter(character, registry = BUILTIN_CONTENT_REGISTRY) 
   if (build && backgroundId && !backgroundEntry) warnings.push(`Unknown background content: ${backgroundId}`);
 
   const level = build
-    ? normalizeLevel(build.level) ?? 1
+    ? normalizeLevel(build.level)
     : normalizeLevel(source.level ?? source.characterLevel);
+  if (build && level == null) warnings.push("Missing or malformed builder level");
   const proficiencyBonus = build
     ? proficiencyBonusForLevel(level)
     : finiteNumberOrNull(source.proficiency);
+
+  const builderSpeed = build && speciesEntry
+    ? finitePositiveNumberOrNull(speciesEntry.data?.speed)
+    : null;
+  const builderHitDieSize = build && classEntry
+    ? finitePositiveNumberOrNull(classEntry.data?.hitDie)
+    : null;
+  if (build && !speciesId) warnings.push("Missing species content for speed");
+  if (build && speciesEntry && builderSpeed == null) warnings.push(`Malformed species speed content: ${speciesEntry.id}`);
+  if (build && !classId) warnings.push("Missing class content for hit dice");
+  if (build && classEntry && builderHitDieSize == null) warnings.push(`Malformed class hit die content: ${classEntry.id}`);
 
   /** @type {ReturnType<typeof deriveCharacter>["abilities"]} */
   const abilities = {};
@@ -282,6 +310,11 @@ export function deriveCharacter(character, registry = BUILTIN_CONTENT_REGISTRY) 
     },
     level,
     proficiencyBonus,
+    vitals: {
+      speed: build ? builderSpeed : null,
+      hitDieAmt: build ? level : null,
+      hitDieSize: build ? builderHitDieSize : null
+    },
     abilities,
     saves,
     skills,

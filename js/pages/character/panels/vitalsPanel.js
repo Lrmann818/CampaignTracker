@@ -22,6 +22,8 @@ function isFiniteNumber(value) {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+const BUILDER_OWNED_VITAL_NUMBER_IDS = new Set(["hitDieAmt", "hitDieSize", "charSpeed", "charProf"]);
+
 function setupVitalsTileReorder({ state, SaveManager, panelEl, gridEl, actions = null }) {
   const panel = panelEl || document.getElementById("charVitalsPanel");
   const grid = gridEl || document.getElementById("charVitalsTiles") || panel?.querySelector(".charTiles");
@@ -185,24 +187,57 @@ export function initVitalsPanel(deps = {}) {
     return getActiveCharacter(state);
   }
 
-  function getBuilderDerivedProficiency(character) {
+  function getBuilderDerivedVitals(character) {
     if (!isBuilderCharacter(character)) return null;
     try {
       const derived = deriveCharacter(character);
-      return isFiniteNumber(derived?.proficiencyBonus) ? derived.proficiencyBonus : null;
+      return {
+        speed: isFiniteNumber(derived?.vitals?.speed) ? derived.vitals.speed : null,
+        hitDieAmt: isFiniteNumber(derived?.vitals?.hitDieAmt) ? derived.vitals.hitDieAmt : null,
+        hitDieSize: isFiniteNumber(derived?.vitals?.hitDieSize) ? derived.vitals.hitDieSize : null,
+        proficiency: isFiniteNumber(derived?.proficiencyBonus) ? derived.proficiencyBonus : null
+      };
     } catch (err) {
-      console.warn("Vitals panel builder proficiency derivation failed:", err);
+      console.warn("Vitals panel builder derivation failed:", err);
       return null;
     }
   }
 
+  /**
+   * @param {"speed" | "hitDieAmt" | "hitDieSize" | "proficiency"} key
+   * @returns {number | null}
+   */
+  function getBuilderDerivedVitalValue(key) {
+    const character = getCurrentCharacter();
+    const vitals = getBuilderDerivedVitals(character);
+    return vitals ? vitals[key] : null;
+  }
+
+  function getSpeedDisplayValue() {
+    const character = getCurrentCharacter();
+    if (isBuilderCharacter(character)) return getBuilderDerivedVitalValue("speed");
+    return character?.speed;
+  }
+
+  function getHitDieAmtDisplayValue() {
+    const character = getCurrentCharacter();
+    if (isBuilderCharacter(character)) return getBuilderDerivedVitalValue("hitDieAmt");
+    return character?.hitDieAmt;
+  }
+
+  function getHitDieSizeDisplayValue() {
+    const character = getCurrentCharacter();
+    if (isBuilderCharacter(character)) return getBuilderDerivedVitalValue("hitDieSize");
+    return character?.hitDieSize;
+  }
+
   function getProficiencyDisplayValue() {
     const character = getCurrentCharacter();
-    if (isBuilderCharacter(character)) return getBuilderDerivedProficiency(character);
+    if (isBuilderCharacter(character)) return getBuilderDerivedVitalValue("proficiency");
     return character?.proficiency;
   }
 
-  function setBuilderOwnedProficiencyState(input, owned) {
+  function setBuilderOwnedVitalState(input, owned) {
     input.readOnly = owned;
     input.disabled = owned;
     if (owned) {
@@ -221,11 +256,11 @@ export function initVitalsPanel(deps = {}) {
   const vitalNumberFields = [
     { id: "charHpCur", path: "hpCur", getValue: () => getCurrentCharacter()?.hpCur },
     { id: "charHpMax", path: "hpMax", getValue: () => getCurrentCharacter()?.hpMax },
-    { id: "hitDieAmt", path: "hitDieAmt", getValue: () => getCurrentCharacter()?.hitDieAmt },
-    { id: "hitDieSize", path: "hitDieSize", getValue: () => getCurrentCharacter()?.hitDieSize },
+    { id: "hitDieAmt", path: "hitDieAmt", getValue: getHitDieAmtDisplayValue },
+    { id: "hitDieSize", path: "hitDieSize", getValue: getHitDieSizeDisplayValue },
     { id: "charAC", path: "ac", getValue: () => getCurrentCharacter()?.ac },
     { id: "charInit", path: "initiative", getValue: () => getCurrentCharacter()?.initiative },
-    { id: "charSpeed", path: "speed", getValue: () => getCurrentCharacter()?.speed },
+    { id: "charSpeed", path: "speed", getValue: getSpeedDisplayValue },
     { id: "charProf", path: "proficiency", getValue: getProficiencyDisplayValue },
     { id: "charSpellAtk", path: "spellAttack", getValue: () => getCurrentCharacter()?.spellAttack },
     { id: "charSpellDC", path: "spellDC", getValue: () => getCurrentCharacter()?.spellDC },
@@ -237,8 +272,8 @@ export function initVitalsPanel(deps = {}) {
 
     const autosizeOpts = { min: 30, max: 60 };
     const value = getValue();
-    if (id === "charProf") {
-      setBuilderOwnedProficiencyState(el, isBuilderCharacter(getCurrentCharacter()));
+    if (BUILDER_OWNED_VITAL_NUMBER_IDS.has(id)) {
+      setBuilderOwnedVitalState(el, isBuilderCharacter(getCurrentCharacter()));
     }
     el.value = (value === null || value === undefined) ? "" : String(value);
 
@@ -250,6 +285,19 @@ export function initVitalsPanel(deps = {}) {
 
   function refreshProficiencyField() {
     refreshVitalNumberField("charProf", getProficiencyDisplayValue);
+  }
+
+  function refreshBuilderOwnedVitalNumberFields() {
+    const shouldRefreshBuilderOwnedVitals = isBuilderCharacter(getCurrentCharacter()) ||
+      guard.els.hitDieAmt?.dataset.builderOwned === "true" ||
+      guard.els.hitDieSize?.dataset.builderOwned === "true" ||
+      guard.els.charSpeed?.dataset.builderOwned === "true";
+    if (shouldRefreshBuilderOwnedVitals) {
+      refreshVitalNumberField("hitDieAmt", getHitDieAmtDisplayValue);
+      refreshVitalNumberField("hitDieSize", getHitDieSizeDisplayValue);
+      refreshVitalNumberField("charSpeed", getSpeedDisplayValue);
+    }
+    refreshProficiencyField();
   }
 
   function refreshVitalsNumbers() {
@@ -269,8 +317,8 @@ export function initVitalsPanel(deps = {}) {
 
       addListener(el, "input", () => {
         if (destroyed) return;
-        if (id === "charProf" && isBuilderCharacter(getCurrentCharacter())) {
-          refreshProficiencyField();
+        if (BUILDER_OWNED_VITAL_NUMBER_IDS.has(id) && isBuilderCharacter(getCurrentCharacter())) {
+          refreshVitalNumberField(id, getValue);
           return;
         }
         const nextValue = numberOrNull(el.value);
@@ -605,7 +653,7 @@ export function initVitalsPanel(deps = {}) {
 
   addDestroy(subscribePanelDataChanged("character-fields", (detail) => {
     if (destroyed || detail.source === panelInstance) return;
-    refreshProficiencyField();
+    refreshBuilderOwnedVitalNumberFields();
     refreshStatusField();
   }));
 

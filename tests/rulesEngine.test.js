@@ -97,6 +97,7 @@ describe("rules derivation", () => {
     });
     expect(derived.level).toBe(5);
     expect(derived.proficiencyBonus).toBe(3);
+    expect(derived.vitals).toEqual({ speed: 30, hitDieAmt: 5, hitDieSize: 10 });
     expect(derived.abilities.str).toEqual({ base: 15, override: 1, total: 16, modifier: 3 });
     expect(derived.abilities.dex).toMatchObject({ total: 14, modifier: 2 });
     expect(derived.saves.str).toEqual({ proficient: true, misc: 2, total: 8 });
@@ -141,6 +142,7 @@ describe("rules derivation", () => {
       background: "Urchin"
     });
     expect(derived.proficiencyBonus).toBe(2);
+    expect(derived.vitals).toEqual({ speed: null, hitDieAmt: null, hitDieSize: null });
     expect(derived.abilities.dex).toMatchObject({ base: 16, total: 16, modifier: 3 });
     expect(derived.saves.dex).toEqual({ proficient: true, misc: 2, total: 7 });
     expect(derived.skills.stealth).toMatchObject({ ability: "dex", level: "expert", misc: 1, total: 8 });
@@ -230,11 +232,53 @@ describe("rules derivation", () => {
 
     expect(derived.mode).toBe("builder");
     expect(derived.labels).toEqual({ classLevel: "1", race: "", background: "" });
+    expect(derived.vitals).toEqual({ speed: null, hitDieAmt: 1, hitDieSize: null });
     expect(derived.warnings).toEqual([
       "Unknown class content: class_missing",
       "Unknown species content: species_missing",
       "Unknown background content: background_missing"
     ]);
+  });
+
+  it("keeps malformed builder Vitals derivation blank-safe with warnings", () => {
+    const registry = createContentRegistry([
+      { id: "species_bad", kind: "species", name: "Bad Species", source: "test", data: { speed: "fast" } },
+      { id: "class_bad", kind: "class", name: "Bad Class", source: "test", data: { hitDie: "d8" } }
+    ]);
+    const character = {
+      speed: 99,
+      hitDieAmt: 99,
+      hitDieSize: 99,
+      build: {
+        version: 1,
+        speciesId: "species_bad",
+        classId: "class_bad",
+        level: Symbol("bad-level")
+      }
+    };
+    const before = structuredClone({
+      speed: character.speed,
+      hitDieAmt: character.hitDieAmt,
+      hitDieSize: character.hitDieSize,
+      build: { version: 1, speciesId: "species_bad", classId: "class_bad" }
+    });
+
+    const derived = deriveCharacter(character, registry);
+
+    expect(derived.mode).toBe("builder");
+    expect(derived.level).toBeNull();
+    expect(derived.proficiencyBonus).toBeNull();
+    expect(derived.vitals).toEqual({ speed: null, hitDieAmt: null, hitDieSize: null });
+    expect(derived.warnings).toEqual([
+      "Missing or malformed builder level",
+      "Malformed species speed content: species_bad",
+      "Malformed class hit die content: class_bad"
+    ]);
+    expect(character.speed).toBe(before.speed);
+    expect(character.hitDieAmt).toBe(before.hitDieAmt);
+    expect(character.hitDieSize).toBe(before.hitDieSize);
+    expect(character.build.speciesId).toBe(before.build.speciesId);
+    expect(character.build.classId).toBe(before.build.classId);
   });
 
   it("does not mutate the input character", () => {

@@ -333,7 +333,7 @@ export function initAbilitiesPanel(deps = {}) {
       return null;
     }
 
-    if (!derived || derived.mode !== "builder" || !isRecord(derived.abilities)) return null;
+    if (!derived || derived.mode !== "builder" || !isFiniteNumber(derived.level) || !isRecord(derived.abilities)) return null;
 
     /** @type {Partial<Record<AbilityKey, { score: number, modifier: number }>>} */
     const display = {};

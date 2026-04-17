@@ -338,6 +338,7 @@ Notes:
 - Step 3 Phase 3E also does not change the schema. For builder characters with a valid `build.abilities.base` shape, ability adjustments made through the existing Abilities & Skills controls write deltas to `overrides.abilities.*`, which `deriveCharacter(...)` adds to the builder base scores. Reset adjustments are neutralized as `0` through the existing override normalization shape. The flat/freeform `abilities.*.score`, `abilities.*.mod`, and `abilities.*.save` fields remain separate and are not used as storage for builder-derived totals.
 - Step 3 Phase 3F also does not change the schema. Builder characters display `deriveCharacter(character).labels.classLevel`, `.race`, and `.background` in the normal Basics panel for `charClassLevel`, `charRace`, and `charBackground`; those three Basics fields are display-only for builder characters and still do not write derived labels back into `classLevel`, `race`, or `background`. Builder Identity remains temporary scaffolding for editing the underlying `build.*` identity inputs. HP, AC, proficiency, broader saves/skills, spells, attacks, custom content, schema migration, and materialization remain future work.
 - Step 3 Phase 3G also does not change the schema. Builder characters display `deriveCharacter(character).proficiencyBonus` in the normal Vitals proficiency field as builder-owned/read-only UI, and Abilities/Skills uses that same derived proficiency scalar for builder characters only in its existing save/skill formulas. Freeform characters still edit and persist flat `proficiency` exactly as before. Save/skill automation, HP/AC automation, spell/combat automation, schema migration, and derived-field materialization remain future work.
+- Step 3 Phase 3H also does not change the schema. Builder characters display `deriveCharacter(character).vitals.speed`, `.hitDieAmt`, and `.hitDieSize` in the normal and embedded Vitals speed and hit-dice fields as builder-owned/read-only UI. These values come from selected builtin species `data.speed`, selected builtin class `data.hitDie`, and normalized builder level. Freeform characters still edit and persist flat `speed`, `hitDieAmt`, and `hitDieSize` exactly as before. Malformed or incomplete builder content displays blank read-only values with derivation warnings instead of falling back to stale flat fields. HP/AC automation, combat/card linking changes, new overrides, schema migration, and derived-field materialization remain future work.
 - Builtin SRD content is code-shipped under `js/domain/rules/`; custom content persistence is intentionally not part of schema v6.
 
 ### Resources
@@ -775,6 +776,7 @@ These are currently part of saved state, even though they are not clean canonica
 - `character.abilities[*].mod`
 - `character.abilities[*].save`
 - `character.skills[*].value`
+- `character.speed`, `character.hitDieAmt`, and `character.hitDieSize` for builder characters, because builder-mode Vitals display now derives speed/hit-dice values at runtime without materializing them back into these flat fields
 - `character.equipment`
 - `tracker.npcActiveGroup`
 - `tracker.ui.theme`
