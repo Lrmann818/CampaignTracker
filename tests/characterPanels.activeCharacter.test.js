@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import events from "node:events";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
-import { makeDefaultCharacterEntry } from "../js/domain/characterHelpers.js";
+import { makeDefaultBuilderCharacterEntry, makeDefaultCharacterEntry } from "../js/domain/characterHelpers.js";
 import { initAbilitiesPanel } from "../js/pages/character/panels/abilitiesPanel.js";
 import { initAttacksPanel } from "../js/pages/character/panels/attackPanel.js";
+import { initBuilderAbilitiesPanel } from "../js/pages/character/panels/builderAbilitiesPanel.js";
 import { initBasicsPanel } from "../js/pages/character/panels/basicsPanel.js";
 import { initEquipmentPanel } from "../js/pages/character/panels/equipmentPanel.js";
 import { initPersonalityPanel } from "../js/pages/character/panels/personalityPanel.js";
@@ -13,6 +16,7 @@ import { initVitalsPanel } from "../js/pages/character/panels/vitalsPanel.js";
 import {
   EMBEDDED_PANEL_HOST_SELECTORS,
   initCombatEmbeddedPanels,
+  renderAbilitiesEmbeddedContent,
   renderSpellsEmbeddedContent,
   renderVitalsEmbeddedContent,
   renderWeaponsEmbeddedContent
@@ -72,6 +76,7 @@ class FakeNode extends EventTarget {
     this.style = {};
     this.hidden = false;
     this.disabled = false;
+    this.readOnly = false;
     this.value = "";
     this.type = "";
     this.title = "";
@@ -128,6 +133,17 @@ class FakeNode extends EventTarget {
     if (name === "class") return this.className || null;
     if (name.startsWith("data-")) return this.dataset[dataKey(name)] ?? null;
     return this.attributes.get(name) ?? null;
+  }
+
+  removeAttribute(name) {
+    this.attributes.delete(name);
+    if (name === "id") this.id = "";
+    else if (name === "class") this.className = "";
+    else if (name.startsWith("data-")) delete this.dataset[dataKey(name)];
+    else if (name === "hidden") this.hidden = false;
+    else if (name === "disabled") this.disabled = false;
+    else if (name === "readonly") this.readOnly = false;
+    else this[name] = "";
   }
 
   appendChild(child) {
@@ -522,6 +538,87 @@ function buildCharacterPanelDom(document) {
   append(abilities, "div", { className: "abilityGrid" });
 }
 
+const TEST_ABILITY_KEYS = ["str", "dex", "con", "int", "wis", "cha"];
+const TEST_ABILITY_LABELS = {
+  str: "Strength",
+  dex: "Dexterity",
+  con: "Constitution",
+  int: "Intelligence",
+  wis: "Wisdom",
+  cha: "Charisma"
+};
+
+function installAbilityBlocks(document, root = document) {
+  const grid = root.querySelector("#charAbilitiesPanel .abilityGrid") ||
+    root.querySelector("#combatEmbeddedAbilitiesSource .abilityGrid");
+  grid.replaceChildren();
+  TEST_ABILITY_KEYS.forEach((key) => {
+    const block = append(grid, "div", { className: "abilityBlock", dataset: { ability: key } });
+    const header = append(block, "div", { className: "abilityHeader" });
+    append(header, "div", { className: "abilityTitle", text: TEST_ABILITY_LABELS[key] });
+    const stats = append(header, "div", { className: "abilityStats" });
+    append(stats, "input", { className: "abilityScore", type: "number", dataset: { stat: "score" } });
+    const mod = append(stats, "div", { className: "abilityStat", text: "Mod " });
+    append(mod, "span", { dataset: { stat: "mod" }, text: "+0" });
+    const save = append(stats, "div", { className: "abilityStat", text: "Save " });
+    append(save, "span", { dataset: { stat: "save" }, text: "+0" });
+    append(save, "input", { type: "checkbox", dataset: { stat: "saveProf" } });
+    append(block, "div", { className: "abilitySkills" });
+  });
+}
+
+function installBuilderAbilitiesPanelDom(document) {
+  const panel = append(document.body, "section", { id: "charBuilderAbilitiesPanel" });
+  panel.hidden = true;
+  panel.setAttribute("aria-hidden", "true");
+  const content = append(panel, "div", { id: "charBuilderAbilitiesContent" });
+  const unavailable = append(content, "p", { id: "charBuilderAbilitiesUnavailable" });
+  unavailable.hidden = true;
+  const grid = append(content, "div", { id: "charBuilderAbilitiesGrid" });
+  [
+    ["Str", "str"],
+    ["Dex", "dex"],
+    ["Con", "con"],
+    ["Int", "int"],
+    ["Wis", "wis"],
+    ["Cha", "cha"]
+  ].forEach(([suffix]) => {
+    const label = append(grid, "label", { id: `charBuilderAbility${suffix}Field` });
+    append(label, "input", { id: `charBuilderAbility${suffix}`, type: "number" });
+  });
+}
+
+function abilityBlock(root, key) {
+  return root.querySelector(`.abilityBlock[data-ability="${key}"]`);
+}
+
+function abilityScoreInput(root, key) {
+  return abilityBlock(root, key).querySelector(".abilityScore");
+}
+
+function abilityModText(root, key) {
+  return abilityBlock(root, key).querySelector('[data-stat="mod"]').textContent;
+}
+
+function abilityBuilderHint(root) {
+  return root.querySelector(".builderSheetHint");
+}
+
+function makeAbilityRows(scores) {
+  return Object.fromEntries(TEST_ABILITY_KEYS.map((key) => [
+    key,
+    { score: scores[key], mod: null, save: null }
+  ]));
+}
+
+function makeBuilder(id, base, flatScores = {}) {
+  const character = makeDefaultBuilderCharacterEntry(`Builder ${id}`);
+  character.id = id;
+  character.build.abilities.base = { ...base };
+  if (Object.keys(flatScores).length) character.abilities = makeAbilityRows(flatScores);
+  return character;
+}
+
 function makeCharacter(id, name, overrides = {}) {
   return { ...makeDefaultCharacterEntry(name), id, ...overrides };
 }
@@ -648,6 +745,184 @@ describe("character panels active character resolution", () => {
     expect(document.getElementById("charName").value).toBe("New Hero");
     expect(document.getElementById("charHpCur").value).toBe("9");
     apis.forEach((api) => api?.destroy?.());
+  });
+
+  it("keeps freeform Abilities scores editable against flat character fields only", () => {
+    installAbilityBlocks(document);
+    const freeform = makeCharacter("char_free", "Freeform", {
+      build: null,
+      abilities: makeAbilityRows({ str: 12, dex: 11, con: 10, int: 9, wis: 8, cha: 7 })
+    });
+    const state = { characters: { activeId: "char_free", entries: [freeform] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initAbilitiesPanel(deps);
+    const strScore = abilityScoreInput(document, "str");
+
+    expect(strScore.value).toBe("12");
+    expect(abilityModText(document, "str")).toBe("+1");
+    expect(strScore.disabled).toBe(false);
+    expect(strScore.readOnly).toBe(false);
+
+    strScore.value = "14";
+    dispatchInput(strScore);
+
+    expect(freeform.abilities.str.score).toBe(14);
+    expect(abilityModText(document, "str")).toBe("+2");
+    expect(freeform.build).toBeNull();
+    expect(deps.SaveManager.markDirty).toHaveBeenCalledTimes(1);
+
+    api.destroy();
+  });
+
+  it("displays builder-derived ability scores and modifiers without materializing flat fields", () => {
+    installAbilityBlocks(document);
+    const builder = makeBuilder(
+      "char_builder",
+      { str: 16, dex: 14, con: 13, int: 12, wis: 10, cha: 8 },
+      { str: 3, dex: 4, con: 5, int: 6, wis: 7, cha: 8 }
+    );
+    const beforeFlat = structuredClone(builder.abilities);
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initAbilitiesPanel(deps);
+    const strScore = abilityScoreInput(document, "str");
+
+    expect(strScore.value).toBe("16");
+    expect(abilityModText(document, "str")).toBe("+3");
+    expect(strScore.disabled).toBe(true);
+    expect(strScore.readOnly).toBe(true);
+    expect(strScore.getAttribute("aria-readonly")).toBe("true");
+    expect(abilityBuilderHint(document).hidden).toBe(false);
+    expect(abilityBuilderHint(document).textContent).toContain("Builder Abilities");
+
+    strScore.value = "20";
+    dispatchInput(strScore);
+
+    expect(strScore.value).toBe("16");
+    expect(builder.abilities).toEqual(beforeFlat);
+    expect(builder.build.abilities.base.str).toBe(16);
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+    expect(readFileSync(resolve(process.cwd(), "js/pages/character/panels/abilitiesPanel.js"), "utf8"))
+      .not.toContain("materializeDerivedCharacterFields");
+
+    api.destroy();
+  });
+
+  it("shows neutral derived abilities for a new builder character in the normal Abilities panel", () => {
+    installAbilityBlocks(document);
+    const builder = makeDefaultBuilderCharacterEntry("New Builder Character");
+    builder.id = "char_builder";
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initAbilitiesPanel(deps);
+
+    TEST_ABILITY_KEYS.forEach((key) => {
+      expect(abilityScoreInput(document, key).value).toBe("10");
+      expect(abilityModText(document, key)).toBe("+0");
+    });
+
+    api.destroy();
+  });
+
+  it("refreshes normal Abilities display when Builder Abilities edits base scores", () => {
+    installAbilityBlocks(document);
+    installBuilderAbilitiesPanelDom(document);
+    const builder = makeBuilder(
+      "char_builder",
+      { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+      { str: 3, dex: 4, con: 5, int: 6, wis: 7, cha: 8 }
+    );
+    const beforeFlat = structuredClone(builder.abilities);
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const abilitiesApi = initAbilitiesPanel(deps);
+    const builderAbilitiesApi = initBuilderAbilitiesPanel(deps);
+
+    expect(abilityScoreInput(document, "str").value).toBe("10");
+    expect(abilityModText(document, "str")).toBe("+0");
+
+    const builderStr = document.getElementById("charBuilderAbilityStr");
+    builderStr.value = "15";
+    builderStr.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+
+    expect(builder.build.abilities.base.str).toBe(15);
+    expect(abilityScoreInput(document, "str").value).toBe("15");
+    expect(abilityModText(document, "str")).toBe("+2");
+    expect(builder.abilities).toEqual(beforeFlat);
+
+    builderAbilitiesApi.destroy();
+    abilitiesApi.destroy();
+  });
+
+  it("refreshes Abilities display when switching between builder and freeform characters", () => {
+    installAbilityBlocks(document);
+    const builderA = makeBuilder("char_builder_a", { str: 16, dex: 14, con: 13, int: 12, wis: 10, cha: 8 });
+    const builderB = makeBuilder("char_builder_b", { str: 8, dex: 10, con: 12, int: 14, wis: 16, cha: 18 });
+    const freeform = makeCharacter("char_free", "Freeform", {
+      build: null,
+      abilities: makeAbilityRows({ str: 12, dex: 11, con: 10, int: 9, wis: 8, cha: 7 })
+    });
+    const state = {
+      characters: { activeId: "char_builder_a", entries: [builderA, builderB, freeform] },
+      combat: { workspace: {} }
+    };
+    const deps = makeDeps(state);
+    const api = initAbilitiesPanel(deps);
+    const strScore = abilityScoreInput(document, "str");
+
+    expect(strScore.value).toBe("16");
+    expect(strScore.disabled).toBe(true);
+
+    state.characters.activeId = "char_builder_b";
+    notifyActiveCharacterChanged({ previousId: "char_builder_a", activeId: "char_builder_b" });
+    expect(strScore.value).toBe("8");
+    expect(abilityModText(document, "str")).toBe("-1");
+    expect(strScore.disabled).toBe(true);
+
+    state.characters.activeId = "char_free";
+    notifyActiveCharacterChanged({ previousId: "char_builder_b", activeId: "char_free" });
+    expect(strScore.value).toBe("12");
+    expect(strScore.disabled).toBe(false);
+    expect(strScore.readOnly).toBe(false);
+
+    strScore.value = "13";
+    dispatchInput(strScore);
+    expect(freeform.abilities.str.score).toBe(13);
+    expect(freeform.build).toBeNull();
+
+    state.characters.activeId = "char_builder_a";
+    notifyActiveCharacterChanged({ previousId: "char_free", activeId: "char_builder_a" });
+    expect(strScore.value).toBe("16");
+    expect(strScore.disabled).toBe(true);
+
+    api.destroy();
+  });
+
+  it("uses the shared Abilities panel behavior for Combat embedded abilities", () => {
+    const host = append(document.body, "div", { id: "combatAbilitiesHost" });
+    renderAbilitiesEmbeddedContent(host);
+    const builder = makeBuilder("char_builder", { str: 15, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initAbilitiesPanel({
+      ...deps,
+      root: host,
+      selectors: EMBEDDED_PANEL_HOST_SELECTORS.abilities
+    });
+    const strScore = abilityScoreInput(host, "str");
+
+    expect(strScore.value).toBe("15");
+    expect(abilityModText(host, "str")).toBe("+2");
+    expect(strScore.disabled).toBe(true);
+    expect(abilityBuilderHint(host).textContent).toContain("Builder Abilities");
+    expect(builder.abilities.str.score).toBeNull();
+
+    api.destroy();
   });
 
   it("re-initializes with the newly active character's data after a switch", () => {
