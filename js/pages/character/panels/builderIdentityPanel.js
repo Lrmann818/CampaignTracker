@@ -49,6 +49,8 @@ function cleanString(value) {
  * @returns {number | null}
  */
 function normalizeLevel(value) {
+  if (value == null) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   return Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, Math.trunc(n)));
@@ -138,6 +140,8 @@ export function initBuilderIdentityPanel(deps = {}) {
     {
       panel: "#charBuilderIdentityPanel",
       content: "#charBuilderIdentityContent",
+      unavailable: "#charBuilderIdentityUnavailable",
+      grid: "#charBuilderIdentityGrid",
       species: "#charBuilderSpeciesSelect",
       class: "#charBuilderClassSelect",
       background: "#charBuilderBackgroundSelect",
@@ -155,6 +159,8 @@ export function initBuilderIdentityPanel(deps = {}) {
 
   const panelEl = /** @type {HTMLElement} */ (guard.els.panel);
   const contentEl = /** @type {HTMLElement} */ (guard.els.content);
+  const unavailableEl = /** @type {HTMLElement} */ (guard.els.unavailable);
+  const gridEl = /** @type {HTMLElement} */ (guard.els.grid);
   const speciesSelect = /** @type {HTMLSelectElement} */ (guard.els.species);
   const classSelect = /** @type {HTMLSelectElement} */ (guard.els.class);
   const backgroundSelect = /** @type {HTMLSelectElement} */ (guard.els.background);
@@ -168,23 +174,17 @@ export function initBuilderIdentityPanel(deps = {}) {
 
   destroyFns.push(() => listenerController.abort());
 
-  function hide() {
-    panelEl.hidden = true;
-    panelEl.setAttribute("aria-hidden", "true");
+  function resetControls() {
     speciesSelect.value = "";
     classSelect.value = "";
     backgroundSelect.value = "";
     levelInput.value = "";
   }
 
-  function refresh() {
-    if (destroyed) return;
-    const build = getEditableBuild(getActiveCharacter(state));
-    if (!build) {
-      hide();
-      return;
-    }
-
+  /**
+   * @param {Record<string, unknown>} build
+   */
+  function syncControls(build) {
     populateContentSelect(speciesSelect, "species", build.speciesId);
     populateContentSelect(classSelect, "class", build.classId);
     populateContentSelect(backgroundSelect, "background", build.backgroundId);
@@ -192,10 +192,54 @@ export function initBuilderIdentityPanel(deps = {}) {
     levelInput.min = String(MIN_LEVEL);
     levelInput.max = String(MAX_LEVEL);
     levelInput.step = "1";
+  }
 
+  function showPanel() {
     panelEl.hidden = false;
     panelEl.setAttribute("aria-hidden", "false");
+  }
+
+  function hide() {
+    panelEl.hidden = true;
+    panelEl.setAttribute("aria-hidden", "true");
+    unavailableEl.hidden = true;
+    gridEl.hidden = true;
     contentEl.removeAttribute("aria-disabled");
+    resetControls();
+  }
+
+  function showUnavailable() {
+    resetControls();
+    unavailableEl.hidden = false;
+    gridEl.hidden = true;
+    contentEl.setAttribute("aria-disabled", "true");
+    showPanel();
+  }
+
+  /**
+   * @param {Record<string, unknown>} build
+   */
+  function showEditable(build) {
+    unavailableEl.hidden = true;
+    gridEl.hidden = false;
+    contentEl.removeAttribute("aria-disabled");
+    syncControls(build);
+    showPanel();
+  }
+
+  function refresh() {
+    if (destroyed) return;
+    const character = getActiveCharacter(state);
+    const build = getEditableBuild(character);
+    if (build) {
+      showEditable(build);
+      return;
+    }
+    if (isBuilderCharacter(character)) {
+      showUnavailable();
+      return;
+    }
+    hide();
   }
 
   /**

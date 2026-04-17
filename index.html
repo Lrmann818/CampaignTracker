@@ -555,25 +555,29 @@
               <h2 class="m0" id="charBuilderIdentityTitle">Builder Identity</h2>
             </div>
             <div id="charBuilderIdentityContent" class="builderIdentityContent">
-              <p class="builderIdentityNote">
+              <p class="builderIdentityNote" id="charBuilderIdentityNote">
                 These builder choices update the read-only Builder Summary only. Existing sheet fields remain editable.
               </p>
-              <div class="builderIdentityGrid">
+              <p class="builderIdentityNote" id="charBuilderIdentityUnavailable" hidden>
+                Builder Mode is active, but this character's builder data is not editable by the current identity editor.
+              </p>
+              <div class="builderIdentityGrid" id="charBuilderIdentityGrid">
                 <label class="builderIdentityField" for="charBuilderSpeciesSelect">
-                  <span>Species</span>
-                  <select id="charBuilderSpeciesSelect"></select>
+                  <span id="charBuilderSpeciesLabel">Species</span>
+                  <select id="charBuilderSpeciesSelect" aria-labelledby="charBuilderSpeciesLabel"></select>
                 </label>
                 <label class="builderIdentityField" for="charBuilderClassSelect">
-                  <span>Class</span>
-                  <select id="charBuilderClassSelect"></select>
+                  <span id="charBuilderClassLabel">Class</span>
+                  <select id="charBuilderClassSelect" aria-labelledby="charBuilderClassLabel"></select>
                 </label>
                 <label class="builderIdentityField" for="charBuilderBackgroundSelect">
-                  <span>Background</span>
-                  <select id="charBuilderBackgroundSelect"></select>
+                  <span id="charBuilderBackgroundLabel">Background</span>
+                  <select id="charBuilderBackgroundSelect" aria-labelledby="charBuilderBackgroundLabel"></select>
                 </label>
                 <label class="builderIdentityField" for="charBuilderLevelInput">
-                  <span>Level</span>
-                  <input id="charBuilderLevelInput" type="number" min="1" max="20" step="1" inputmode="numeric" />
+                  <span id="charBuilderLevelLabel">Level</span>
+                  <input id="charBuilderLevelInput" type="number" min="1" max="20" step="1" inputmode="numeric"
+                    aria-labelledby="charBuilderLevelLabel" />
                 </label>
               </div>
             </div>

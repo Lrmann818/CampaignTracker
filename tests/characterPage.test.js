@@ -432,13 +432,28 @@ function installBuilderIdentityDom(document) {
   const panel = appendWithId(document, col, "section", "charBuilderIdentityPanel", "panel builderIdentityPanel");
   panel.hidden = true;
   panel.setAttribute("aria-hidden", "true");
+  panel.setAttribute("aria-labelledby", "charBuilderIdentityTitle");
   appendWithId(document, panel, "h2", "charBuilderIdentityTitle").textContent = "Builder Identity";
   const content = appendWithId(document, panel, "div", "charBuilderIdentityContent", "builderIdentityContent");
-  appendWithId(document, content, "select", "charBuilderSpeciesSelect");
-  appendWithId(document, content, "select", "charBuilderClassSelect");
-  appendWithId(document, content, "select", "charBuilderBackgroundSelect");
-  const level = appendWithId(document, content, "input", "charBuilderLevelInput");
+  appendWithId(document, content, "p", "charBuilderIdentityNote", "builderIdentityNote")
+    .textContent = "These builder choices update the read-only Builder Summary only. Existing sheet fields remain editable.";
+  const unavailable = appendWithId(document, content, "p", "charBuilderIdentityUnavailable", "builderIdentityNote");
+  unavailable.hidden = true;
+  unavailable.textContent = "Builder Mode is active, but this character's builder data is not editable by the current identity editor.";
+  const grid = appendWithId(document, content, "div", "charBuilderIdentityGrid", "builderIdentityGrid");
+  appendWithId(document, grid, "span", "charBuilderSpeciesLabel").textContent = "Species";
+  const species = appendWithId(document, grid, "select", "charBuilderSpeciesSelect");
+  species.setAttribute("aria-labelledby", "charBuilderSpeciesLabel");
+  appendWithId(document, grid, "span", "charBuilderClassLabel").textContent = "Class";
+  const classSelect = appendWithId(document, grid, "select", "charBuilderClassSelect");
+  classSelect.setAttribute("aria-labelledby", "charBuilderClassLabel");
+  appendWithId(document, grid, "span", "charBuilderBackgroundLabel").textContent = "Background";
+  const background = appendWithId(document, grid, "select", "charBuilderBackgroundSelect");
+  background.setAttribute("aria-labelledby", "charBuilderBackgroundLabel");
+  appendWithId(document, grid, "span", "charBuilderLevelLabel").textContent = "Level";
+  const level = appendWithId(document, grid, "input", "charBuilderLevelInput");
   level.type = "number";
+  level.setAttribute("aria-labelledby", "charBuilderLevelLabel");
   return panel;
 }
 
@@ -611,10 +626,15 @@ describe("character page selector", () => {
     expect(html).toContain('class="charBuilderModeBadge" id="charBuilderModeBadge"');
     expect(html).toContain('class="panel builderIdentityPanel" id="charBuilderIdentityPanel" hidden aria-hidden="true"');
     expect(html).toContain('id="charBuilderSpeciesSelect"');
+    expect(html).toContain('id="charBuilderSpeciesSelect" aria-labelledby="charBuilderSpeciesLabel"');
     expect(html).toContain('id="charBuilderClassSelect"');
+    expect(html).toContain('id="charBuilderClassSelect" aria-labelledby="charBuilderClassLabel"');
     expect(html).toContain('id="charBuilderBackgroundSelect"');
+    expect(html).toContain('id="charBuilderBackgroundSelect" aria-labelledby="charBuilderBackgroundLabel"');
     expect(html).toContain('id="charBuilderLevelInput" type="number" min="1" max="20"');
+    expect(html).toContain('aria-labelledby="charBuilderLevelLabel"');
     expect(html).toContain("These builder choices update the read-only Builder Summary only. Existing sheet fields remain editable.");
+    expect(html).toContain("Builder Mode is active, but this character's builder data is not editable by the current identity editor.");
     expect(html).toContain('class="panelBtnSm charActionMenuBtn" id="charActionMenuBtn"');
     expect(html).toContain('class="dropdownMenu charActionDropdownMenu" id="charActionDropdownMenu"');
     expect(html).not.toContain("charActionSelect");
@@ -1093,10 +1113,37 @@ describe("character page selector", () => {
 
     expect(panel.hidden).toBe(false);
     expect(panel.getAttribute("aria-hidden")).toBe("false");
+    expect(document.getElementById("charBuilderIdentityGrid").hidden).toBe(false);
+    expect(document.getElementById("charBuilderIdentityUnavailable").hidden).toBe(true);
     expect(document.getElementById("charBuilderSpeciesSelect").value).toBe("species_elf");
     expect(document.getElementById("charBuilderClassSelect").value).toBe("class_fighter");
     expect(document.getElementById("charBuilderBackgroundSelect").value).toBe("background_soldier");
     expect(document.getElementById("charBuilderLevelInput").value).toBe("5");
+
+    controller.destroy();
+  });
+
+  it("links Builder Identity controls to their visible labels", () => {
+    const { document } = installCharacterSelectorDom();
+    installBuilderIdentityDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    deps.state.characters.entries[0] = makeBuilderCharacter({ id: "char_a" });
+
+    const controller = initCharacterPageUI(deps);
+
+    expect(document.getElementById("charBuilderSpeciesSelect").getAttribute("aria-labelledby"))
+      .toBe("charBuilderSpeciesLabel");
+    expect(document.getElementById("charBuilderSpeciesLabel").textContent).toBe("Species");
+    expect(document.getElementById("charBuilderClassSelect").getAttribute("aria-labelledby"))
+      .toBe("charBuilderClassLabel");
+    expect(document.getElementById("charBuilderClassLabel").textContent).toBe("Class");
+    expect(document.getElementById("charBuilderBackgroundSelect").getAttribute("aria-labelledby"))
+      .toBe("charBuilderBackgroundLabel");
+    expect(document.getElementById("charBuilderBackgroundLabel").textContent).toBe("Background");
+    expect(document.getElementById("charBuilderLevelInput").getAttribute("aria-labelledby"))
+      .toBe("charBuilderLevelLabel");
+    expect(document.getElementById("charBuilderLevelLabel").textContent).toBe("Level");
 
     controller.destroy();
   });
@@ -1112,13 +1159,15 @@ describe("character page selector", () => {
 
     expect(document.getElementById("charBuilderIdentityPanel").hidden).toBe(true);
     expect(document.getElementById("charBuilderIdentityPanel").getAttribute("aria-hidden")).toBe("true");
+    expect(document.getElementById("charBuilderIdentityGrid").hidden).toBe(true);
+    expect(document.getElementById("charBuilderIdentityUnavailable").hidden).toBe(true);
     expect(document.getElementById("charBuilderSpeciesSelect").value).toBe("");
     expect(document.getElementById("charBuilderLevelInput").value).toBe("");
 
     controller.destroy();
   });
 
-  it("hides the Builder Identity panel for malformed builder data", () => {
+  it("explains when Builder Mode data is not editable by the Builder Identity panel", () => {
     const { document } = installCharacterSelectorDom();
     installBuilderIdentityDom(document);
     const Popovers = createFakePopovers();
@@ -1138,7 +1187,14 @@ describe("character page selector", () => {
     const controller = initCharacterPageUI(deps);
 
     expect(isBuilderCharacter(deps.state.characters.entries[0])).toBe(true);
-    expect(document.getElementById("charBuilderIdentityPanel").hidden).toBe(true);
+    expect(document.getElementById("charBuilderModeBadge").hidden).toBe(false);
+    expect(document.getElementById("charBuilderIdentityPanel").hidden).toBe(false);
+    expect(document.getElementById("charBuilderIdentityPanel").getAttribute("aria-hidden")).toBe("false");
+    expect(document.getElementById("charBuilderIdentityContent").getAttribute("aria-disabled")).toBe("true");
+    expect(document.getElementById("charBuilderIdentityGrid").hidden).toBe(true);
+    expect(document.getElementById("charBuilderIdentityUnavailable").hidden).toBe(false);
+    expect(document.getElementById("charBuilderIdentityUnavailable").textContent)
+      .toContain("Builder Mode is active");
     expect(document.getElementById("charBuilderClassSelect").value).toBe("");
 
     controller.destroy();
@@ -1324,6 +1380,44 @@ describe("character page selector", () => {
     controller.destroy();
   });
 
+  it("rejects invalid Builder Identity content IDs without persisting them", () => {
+    const { document } = installCharacterSelectorDom();
+    installBuilderIdentityDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    const builder = makeBuilderCharacter({
+      id: "char_a",
+      speciesId: "species_elf",
+      classId: "class_fighter",
+      backgroundId: null
+    });
+    deps.state.characters.entries[0] = builder;
+    const beforeBuild = structuredClone(builder.build);
+
+    const controller = initCharacterPageUI(deps);
+
+    const speciesSelect = document.getElementById("charBuilderSpeciesSelect");
+    speciesSelect.value = "class_fighter";
+    dispatchChange(speciesSelect);
+    expect(builder.build).toEqual(beforeBuild);
+    expect(speciesSelect.value).toBe("species_elf");
+
+    const classSelect = document.getElementById("charBuilderClassSelect");
+    classSelect.value = "class_missing";
+    dispatchChange(classSelect);
+    expect(builder.build).toEqual(beforeBuild);
+    expect(classSelect.value).toBe("class_fighter");
+
+    const backgroundSelect = document.getElementById("charBuilderBackgroundSelect");
+    backgroundSelect.value = "background_missing";
+    dispatchChange(backgroundSelect);
+    expect(builder.build).toEqual(beforeBuild);
+    expect(backgroundSelect.value).toBe("");
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    controller.destroy();
+  });
+
   it("keeps Builder Identity level within 1 through 20", () => {
     const { document } = installCharacterSelectorDom();
     installBuilderIdentityDom(document);
@@ -1335,20 +1429,29 @@ describe("character page selector", () => {
     const controller = initCharacterPageUI(deps);
     const levelInput = document.getElementById("charBuilderLevelInput");
 
+    levelInput.value = "";
+    dispatchChange(levelInput);
+    expect(builder.build.level).toBe(5);
+    expect(levelInput.value).toBe("5");
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    levelInput.value = "nope";
+    dispatchChange(levelInput);
+    expect(builder.build.level).toBe(5);
+    expect(levelInput.value).toBe("5");
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
     levelInput.value = "99";
     dispatchChange(levelInput);
     expect(builder.build.level).toBe(20);
     expect(levelInput.value).toBe("20");
+    expect(deps.SaveManager.markDirty).toHaveBeenCalledTimes(1);
 
     levelInput.value = "0";
     dispatchChange(levelInput);
     expect(builder.build.level).toBe(1);
     expect(levelInput.value).toBe("1");
-
-    levelInput.value = "nope";
-    dispatchChange(levelInput);
-    expect(builder.build.level).toBe(1);
-    expect(levelInput.value).toBe("1");
+    expect(deps.SaveManager.markDirty).toHaveBeenCalledTimes(2);
 
     controller.destroy();
   });
