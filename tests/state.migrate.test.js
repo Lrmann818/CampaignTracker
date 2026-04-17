@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { makeDefaultCharacterOverrides } from "../js/domain/characterHelpers.js";
 import { backfillInventoryItemsFromLegacyEquipment, CURRENT_SCHEMA_VERSION, migrateState } from "../js/state.js";
 
 function cloneState(value) {
@@ -203,7 +204,7 @@ describe("migrateState", () => {
       });
 
       expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-      expect(CURRENT_SCHEMA_VERSION).toBe(5);
+      expect(CURRENT_SCHEMA_VERSION).toBe(6);
       expect(migrated.combat).toEqual(DEFAULT_COMBAT_STATE);
       expect(migrated.tracker.campaignTitle).toBe("Moonfall");
       expect(migrated.tracker.misc).toBe("Preserve this");
@@ -230,6 +231,79 @@ describe("migrateState", () => {
       expect(migrated.tracker.party[0].characterId).toBeNull();
       expect(migrated.tracker.locationsList[0].characterId).toBeUndefined();
       expect(activeEntry(migrated).status).toBe("");
+      expect(activeEntry(migrated).build).toBeNull();
+      expect(activeEntry(migrated).overrides).toEqual(makeDefaultCharacterOverrides());
+    });
+
+    it("upgrades schema v5 saves into v6 Step 3 foundation fields without changing freeform fields", () => {
+      const migrated = migrateState({
+        schemaVersion: 5,
+        characters: {
+          activeId: "char_a",
+          entries: [{
+            id: "char_a",
+            name: "Arlen",
+            classLevel: "Fighter 3",
+            race: "Human",
+            background: "Soldier",
+            proficiency: 2,
+            abilities: { str: { score: 16, mod: 3, save: 5 } },
+            skills: { athletics: { level: "prof", misc: 1, value: 6 } }
+          }]
+        }
+      });
+      const entry = activeEntry(migrated);
+
+      expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+      expect(entry).toMatchObject({
+        name: "Arlen",
+        classLevel: "Fighter 3",
+        race: "Human",
+        background: "Soldier",
+        proficiency: 2,
+        abilities: { str: { score: 16, mod: 3, save: 5 } },
+        skills: { athletics: { level: "prof", misc: 1, value: 6 } }
+      });
+      expect(entry.build).toBeNull();
+      expect(entry.overrides).toEqual(makeDefaultCharacterOverrides());
+    });
+
+    it("normalizes malformed Step 3 build and override fields during v6 migration", () => {
+      const migrated = migrateState({
+        schemaVersion: 5,
+        characters: {
+          activeId: "char_a",
+          entries: [
+            {
+              id: "char_a",
+              name: "Bad Build",
+              build: ["not plain"],
+              overrides: "bad"
+            },
+            {
+              id: "char_b",
+              name: "Partial Overrides",
+              build: { classId: "class_fighter" },
+              overrides: {
+                abilities: { str: "2", dex: "bad" },
+                saves: { con: 1 },
+                skills: { athletics: "3", "": 9 },
+                initiative: "1"
+              }
+            }
+          ]
+        }
+      });
+
+      expect(migrated.characters.entries[0].build).toBeNull();
+      expect(migrated.characters.entries[0].overrides).toEqual(makeDefaultCharacterOverrides());
+      expect(migrated.characters.entries[1].build).toEqual({ classId: "class_fighter" });
+      expect(migrated.characters.entries[1].overrides).toEqual({
+        abilities: { str: 2, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+        saves: { str: 0, dex: 0, con: 1, int: 0, wis: 0, cha: 0 },
+        skills: { athletics: 3 },
+        initiative: 1
+      });
     });
 
     it("repairs malformed combat state while keeping workspace limited to composition data", () => {

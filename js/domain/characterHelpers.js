@@ -6,6 +6,40 @@
  * @typedef {import("../state.js").CharacterEntry} CharacterEntry
  */
 
+export const CHARACTER_ABILITY_KEYS = Object.freeze(["str", "dex", "con", "int", "wis", "cha"]);
+
+/**
+ * Creates the Step 3 foundation override shape.
+ * Keep this object plain and JSON-safe; it is persisted on character entries.
+ * @returns {{
+ *   abilities: Record<string, number>,
+ *   saves: Record<string, number>,
+ *   skills: Record<string, number>,
+ *   initiative: number
+ * }}
+ */
+export function makeDefaultCharacterOverrides() {
+  const zeroByAbility = () => Object.fromEntries(CHARACTER_ABILITY_KEYS.map((key) => [key, 0]));
+  return {
+    abilities: zeroByAbility(),
+    saves: zeroByAbility(),
+    skills: {},
+    initiative: 0
+  };
+}
+
+/**
+ * @param {unknown} character
+ * @returns {boolean}
+ */
+export function isBuilderCharacter(character) {
+  if (!character || typeof character !== "object" || Array.isArray(character)) return false;
+  const build = /** @type {{ build?: unknown }} */ (character).build;
+  if (!build || typeof build !== "object" || Array.isArray(build)) return false;
+  const proto = Object.getPrototypeOf(build);
+  return proto === Object.prototype || proto === null;
+}
+
 /**
  * Returns the active CharacterEntry for the given state, or null if none exists.
  * Defensive against missing `characters`, missing `entries`, or a bad `activeId`.
@@ -43,6 +77,8 @@ export function makeDefaultCharacterEntry(name = "New Character") {
   const id = `char_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   return {
     id,
+    build: null,
+    overrides: makeDefaultCharacterOverrides(),
     imgBlobId: null,
     name,
     classLevel: "",

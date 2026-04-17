@@ -2,12 +2,13 @@
 // js/state.js — app-wide state + schema migration
 
 import { DEV_MODE } from "./utils/dev.js";
+import { CHARACTER_ABILITY_KEYS, makeDefaultCharacterOverrides } from "./domain/characterHelpers.js";
 
 export const STORAGE_KEY = "localCampaignTracker_v1";
 export const ACTIVE_TAB_KEY = "localCampaignTracker_activeTab";
 
 // Save schema versioning
-export const CURRENT_SCHEMA_VERSION = 5;
+export const CURRENT_SCHEMA_VERSION = 6;
 
 /** @typedef {import("./domain/factories.js").NpcCard & PortraitRef} NpcCard */
 /** @typedef {import("./domain/factories.js").PartyMemberCard & PortraitRef} PartyMemberCard */
@@ -50,6 +51,11 @@ export const SCHEMA_MIGRATION_HISTORY = Object.freeze([
     version: 5,
     date: "2026-04-15",
     changes: "Added character-linked NPC/Party card references and character status field."
+  },
+  {
+    version: 6,
+    date: "2026-04-16",
+    changes: "Added Step 3 rules-engine foundation fields on character entries: build and overrides."
   }
 ]);
 
@@ -302,7 +308,35 @@ export const SCHEMA_MIGRATION_HISTORY = Object.freeze([
 
 /**
  * @typedef {{
+ *   version?: number,
+ *   ruleset?: string,
+ *   speciesId?: string | null,
+ *   classId?: string | null,
+ *   subclassId?: string | null,
+ *   backgroundId?: string | null,
+ *   level?: number,
+ *   abilityMethod?: string,
+ *   abilities?: { base?: NumberLookup, [key: string]: unknown },
+ *   choicesByLevel?: Record<string, unknown>,
+ *   [key: string]: unknown
+ * }} CharacterBuildState
+ */
+
+/**
+ * @typedef {{
+ *   abilities: NumberLookup,
+ *   saves: NumberLookup,
+ *   skills: NumberLookup,
+ *   initiative: number,
+ *   [key: string]: unknown
+ * }} CharacterOverridesState
+ */
+
+/**
+ * @typedef {{
  *   imgBlobId: string | null,
+ *   build: CharacterBuildState | null,
+ *   overrides: CharacterOverridesState,
  *   imgDataUrl?: string,
  *   name: string,
  *   classLevel: string,
@@ -1228,12 +1262,104 @@ export function migrateState(raw) {
     }
   }
 
+  /**
+   * @param {unknown} value
+   * @returns {value is Record<string, unknown>}
+   */
+  function isPlainPersistedObject(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const proto = Object.getPrototypeOf(value);
+    return proto === Object.prototype || proto === null;
+  }
+
+  /**
+   * @param {unknown} value
+   * @returns {number}
+   */
+  function finiteNumberOrZero(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  /**
+   * @param {unknown} value
+   * @returns {NumberLookup}
+   */
+  function normalizeAbilityNumberLookup(value) {
+    const source = value && typeof value === "object" && !Array.isArray(value)
+      ? /** @type {Record<string, unknown>} */ (value)
+      : {};
+    /** @type {NumberLookup} */
+    const out = {};
+    for (const key of CHARACTER_ABILITY_KEYS) {
+      out[key] = finiteNumberOrZero(source[key]);
+    }
+    return out;
+  }
+
+  /**
+   * @param {unknown} value
+   * @returns {NumberLookup}
+   */
+  function normalizeSkillOverrideLookup(value) {
+    const source = value && typeof value === "object" && !Array.isArray(value)
+      ? /** @type {Record<string, unknown>} */ (value)
+      : {};
+    /** @type {NumberLookup} */
+    const out = {};
+    for (const [key, entry] of Object.entries(source)) {
+      const trimmedKey = key.trim();
+      if (!trimmedKey) continue;
+      const n = Number(entry);
+      if (Number.isFinite(n)) out[trimmedKey] = n;
+    }
+    return out;
+  }
+
+  /**
+   * @param {unknown} value
+   * @returns {CharacterOverridesState}
+   */
+  function normalizeCharacterOverrides(value) {
+    const defaults = makeDefaultCharacterOverrides();
+    const source = isPlainPersistedObject(value) ? value : {};
+    return {
+      ...defaults,
+      abilities: normalizeAbilityNumberLookup(source.abilities),
+      saves: normalizeAbilityNumberLookup(source.saves),
+      skills: normalizeSkillOverrideLookup(source.skills),
+      initiative: finiteNumberOrZero(source.initiative)
+    };
+  }
+
+  function migrateToV6() {
+    const characters = data.characters && typeof data.characters === "object" && !Array.isArray(data.characters)
+      ? /** @type {CharactersCollection & Record<string, unknown>} */ (data.characters)
+      : null;
+    const entries = Array.isArray(characters?.entries) ? characters.entries : [];
+    for (const entry of entries) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+      const character = /** @type {Record<string, unknown>} */ (entry);
+      if (
+        !("build" in character) ||
+        (
+          character.build !== null &&
+          !isPlainPersistedObject(character.build)
+        )
+      ) {
+        character.build = null;
+      }
+      character.overrides = normalizeCharacterOverrides(character.overrides);
+    }
+  }
+
   const SCHEMA_MIGRATIONS = Object.freeze({
     0: migrateToV1,
     1: migrateToV2,
     2: migrateToV3,
     3: migrateToV4,
-    4: migrateToV5
+    4: migrateToV5,
+    5: migrateToV6
   });
 
   function applyMigrationStep(version) {
@@ -1262,6 +1388,7 @@ export function migrateState(raw) {
   // and removes any stale character key that migrateToV1 may have re-created.
   migrateToV4();
   migrateToV5();
+  migrateToV6();
 
   data.schemaVersion = CURRENT_SCHEMA_VERSION;
   return normalizeState(/** @type {State} */ (data));

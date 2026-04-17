@@ -20,6 +20,7 @@ import {
   prepareImportedCharacter,
   validateImportFile
 } from "../js/domain/characterPortability.js";
+import { makeDefaultCharacterOverrides } from "../js/domain/characterHelpers.js";
 import { migrateState, sanitizeForSave } from "../js/state.js";
 import { saveAllLocal } from "../js/storage/persistence.js";
 import { blobToDataUrl } from "../js/storage/blobs.js";
@@ -313,6 +314,35 @@ describe("prepareImportedCharacter", () => {
 
     expect(prepared.spellNotes).toEqual(importObject.spellNotes);
     expect(prepared.spellNotes).not.toBe(importObject.spellNotes);
+  });
+
+  it("preserves Step 3 builder state and overrides while regenerating the character id", () => {
+    const build = {
+      version: 1,
+      ruleset: "srd-5.2.1",
+      speciesId: "species_human",
+      classId: "class_fighter",
+      backgroundId: "background_soldier",
+      level: 3
+    };
+    const overrides = {
+      ...makeDefaultCharacterOverrides(),
+      abilities: { str: 1, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+      skills: { athletics: 2 }
+    };
+    const importObject = makeExportObject({
+      character: makeCharacter({ build, overrides }),
+      portrait: null,
+      spellNotes: {}
+    });
+
+    const prepared = prepareImportedCharacter(importObject);
+
+    expect(prepared.characterEntry.id).not.toBe(importObject.character.id);
+    expect(prepared.characterEntry.build).toEqual(build);
+    expect(prepared.characterEntry.overrides).toEqual(overrides);
+    expect(prepared.characterEntry.build).not.toBe(build);
+    expect(prepared.characterEntry.overrides).not.toBe(overrides);
   });
 });
 
@@ -635,5 +665,53 @@ describe("character portability round trip", () => {
 
     expect(newId).not.toBe(originalCharacter.id);
     expect(normalizeRoundTripExport(secondExport)).toEqual(normalizeRoundTripExport(firstExport));
+  });
+
+  it("round-trips Step 3 build and overrides without changing the export format version", async () => {
+    const build = {
+      version: 1,
+      ruleset: "srd-5.2.1",
+      speciesId: "species_human",
+      classId: "class_fighter",
+      backgroundId: "background_soldier",
+      level: 4,
+      abilities: { base: { str: 15, dex: 14, con: 13, int: 10, wis: 8, cha: 12 } }
+    };
+    const overrides = {
+      ...makeDefaultCharacterOverrides(),
+      abilities: { str: 1, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+      saves: { str: 2, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+      skills: { athletics: 1 },
+      initiative: 1
+    };
+    const originalCharacter = makeCharacter({ build, overrides, imgBlobId: null });
+    const firstExport = await exportCharacterToObject(originalCharacter, null, {});
+    const state = {
+      appShell: { activeCampaignId: "campaign_gamma" },
+      characters: { activeId: null, entries: [] }
+    };
+
+    const newId = await commitImport(firstExport, {
+      state,
+      SaveManager: makeSaveManager(),
+      putBlob: vi.fn(async () => "unused"),
+      deleteBlob: vi.fn(async () => {}),
+      putText: vi.fn(async () => {}),
+      dataUrlToBlob: vi.fn(() => new Blob(["portrait"], { type: "image/webp" })),
+      mutateState: makeMutateState(state)
+    });
+    const secondExport = await exportActiveCharacter({
+      state,
+      getBlob: vi.fn(async () => null),
+      getText: vi.fn(async () => "")
+    });
+
+    expect(EXPORT_FORMAT_VERSION).toBe(1);
+    expect(firstExport.character.build).toEqual(build);
+    expect(firstExport.character.overrides).toEqual(overrides);
+    expect(newId).not.toBe(originalCharacter.id);
+    expect(secondExport.character.id).toBe(newId);
+    expect(secondExport.character.build).toEqual(build);
+    expect(secondExport.character.overrides).toEqual(overrides);
   });
 });

@@ -328,7 +328,7 @@ Important rule: a field living on `state` does **not** guarantee that it is pers
 
 ### Schema migration rules
 
-- Current schema version: `5`
+- Current schema version: `6`
 - Migration lives in `migrateState(...)` in `js/state.js`.
 - `normalizeState(...)` restores runtime-only UI defaults after migration/load/import.
 - Unknown future schema versions are accepted as-is to avoid destructive downgrade behavior.

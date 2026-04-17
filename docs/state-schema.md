@@ -13,7 +13,7 @@ The source of truth is the code, primarily:
 
 This is intentionally a maintainer-focused document. It describes the state as it exists today, including a few legacy or duplicated fields that still appear because the app preserves backward compatibility.
 
-Current structured schema version: `4`
+Current structured schema version: `6`
 
 ## 2. Schema versioning policy
 
@@ -33,6 +33,8 @@ Current history:
 - `2`: ensured `character.inventoryItems` exists and migrated legacy equipment text
 - `3`: added campaign-scoped Combat Workspace state with separate workspace and encounter buckets
 - `4`: migrated the legacy singleton character object to the multi-character collection `{ activeId, entries[] }`
+- `5`: added character-linked NPC/Party card references and the character `status` field
+- `6`: added Step 3 rules-engine / character-builder foundation fields on character entries: `build` and `overrides`
 
 Important implementation detail:
 
@@ -291,6 +293,43 @@ The legacy singleton `state.character` key is accepted only by migration/backwar
 - `proficiency: number | null`
 - `spellAttack: number | null`
 - `spellDC: number | null`
+
+### Step 3 builder foundation
+
+Every character entry now carries builder metadata, but migrated characters stay in freeform/manual mode by default:
+
+```js
+{
+  build: null | {
+    version?: number,
+    ruleset?: string,
+    speciesId?: string | null,
+    classId?: string | null,
+    subclassId?: string | null,
+    backgroundId?: string | null,
+    level?: number,
+    abilities?: {
+      base?: Record<"str" | "dex" | "con" | "int" | "wis" | "cha", number>
+    },
+    choicesByLevel?: object
+  },
+  overrides: {
+    abilities: { str: number, dex: number, con: number, int: number, wis: number, cha: number },
+    saves: { str: number, dex: number, con: number, int: number, wis: number, cha: number },
+    skills: Record<string, number>,
+    initiative: number
+  }
+}
+```
+
+Notes:
+
+- `build: null` means the character is freeform/manual.
+- A plain object `build` opts the character into builder-derived interpretation for pure rules helpers.
+- Migration never infers builder choices from existing freeform fields such as `classLevel`, `race`, `background`, abilities, or skills.
+- `overrides` is persisted JSON-safe data for first-slice derivations only: ability totals, save totals, skill totals, and initiative.
+- The first Step 3 rules derivation is pure. It is not wired into migration, passive load, page initialization, or visible UI/materialization flows yet.
+- Builtin SRD content is code-shipped under `js/domain/rules/`; custom content persistence is intentionally not part of schema v6.
 
 ### Resources
 
@@ -766,6 +805,19 @@ Current structural migrations:
   - ensure campaign-scoped `combat.workspace` exists
   - ensure campaign-scoped `combat.encounter` exists
   - repair malformed Combat Workspace fields to safe defaults without touching unrelated campaign data
+- `3 -> 4`
+  - migrate the legacy singleton `character` into `characters: { activeId, entries[] }`
+  - repair malformed character collection IDs and active selection
+  - remove stale singleton `character` once the collection exists
+- `4 -> 5`
+  - add `characterId: null` to NPC and Party cards when missing
+  - add `status: ""` to character entries when missing or malformed
+  - do not add character links to Location cards
+- `5 -> 6`
+  - add `build: null` to character entries when missing or malformed
+  - normalize `overrides` to the Step 3 foundation shape
+  - preserve existing flat freeform character fields exactly
+  - do not materialize derived values or infer builder state during migration
 
 ### Automated migration coverage
 

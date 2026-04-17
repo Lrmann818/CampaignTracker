@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { getActiveCharacter, getCharacterById, makeDefaultCharacterEntry } from "../js/domain/characterHelpers.js";
+import {
+  getActiveCharacter,
+  getCharacterById,
+  isBuilderCharacter,
+  makeDefaultCharacterEntry,
+  makeDefaultCharacterOverrides
+} from "../js/domain/characterHelpers.js";
 
 function makeState(overrides = {}) {
   return {
@@ -60,6 +66,51 @@ describe("makeDefaultCharacterEntry", () => {
       name: "Mira",
       status: ""
     });
+  });
+
+  it("seeds the Step 3 foundation fields without enabling builder mode", () => {
+    expect(makeDefaultCharacterEntry("Mira")).toMatchObject({
+      name: "Mira",
+      build: null,
+      overrides: makeDefaultCharacterOverrides()
+    });
+  });
+});
+
+describe("makeDefaultCharacterOverrides", () => {
+  it("returns the first-slice override shape", () => {
+    expect(makeDefaultCharacterOverrides()).toEqual({
+      abilities: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+      saves: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+      skills: {},
+      initiative: 0
+    });
+  });
+
+  it("returns fresh nested objects", () => {
+    const first = makeDefaultCharacterOverrides();
+    const second = makeDefaultCharacterOverrides();
+
+    first.abilities.str = 9;
+    first.skills.stealth = 4;
+
+    expect(first).not.toBe(second);
+    expect(first.abilities).not.toBe(second.abilities);
+    expect(first.saves).not.toBe(second.saves);
+    expect(first.skills).not.toBe(second.skills);
+    expect(second.abilities.str).toBe(0);
+    expect(second.skills).toEqual({});
+  });
+});
+
+describe("isBuilderCharacter", () => {
+  it("returns true only when build is a plain object-like builder state", () => {
+    expect(isBuilderCharacter(null)).toBe(false);
+    expect(isBuilderCharacter({})).toBe(false);
+    expect(isBuilderCharacter({ build: null })).toBe(false);
+    expect(isBuilderCharacter({ build: [] })).toBe(false);
+    expect(isBuilderCharacter({ build: "fighter" })).toBe(false);
+    expect(isBuilderCharacter({ build: { classId: "class_fighter" } })).toBe(true);
   });
 });
 

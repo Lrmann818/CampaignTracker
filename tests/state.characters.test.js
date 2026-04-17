@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { makeDefaultCharacterOverrides } from "../js/domain/characterHelpers.js";
 import { migrateState, sanitizeForSave, CURRENT_SCHEMA_VERSION } from "../js/state.js";
 
 const EMPTY_CHARACTERS = { activeId: null, entries: [] };
@@ -157,7 +158,7 @@ describe("schema version", () => {
   it("always sets schemaVersion to the current version after migration", () => {
     const fromLegacy = migrateState({ character: { name: "Arlen" } });
     expect(fromLegacy.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(CURRENT_SCHEMA_VERSION).toBe(5);
+    expect(CURRENT_SCHEMA_VERSION).toBe(6);
 
     const fromEmpty = migrateState({});
     expect(fromEmpty.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
@@ -205,6 +206,85 @@ describe("migrateToV5 — character-linked tracker card fields", () => {
   });
 });
 
+describe("migrateToV6 — Step 3 rules-builder foundation fields", () => {
+  it("adds build and overrides to v5 character entries without inferring freeform data", () => {
+    const migrated = migrateState({
+      schemaVersion: 5,
+      characters: {
+        activeId: "char_a",
+        entries: [{
+          id: "char_a",
+          name: "Arlen",
+          classLevel: "Ranger 4",
+          race: "Elf",
+          background: "Outlander",
+          initiative: 3,
+          abilities: { dex: { score: 16, mod: 3, save: 5 } }
+        }]
+      }
+    });
+    const entry = activeEntry(migrated);
+
+    expect(entry.build).toBeNull();
+    expect(entry.overrides).toEqual(makeDefaultCharacterOverrides());
+    expect(entry.classLevel).toBe("Ranger 4");
+    expect(entry.race).toBe("Elf");
+    expect(entry.background).toBe("Outlander");
+    expect(entry.initiative).toBe(3);
+    expect(entry.abilities.dex).toEqual({ score: 16, mod: 3, save: 5 });
+  });
+
+  it("resets malformed build values to null", () => {
+    const migrated = migrateState({
+      schemaVersion: 5,
+      characters: {
+        activeId: "char_a",
+        entries: [
+          { id: "char_a", name: "Array Build", build: [] },
+          { id: "char_b", name: "Number Build", build: 42 },
+          { id: "char_c", name: "Valid Build", build: { classId: "class_fighter" } }
+        ]
+      }
+    });
+
+    expect(migrated.characters.entries[0].build).toBeNull();
+    expect(migrated.characters.entries[1].build).toBeNull();
+    expect(migrated.characters.entries[2].build).toEqual({ classId: "class_fighter" });
+  });
+
+  it("normalizes malformed and partial overrides into the foundation shape", () => {
+    const migrated = migrateState({
+      schemaVersion: 5,
+      characters: {
+        activeId: "char_a",
+        entries: [
+          { id: "char_a", name: "Missing" },
+          { id: "char_b", name: "Bad", overrides: null },
+          {
+            id: "char_c",
+            name: "Partial",
+            overrides: {
+              abilities: { str: 1, cha: "2", con: "bad" },
+              saves: { dex: "3" },
+              skills: { stealth: "4", perception: Number.NaN },
+              initiative: "5"
+            }
+          }
+        ]
+      }
+    });
+
+    expect(migrated.characters.entries[0].overrides).toEqual(makeDefaultCharacterOverrides());
+    expect(migrated.characters.entries[1].overrides).toEqual(makeDefaultCharacterOverrides());
+    expect(migrated.characters.entries[2].overrides).toEqual({
+      abilities: { str: 1, dex: 0, con: 0, int: 0, wis: 0, cha: 2 },
+      saves: { str: 0, dex: 3, con: 0, int: 0, wis: 0, cha: 0 },
+      skills: { stealth: 4 },
+      initiative: 5
+    });
+  });
+});
+
 describe("round-trip stability", () => {
   it("migrate → sanitize → migrate produces the same characters collection", () => {
     const legacy = { character: { name: "Arlen", hpMax: 20 } };
@@ -219,6 +299,8 @@ describe("round-trip stability", () => {
     expect(entry.name).toBe("Arlen");
     expect(entry.hpMax).toBe(20);
     expect(entry.status).toBe("");
+    expect(entry.build).toBeNull();
+    expect(entry.overrides).toEqual(makeDefaultCharacterOverrides());
   });
 
   it("round-tripping an already-current state is stable", () => {
