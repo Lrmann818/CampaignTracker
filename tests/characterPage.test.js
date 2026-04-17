@@ -345,6 +345,8 @@ function installCharacterSelectorDom() {
   const selector = appendWithId(document, bar, "select", "charSelector", CHARACTER_SELECTOR_SELECT_CLASSES);
   const builderBadge = appendWithId(document, bar, "span", "charBuilderModeBadge", "charBuilderModeBadge");
   builderBadge.textContent = "Builder Mode";
+  builderBadge.setAttribute("aria-label", "Builder mode active. Full builder tools are not enabled yet.");
+  builderBadge.setAttribute("title", "Builder mode active. Full builder tools are not enabled yet.");
   builderBadge.hidden = true;
   const actionMenu = appendWithId(document, bar, "div", "charActionMenu", "dropdown charActionMenu");
   const actionMenuButton = appendWithId(document, actionMenu, "button", "charActionMenuBtn", CHARACTER_ACTION_BUTTON_CLASSES);
@@ -955,7 +957,7 @@ describe("character page selector", () => {
     controller.destroy();
   });
 
-  it("shows the Builder Mode badge only for active builder characters", () => {
+  it("shows the accessible Builder Mode badge only for active builder characters", () => {
     installCharacterSelectorDom();
     const Popovers = createFakePopovers();
     const deps = createCharacterPageDeps(Popovers);
@@ -967,7 +969,10 @@ describe("character page selector", () => {
     deps.state.characters.entries[1].build = makeDefaultCharacterBuild();
     deps.state.characters.activeId = "char_b";
     const secondController = initCharacterPageUI(deps);
-    expect(document.getElementById("charBuilderModeBadge").hidden).toBe(false);
+    const builderBadge = document.getElementById("charBuilderModeBadge");
+    expect(builderBadge.hidden).toBe(false);
+    expect(builderBadge.getAttribute("aria-label")).toBe("Builder mode active. Full builder tools are not enabled yet.");
+    expect(builderBadge.getAttribute("title")).toBe("Builder mode active. Full builder tools are not enabled yet.");
 
     secondController.destroy();
   });
