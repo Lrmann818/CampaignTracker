@@ -1,0 +1,46 @@
+
+
+# Lore Ledger / CampaignTracker Codex project config
+# Keep this file small and conservative. Use AGENTS.md for most behavioral guidance.
+
+[project]
+name = "CampaignTracker"
+description = "Lore Ledger / CampaignTracker production SPA with SRD 5.2.1-backed builder work"
+
+[context]
+primary_instructions_file = "AGENTS.md"
+
+[builder]
+active_builtin_source = "srd-5.2.1"
+reference_only_source = "srd-5.1"
+registry_root = "game-data/srd"
+docs_root = "docs/reference"
+
+[commands]
+install = "npm ci"
+test = "npm run test:run"
+build = "npm run build"
+verify = "npm run verify"
+typecheck = "npm run typecheck"
+
+[workflow]
+default_branch = "main"
+working_branch = "Refactoring"
+prefer_small_scoped_changes = true
+require_docs_alignment_for_builder_changes = true
+require_tests_for_persisted_shape_changes = true
+
+[content_policy]
+respect_greenlist = true
+treat_ungreenlit_content_as_custom = true
+keep_spells_panel_manual = true
+allow_builder_spellcasting_progression = true
+allow_automatically_granted_builtin_spells = true
+full_builtin_spell_registry_deferred = true
+
+[architecture]
+preserve_freeform_builder_split = true
+avoid_duplicate_character_state = true
+avoid_casual_materialization_of_derived_fields = true
+require_migrations_for_storage_shape_changes = true
+keep_ui_state_out_of_domain_records = true
