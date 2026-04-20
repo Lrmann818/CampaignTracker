@@ -27,12 +27,12 @@ Do not optimize for speed at the expense of data safety, architectural clarity, 
 
 For builder-related builtin content:
 
-- **Active source:** `SRD 5.2.1`
-- **Reference/archive only:** `SRD 5.1`
+- **Active source:** `SRD 5.1`
+- **Retired:** `SRD 5.2.1` (data deleted from game-data/srd/)
 
-Use SRD 5.2.1 terminology and content policy for current builder implementation work.
+Use SRD 5.1 terminology and content policy for all builder implementation work.
 
-Do not treat SRD 5.1 as the active implementation source of truth.
+Do not use SRD 5.2.1 as a source for any builtin content. It has been retired.
 
 ---
 
@@ -75,7 +75,7 @@ Do not silently promote custom or unclear content into shipped builtin data.
 
 The current intended shipped builtin builder scope includes:
 
-- species
+- races
 - classes
 - backgrounds
 - subclasses
@@ -95,7 +95,7 @@ Important spell rule:
 
 - the existing spells panel remains the main manual-entry UI for user-managed spells
 - the builder may derive spellcasting progression data such as caster status, spellcasting ability, spell level access, and spell slot counts
-- the builder may surface automatically granted spells or cantrips from builtin species, classes, subclasses, feats, or similar builder-backed content
+- the builder may surface automatically granted spells or cantrips from builtin races, classes, subclasses, feats, or similar builder-backed content
 - do not treat this as a commitment to a full builtin spell compendium or fully builder-managed spellbook workflow
 
 ---
@@ -106,7 +106,7 @@ When working with `game-data/srd/*.json`:
 
 - use stable lowercase underscore-separated IDs
 - use explicit `kind` fields
-- use explicit `source` fields (`"srd-5.2.1"` for current shipped builtin SRD data)
+- use explicit `source` fields (`"srd-5.1"` for current shipped builtin SRD data)
 - prefer structured fields over prose blobs
 - do not hardcode registry facts in UI modules when they belong in data files
 - keep record shapes aligned with `docs/reference/content-registry-plan.md`
@@ -217,4 +217,4 @@ When in doubt, do not ship it as builtin.
 
 For Lore Ledger builder work:
 
-> Use SRD 5.2.1 as the active builtin source, keep SRD 5.1 as reference/archive only, treat ungreenlit content as custom, and keep implementation data-driven, migration-safe, and architecture-aligned.
+> Use SRD 5.1 as the active builtin source. SRD 5.2.1 is retired. Content kind for race is "race" not "species". Source field value is "srd-5.1". Treat ungreenlit content as custom. Keep implementation data-driven, migration-safe, and architecture-aligned.
