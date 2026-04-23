@@ -104,17 +104,25 @@ export function initCharacterPageUI(deps) {
   const addDestroy = (destroyFn) => {
     if (typeof destroyFn === "function") destroyFns.push(destroyFn);
   };
-  const listenerController = new AbortController();
-  const listenerSignal = listenerController.signal;
-  addDestroy(() => listenerController.abort());
+  const listenerControllers = {
+    fields: new AbortController(),
+    chrome: new AbortController(),
+    actions: new AbortController()
+  };
+  addDestroy(() => listenerControllers.fields.abort());
+  addDestroy(() => listenerControllers.chrome.abort());
+  addDestroy(() => listenerControllers.actions.abort());
 
-  const addListener = (target, type, handler, options) => {
+  const addListener = (bucket, target, type, handler, options) => {
     if (!target || typeof target.addEventListener !== "function") return;
     const listenerOptions =
       typeof options === "boolean"
         ? { capture: options }
         : (options || {});
-    target.addEventListener(type, handler, { ...listenerOptions, signal: listenerSignal });
+    target.addEventListener(type, handler, {
+      ...listenerOptions,
+      signal: listenerControllers[bucket].signal
+    });
   };
 
   /**
@@ -128,7 +136,7 @@ export function initCharacterPageUI(deps) {
     if (!target) return null;
 
     target.value = getter?.() ?? "";
-    addListener(target, "input", () => {
+    addListener("fields", target, "input", () => {
       setter?.(target.value);
       SaveManager.markDirty();
     });
@@ -156,7 +164,7 @@ export function initCharacterPageUI(deps) {
       autoSizeInput(target, sizeOpts);
     }
 
-    addListener(target, "input", () => {
+    addListener("fields", target, "input", () => {
       setter?.(numberOrNull(target.value));
 
       if (typeof autoSizeInput === "function") {
@@ -363,7 +371,7 @@ export function initCharacterPageUI(deps) {
     setActionMenuClosed();
 
     const wireFallbackActionMenu = () => {
-      addListener(actionMenuButtonEl, "click", (event) => {
+      addListener("chrome", actionMenuButtonEl, "click", (event) => {
         event.preventDefault();
         event.stopPropagation();
         if (actionMenuEl.hidden) openActionMenu();
@@ -395,7 +403,7 @@ export function initCharacterPageUI(deps) {
     });
 
     // --- wire selector change ---
-    addListener(selectorEl, "change", () => {
+    addListener("chrome", selectorEl, "change", () => {
       const newId = selectorEl.value;
       if (!newId || newId === state.characters?.activeId) return;
       mutateCharactersAndNotify((s) => { s.characters.activeId = newId; });
@@ -655,7 +663,7 @@ export function initCharacterPageUI(deps) {
     };
 
     actionButtons.forEach((button) => {
-      addListener(button, "click", safeAsync(async () => {
+      addListener("actions", button, "click", safeAsync(async () => {
         const action = button.dataset.charAction;
         if (!action) return;
         try {
@@ -670,7 +678,7 @@ export function initCharacterPageUI(deps) {
       }));
     });
 
-    addListener(actionMenuButtonEl, "keydown", (event) => {
+    addListener("chrome", actionMenuButtonEl, "keydown", (event) => {
       const e = /** @type {KeyboardEvent} */ (event);
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
       e.preventDefault();
@@ -678,7 +686,7 @@ export function initCharacterPageUI(deps) {
       focusActionButtonAt(e.key === "ArrowUp" ? actionButtons.length - 1 : 0);
     });
 
-    addListener(actionMenuEl, "keydown", (event) => {
+    addListener("chrome", actionMenuEl, "keydown", (event) => {
       const e = /** @type {KeyboardEvent} */ (event);
       const enabled = actionButtons.filter((button) => !button.disabled);
       if (!enabled.length) return;
@@ -735,7 +743,7 @@ export function initCharacterPageUI(deps) {
       emptyEl.hidden = true;
     }
 
-    addListener(yesBtn, "click", () => {
+    addListener("chrome", yesBtn, "click", () => {
       const entry = makeDefaultCharacterEntry();
       const previousId = state.characters?.activeId ?? null;
       mutateState((s) => {
@@ -749,7 +757,7 @@ export function initCharacterPageUI(deps) {
       rerender();
     });
 
-    addListener(noBtn, "click", dismiss);
+    addListener("chrome", noBtn, "click", dismiss);
   }
 
   // Boot character page bindings

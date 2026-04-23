@@ -192,8 +192,11 @@ export function initDataPanel(deps) {
   const panel = /** @type {HTMLElement} */ (guard.els.panel);
   const closeBtn = /** @type {HTMLButtonElement} */ (guard.els.closeBtn);
 
-  const listenerController = new AbortController();
-  const listenerSignal = listenerController.signal;
+  const listenerControllers = {
+    shell: new AbortController(),
+    settings: new AbortController(),
+    actions: new AbortController()
+  };
 
   // Background scroll lock state
   let lockedScrollY = 0;
@@ -214,19 +217,23 @@ export function initDataPanel(deps) {
   }
 
   /**
+   * @param {"shell" | "settings" | "actions"} bucket
    * @param {{ addEventListener?: EventTarget["addEventListener"] } | null | undefined} target
    * @param {string} type
    * @param {(event: Event) => void} handler
    * @param {AddEventListenerOptions | boolean} [options]
    * @returns {void}
    */
-  const addListener = (target, type, handler, options) => {
+  const addListener = (bucket, target, type, handler, options) => {
     if (!target || typeof target.addEventListener !== "function") return;
     const listenerOptions =
       typeof options === "boolean"
         ? { capture: options }
         : (options || {});
-    target.addEventListener(type, handler, { ...listenerOptions, signal: listenerSignal });
+    target.addEventListener(type, handler, {
+      ...listenerOptions,
+      signal: listenerControllers[bucket].signal
+    });
   };
 
   const themeSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById("dataPanelThemeSelect"));
@@ -318,11 +325,11 @@ export function initDataPanel(deps) {
   }
 
   // Close interactions
-  if (closeBtn) addListener(closeBtn, "click", () => close());
-  addListener(overlay, "click", (e) => {
+  if (closeBtn) addListener("shell", closeBtn, "click", () => close());
+  addListener("shell", overlay, "click", (e) => {
     if (e.target === overlay) close();
   });
-  addListener(document, "keydown", (event) => {
+  addListener("shell", document, "keydown", (event) => {
     const e = /** @type {KeyboardEvent} */ (event);
     if (e.key === "Escape" && !overlay.hidden) close();
   });
@@ -337,12 +344,12 @@ export function initDataPanel(deps) {
     if (panel.contains(/** @type {Node} */ (e.target))) return;
     e.preventDefault();
   };
-  addListener(overlay, "wheel", trapBackgroundScroll, { passive: false });
-  addListener(overlay, "touchmove", trapBackgroundScroll, { passive: false });
+  addListener("shell", overlay, "wheel", trapBackgroundScroll, { passive: false });
+  addListener("shell", overlay, "touchmove", trapBackgroundScroll, { passive: false });
 
   // Theme change
   if (themeSelect) {
-    addListener(themeSelect, "change", () => {
+    addListener("settings", themeSelect, "change", () => {
       const val = themeSelect.value || "system";
       applyTheme(val);
       // Preserve whichever UI bucket exists (legacy tracker.ui or root ui).
@@ -415,15 +422,15 @@ export function initDataPanel(deps) {
   syncPreferences();
 
   if (playHubOpenSoundToggle) {
-    addListener(playHubOpenSoundToggle, "change", () => {
+    addListener("settings", playHubOpenSoundToggle, "change", () => {
       ensureAppPreferences(state).playHubOpenSound = !!playHubOpenSoundToggle.checked;
       markDirty();
     });
   }
 
-  if (exportBtn) addListener(exportBtn, "click", () => exportBackup());
-  if (importFile) addListener(importFile, "change", (e) => importBackup(e));
-  if (openHubBtn) addListener(openHubBtn, "click",
+  if (exportBtn) addListener("actions", exportBtn, "click", () => exportBackup());
+  if (importFile) addListener("actions", importFile, "change", (e) => importBackup(e));
+  if (openHubBtn) addListener("settings", openHubBtn, "click",
     safeAsync(async () => {
       if (typeof openCampaignHub !== "function") return;
       close({ focusFallback: document.body });
@@ -451,7 +458,7 @@ export function initDataPanel(deps) {
         }
       });
 
-      addListener(checkUpdatesBtn, "click",
+      addListener("actions", checkUpdatesBtn, "click",
         safeAsync(async () => {
           if (!updatesApi?.checkForUpdates) return;
 
@@ -477,7 +484,7 @@ export function initDataPanel(deps) {
     }
   }
 
-  if (resetAllBtn) addListener(resetAllBtn, "click",
+  if (resetAllBtn) addListener("actions", resetAllBtn, "click",
     safeAsync(async () => {
       close();
       await resetAll();
@@ -487,7 +494,7 @@ export function initDataPanel(deps) {
     })
   );
 
-  if (resetUiBtn) addListener(resetUiBtn, "click",
+  if (resetUiBtn) addListener("actions", resetUiBtn, "click",
     safeAsync(async () => {
     const ok = await uiConfirm("Reset UI settings only?\n\nThis will reset theme + UI layout prefs (like last active tab). It will NOT delete your campaign data.");
     if (!ok) return;
@@ -517,7 +524,7 @@ export function initDataPanel(deps) {
     })
   );
 
-  if (clearImagesBtn) addListener(clearImagesBtn, "click",
+  if (clearImagesBtn) addListener("actions", clearImagesBtn, "click",
     safeAsync(async () => {
     const ok = await uiConfirm("Clear ALL saved images?\n\nThis removes portraits and map images stored in your browser. Your campaign data stays.");
     if (!ok) return;
@@ -548,7 +555,7 @@ export function initDataPanel(deps) {
     })
   );
 
-  if (clearTextsBtn) addListener(clearTextsBtn, "click",
+  if (clearTextsBtn) addListener("actions", clearTextsBtn, "click",
     safeAsync(async () => {
     const ok = await uiConfirm("Clear ALL saved long texts (notes) stored in the browser?\n\nThis does not delete your campaign cards, but it will remove any large notes stored separately.");
     if (!ok) return;
@@ -570,7 +577,7 @@ export function initDataPanel(deps) {
     })
   );
 
-  if (reportBugBtn) addListener(reportBugBtn, "click",
+  if (reportBugBtn) addListener("actions", reportBugBtn, "click",
     safeAsync(async () => {
       const debugInfo = getDebugInfo();
       const canLaunchMailto =
@@ -605,7 +612,7 @@ export function initDataPanel(deps) {
     })
   );
 
-  if (copyDebugInfoBtn) addListener(copyDebugInfoBtn, "click",
+  if (copyDebugInfoBtn) addListener("actions", copyDebugInfoBtn, "click",
     safeAsync(async () => {
       const debugInfo = getDebugInfo();
       let copied = false;
@@ -629,7 +636,7 @@ export function initDataPanel(deps) {
     })
   );
 
-  if (storageInfoBtn) addListener(storageInfoBtn, "click",
+  if (storageInfoBtn) addListener("actions", storageInfoBtn, "click",
     safeAsync(async () => {
       const appKeys = [storageKeys.STORAGE_KEY, storageKeys.ACTIVE_TAB_KEY];
       const diag = await getStorageDiagnostics(appKeys);
@@ -659,7 +666,7 @@ export function initDataPanel(deps) {
     })
   );
 
-  if (aboutBtn) addListener(aboutBtn, "click",
+  if (aboutBtn) addListener("actions", aboutBtn, "click",
     safeAsync(async () => {
     const appName = (state?.tracker && typeof state.tracker.campaignTitle === "string" && state.tracker.campaignTitle.trim())
       ? state.tracker.campaignTitle.trim()
@@ -694,7 +701,9 @@ export function initDataPanel(deps) {
     close,
     destroy() {
       unlockScroll();
-      listenerController.abort();
+      listenerControllers.shell.abort();
+      listenerControllers.settings.abort();
+      listenerControllers.actions.abort();
       if (_activeDataPanel === api) _activeDataPanel = null;
     }
   };
