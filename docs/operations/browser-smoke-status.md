@@ -1,6 +1,6 @@
 # Browser Smoke Status
 
-This note records the current local browser smoke layer for Lore Ledger as it exists in the repo today.
+This note records the current local browser smoke layer for Lore Ledger as it exists in the repo today. It is the canonical source for the current Playwright automation posture — what is covered, what is intentionally manual, and what is out of scope for this version. The broader testing strategy and manual checks live in [`testing-guide.md`](./testing-guide.md).
 
 ## Current readiness
 

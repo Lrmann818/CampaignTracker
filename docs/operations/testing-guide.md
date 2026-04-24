@@ -1,6 +1,6 @@
 # Testing Guide
 
-This is the primary current manual testing guide for Lore Ledger. It pulls together the current release/regression guidance from `docs/SMOKE_TEST.md`, `SMOKE_TEST.md`, and `docs/CSP_AUDIT.md`, while still treating those shorter docs as supplemental checklists and pointing to the current automated coverage for migration, persistence, backup/import, and save-lifecycle behavior.
+This is the primary current manual testing guide for Lore Ledger. It covers testing philosophy, pre-merge and pre-release checks, persistence and page-by-page manual regression coverage, PWA/offline and CSP checks, and the current automated coverage story. For the current Playwright smoke suite posture, see [`browser-smoke-status.md`](./browser-smoke-status.md). For the 5-minute pre-ship checklist, see [`pre-ship-smoke-test.md`](./pre-ship-smoke-test.md). For post-Vite-change validation, see [`vite-smoke-test.md`](./vite-smoke-test.md). For the CSP dev-mode audit, see [`csp-audit.md`](./csp-audit.md).
 
 ## 1. Testing philosophy
 
@@ -70,14 +70,7 @@ Current automated scope is intentionally targeted:
 - `tests/storage.backup.test.js` covers backup export shape, referenced blob/text collection, import validation failures, staged blob/text writes before state swap, rollback attempts for touched text IDs on covered failure paths, cleanup of staged assets after pre-swap failures, and blob-ID remap fallback when an import collides with an existing blob id.
 - `tests/support.test.js` covers the focused support helpers: safe debug-info formatting, mailto generation, runtime/context capability hints, and route/query-string hardening so copied debug info stays privacy-safe.
 - `tests/dataPanel.support.test.js` covers `Data & Settings` -> `Support` wiring, support summary display, `Report Bug`, `Copy Debug Info`, hub-versus-active-campaign debug snapshots, clipboard success, and both copy/mailto fallback paths when platform features are unavailable.
-- `tests/smoke/app.smoke.js` covers top-level shell boot in Chromium, opening the Map workspace, and a campaign-title reload-persistence check against the dedicated production-mode Vite server.
-- `tests/smoke/backup.smoke.js` covers backup export to a real download, import of that backup into a fresh Chromium browser context, and visible failure handling for invalid JSON import input.
-- `tests/smoke/combatShell.smoke.js` covers the Combat tab shell, Combat Cards, round controls, HP/temp HP actions, status effects, turn undo, tracker writeback for HP/status labels, role/order/remove/clear flows, mobile stacking, and embedded panel selection/reorder/source-panel behavior.
-- `tests/smoke/npcPortrait.smoke.js` covers NPC portrait crop/save behavior plus incremental tracker-card patch paths for portrait toggles, search, section moves, reorder, collapse, and focus restoration.
-- `tests/smoke/partyLocationPanels.smoke.js` covers the same controller-scoped tracker-card behaviors for Party and Location panels, including location type filtering.
-- `tests/smoke/trackerPanelLifecycle.smoke.js` covers repeated `initTrackerPage(...)` calls and checks that tracker panel listeners stay single-bound after re-init.
-- `tests/smoke/characterPanelLifecycle.smoke.js` covers repeated `initCharacterPageUI(...)` calls and checks that representative Character page panel actions stay single-bound after teardown/re-init.
-- `tests/smoke/dropdownRegression.smoke.js` covers shared dropdown/popover behavior, including enhanced select opening, tracker card menu clickability in the body-ported menu path, and dropdown wiring after rerender.
+For current per-test-file coverage of the Playwright smoke suite, see [`browser-smoke-status.md`](./browser-smoke-status.md).
 
 Critical paths currently protected by automation:
 
@@ -98,14 +91,7 @@ Critical paths currently protected by automation:
 - Combat Workspace behavior for combat tab layout, card actions, HP/temp HP, status timing, turn undo, tracker HP/status-label writeback exceptions, mobile stacking, and embedded character panels
 - shared dropdown/popover interaction paths for enhanced selects and tracker card menus after rerender
 
-Manual release checks that remain by decision:
-
-- Broader Character-page rendering and persistence depth beyond the current repeated-init smoke check is a future automation roadmap item, not release-quality debt.
-- `Reset Everything` plus full browser restore runs that include images, drawings, and text-backed assets are a future automation roadmap item, not release-quality debt.
-- Map drawing, gesture, and touch/mobile behavior beyond basic shell boot is a future automation roadmap item, not release-quality debt.
-- PWA install, offline shell, update-banner, cache, and service-worker behavior are a future automation roadmap item, not release-quality debt.
-- Cross-browser UI differences outside local Chromium smoke are intentionally out of scope for automated coverage in this version and stay in the manual browser/device matrix.
-- End-to-end CSP/startup verification in a real browser session remains a required manual release check because it validates the deployed browser/runtime boundary rather than a missing automated test.
+For the current list of manual-only coverage decisions and items intentionally out of scope for automated smoke, see [`browser-smoke-status.md`](./browser-smoke-status.md).
 
 Those gaps are why the manual sections below remain release-critical.
 
@@ -162,12 +148,13 @@ Run these before merging any user-visible change:
    - Map, drawing, or image change: section 8
    - PWA, assets, routing base path, or build-output change: section 10
    - CSP, boot, startup, or asset-loading change: section 11
+   - Vite configuration, build tooling, or dev server change: see [`vite-smoke-test.md`](./vite-smoke-test.md)
 6. If the change touched themes or boot-time styling, reload once with a non-default theme selected.
    Expected: the saved theme applies immediately with no obvious flash to the wrong theme.
 
 ## 4. Pre-release minimum checks
 
-Before any release candidate or production deploy, run the full set below in a clean browser profile:
+Before any release candidate or production deploy, run the full set below in a clean browser profile. For a faster ~5-minute persistence spot-check that covers the highest-risk refresh, undo/redo, and backup round-trip paths, see [`pre-ship-smoke-test.md`](./pre-ship-smoke-test.md). The full pre-release set below remains the canonical release gate.
 
 1. Run `npm run verify`.
 2. Complete section 5, including refresh durability and intentional non-persistence checks.

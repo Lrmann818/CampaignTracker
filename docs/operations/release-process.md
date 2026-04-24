@@ -112,7 +112,6 @@ The repository now defines targeted automated checks in [`package.json`](../pack
 Primary sources:
 
 - [`docs/testing-guide.md`](./testing-guide.md)
-- [`docs/SMOKE_TEST.md`](./SMOKE_TEST.md)
 - [`docs/operations/pwa-notes.md`](./pwa-notes.md)
 - [`docs/operations/csp-audit.md`](./csp-audit.md)
 

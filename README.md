@@ -365,12 +365,12 @@ Core maintainer docs:
 - [`docs/operations/troubleshooting.md`](docs/operations/troubleshooting.md) - common recovery steps for save, import, offline, and build issues
 - [`docs/operations/browser-smoke-status.md`](docs/operations/browser-smoke-status.md) - current Playwright smoke scope and the manual gaps it does not replace
 - [`docs/operations/pwa-notes.md`](docs/operations/pwa-notes.md) - offline cache behavior, update prompts, and cache reset steps
+- [`docs/operations/pre-ship-smoke-test.md`](docs/operations/pre-ship-smoke-test.md) - 5-minute pre-ship persistence checklist for NPC/map data, undo/redo behavior, and backup round-trip
+- [`docs/operations/vite-smoke-test.md`](docs/operations/vite-smoke-test.md) - post-Vite-change validation checklist for dev server, boot ordering, static assets, and offline app shell
 
 Supplemental checklists and support docs:
 
 - [`docs/operations/csp-audit.md`](docs/operations/csp-audit.md) - dev-mode CSP verification checklist
-- [`docs/SMOKE_TEST.md`](docs/SMOKE_TEST.md) - persistence-focused manual smoke checklist
-- [`SMOKE_TEST.md`](SMOKE_TEST.md) - short Vite/offline validation checklist
 - [`AGENTS.md`](AGENTS.md) - repository editing rules for AI-assisted changes
 - [`.github/workflows/pages.yml`](.github/workflows/pages.yml) - production Pages build/deploy workflow
 
