@@ -70,9 +70,12 @@ Current automated scope is intentionally targeted:
 - `tests/storage.backup.test.js` covers backup export shape, referenced blob/text collection, import validation failures, staged blob/text writes before state swap, rollback attempts for touched text IDs on covered failure paths, cleanup of staged assets after pre-swap failures, and blob-ID remap fallback when an import collides with an existing blob id.
 - `tests/support.test.js` covers the focused support helpers: safe debug-info formatting, mailto generation, runtime/context capability hints, and route/query-string hardening so copied debug info stays privacy-safe.
 - `tests/dataPanel.support.test.js` covers `Data & Settings` -> `Support` wiring, support summary display, `Report Bug`, `Copy Debug Info`, hub-versus-active-campaign debug snapshots, clipboard success, and both copy/mailto fallback paths when platform features are unavailable.
+
 For current per-test-file coverage of the Playwright smoke suite, see [`browser-smoke-status.md`](./browser-smoke-status.md).
 
 Critical paths currently protected by automation:
+
+This list spans both the Vitest unit suite and the Playwright smoke layer, so some entries map to test files in the per-file inventory above and others map to smoke coverage detailed in [`browser-smoke-status.md`](./browser-smoke-status.md).
 
 - schema upgrades and load-time normalization for saved state
 - local save serialization that strips runtime-only fields while leaving hit-die alias normalization to migration
