@@ -29,5 +29,5 @@ temp/
 # Archives
 *.zip
 
-# Private design notes
-docs/design/
+# Private personal notes
+docs/personal/
