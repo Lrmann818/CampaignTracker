@@ -73,16 +73,6 @@ Ratified policies for content, attribution, and scope. These are authoritative �
 
 ---
 
-## Personal notes
-
-Personal working notes and prompts. These are retained for context but are not authoritative when they conflict with reference docs or `AGENTS.md`.
-
-- [`#personal/SRD building master prompts.md`](./#personal/SRD building master prompts.md) — Reusable strict audit and patch prompts for validating SRD registry files before treating them as source-of-truth builder data.
-- [`#personal/TODO-NEXT.md`](./#personal/TODO-NEXT.md) — Personal documentation-reorganization audit notes and proposed target structure.
-- [`#personal/vertical-slice-schema.md`](./#personal/vertical-slice-schema.md) — Personal design record for the build-time choices schema and vertical-slice validation approach.
-
----
-
 ## Where to start
 
 **Returning to the project after a break?**
