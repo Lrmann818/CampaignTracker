@@ -1,6 +1,6 @@
 # Content Registry Plan
 
-_Last updated: 2026-04-17_
+_Last updated: 2026-04-22_
 
 ## Purpose
 
@@ -66,6 +66,10 @@ The planned builtin registry files are:
 - `game-data/srd/backgrounds.json`
 - `game-data/srd/feats.json`
 - `game-data/srd/subclasses.json`
+- `game-data/srd/traits.json`
+- `game-data/srd/draconic-ancestries.json`
+- `game-data/srd/languages.json`
+- `game-data/srd/skills.json`
 - `game-data/srd/equipment.armor.json`
 - `game-data/srd/equipment.weapons.json`
 - `game-data/srd/spells.json` *(optional/later, only if needed for granted builtin spell support or future expansion)*
@@ -114,7 +118,8 @@ IDs should be:
 
 - lowercase
 - ASCII
-- underscore-separated
+- hyphen-separated
+- limited to lowercase ASCII letters, digits, and hyphens
 - stable over time
 - descriptive enough to remain understandable in code and saved data
 
@@ -125,7 +130,7 @@ Examples:
 - `soldier`
 - `tough`
 - `champion`
-- `studded_leather`
+- `studded-leather`
 - `longsword`
 
 Do not use display names as IDs.
@@ -172,7 +177,7 @@ Good:
 
 - `speed: 30`
 - `damage: "1d8"`
-- `abilityBonuses: { con: 2 }`
+- `abilityScoreIncreases: [{ ability: "con", bonus: 2 }]`
 - `properties: ["versatile"]`
 
 Bad:
@@ -230,19 +235,23 @@ Recommended shape:
   "source": "srd-5.1",
   "size": "Medium",
   "speed": 30,
-  "abilityBonuses": {
-    "con": 2
-  },
+  "abilityScoreIncreases": [
+    {
+      "ability": "con",
+      "bonus": 2
+    }
+  ],
   "traits": [
     "darkvision",
-    "dwarven_resilience",
-    "dwarven_combat_training",
-    "tool_proficiency",
+    "dwarven-resilience",
+    "dwarven-combat-training",
+    "tool-proficiency",
     "stonecunning"
   ],
+  "subraceIds": [],
   "languages": [
-    "Common",
-    "Dwarvish"
+    "common",
+    "dwarvish"
   ]
 }
 ```
@@ -309,7 +318,7 @@ Recommended shape:
     "choose": 2,
     "from": [
       "acrobatics",
-      "animal_handling",
+      "animal-handling",
       "athletics",
       "history",
       "insight",
@@ -320,10 +329,10 @@ Recommended shape:
   },
   "subclassLevel": 3,
   "featuresByLevel": {
-    "1": ["fighting_style", "second_wind"],
-    "2": ["action_surge"],
-    "3": ["fighter_subclass"],
-    "4": ["ability_score_improvement"]
+    "1": ["fighting-style", "second-wind"],
+    "2": ["action-surge"],
+    "3": ["fighter-subclass"],
+    "4": ["ability-score-improvement"]
   }
 }
 ```
@@ -354,7 +363,7 @@ and/or:
 "grantedSpells": [
   {
     "level": 1,
-    "spellId": "cure_wounds",
+    "spellId": "cure-wounds",
     "grantType": "always_prepared"
   }
 ]
@@ -388,9 +397,9 @@ Recommended shape:
   "languages": [],
   "equipment": [
     "uniform",
-    "insignia_of_rank"
+    "insignia-of-rank"
   ],
-  "feature": "military_rank"
+  "feature": "military-rank"
 }
 ```
 
@@ -439,7 +448,7 @@ Example:
 "grantedSpells": [
   {
     "level": 1,
-    "spellId": "misty_step",
+    "spellId": "misty-step",
     "grantType": "once_per_long_rest"
   }
 ]
@@ -463,10 +472,10 @@ Recommended shape:
   "source": "srd-5.1",
   "classId": "fighter",
   "featuresByLevel": {
-    "3": ["improved_critical"],
-    "7": ["remarkable_athlete"],
-    "10": ["additional_fighting_style"],
-    "15": ["superior_critical"],
+    "3": ["improved-critical"],
+    "7": ["remarkable-athlete"],
+    "10": ["additional-fighting-style"],
+    "15": ["superior-critical"],
     "18": ["survivor"]
   }
 }
@@ -487,7 +496,7 @@ Recommended shape:
 
 ```json
 {
-  "id": "studded_leather",
+  "id": "studded-leather",
   "kind": "armor",
   "name": "Studded Leather",
   "source": "srd-5.1",
@@ -548,24 +557,132 @@ Notes:
 
 ---
 
+## Build-Time Choices Schema
+
+Every choice the user makes during character building is represented as a `choice` object.
+
+Examples include picking a language, picking a draconic ancestry, picking a cantrip, or picking a fighting style.
+
+Choice objects use this shape:
+
+```json
+{
+  "id": "dragonborn-ancestry",
+  "kind": "ancestry",
+  "count": 1,
+  "from": { "type": "list", "source": "draconic-ancestries" },
+  "source": "race:dragonborn"
+}
+```
+
+Fields:
+
+- `id` is the stable identifier for this specific choice. It is used as a key when storing the user's selection on the character.
+- `kind` is the category of thing being picked.
+- `count` is how many to pick. This is usually `1`, but may be more, such as the Acolyte background choosing two languages.
+- `from` defines where the options come from.
+- `source` identifies where this choice originates, such as `race:dragonborn`, `class:fighter`, or `background:acolyte`.
+
+User selections are stored on the character's `build` object keyed by level.
+
+Example:
+
+```js
+build.choicesByLevel["1"]["dragonborn-ancestry"] = "red";
+```
+
+### Choice `from` Types
+
+`from` takes one of three shapes:
+
+- `{ "type": "any" }` means any record matching the choice's `kind`, such as Human's free language choice.
+- `{ "type": "list", "options": ["red", "blue", "brass"] }` means a literal list of IDs.
+- `{ "type": "list", "source": "draconic-ancestries" }` means every record in a referenced content file.
+
+A future variant may add `filter`, such as `{ "type": "list", "source": "spells", "filter": { ... } }`, but that is not currently in scope.
+
+### `kind` Vocabulary
+
+`kind` controls what the user is picking and what file or files the chosen value is validated against.
+
+Current vocabulary:
+
+- `language` means the chosen value must be an ID in `languages.json`
+- `ancestry` means the chosen value must be an ID in `draconic-ancestries.json`
+- `skill` means the chosen value must be an ID in `skills.json`
+- `cantrip` means the chosen value must be an ID in `spells.json`
+
+This vocabulary is a closed set. Adding a new `kind` requires updating this document and updating the referential integrity test.
+
+### Choice Placement
+
+Choices live inline on the parent entry as a `choices: []` array on that entry.
+
+Parent entries include races, classes, backgrounds, and subclasses.
+
+There is no separate `choices.json`.
+
+The dominant access pattern is "render this race entry," and inlining keeps a race's grants discoverable in one place.
+
+### Trait Fields
+
+Trait records in `traits.json` are purely descriptive.
+
+Allowed fields:
+
+- `id`
+- `name`
+- `description`
+- `source`
+- `derivedFrom` (optional)
+
+Traits do not carry a `choiceRef` field.
+
+The relationship between a trait and a build-time choice flows through the parent race/class entry's `choices` array, not through the trait itself.
+
+`derivedFrom` is the only allowed pointer-style field on a trait. Use it when the trait's mechanics depend on a choice the user made. For example, Breath Weapon's damage type and shape depend on the chosen Draconic Ancestry, so its trait record carries `"derivedFrom": "dragonborn-ancestry"`.
+
+### ID Uniqueness and Referential Integrity
+
+IDs are bare, with no namespace prefix like `race:` or `trait:`.
+
+All IDs must be globally unique across all `game-data/srd/*.json` content files.
+
+Uniqueness and reference soundness are enforced by a referential integrity test at `tests/data/referential-integrity.test.js`.
+
+The test:
+
+- walks every ID-shaped reference across all SRD JSON files
+- asserts each reference resolves to a real record in the appropriate file
+- asserts global ID uniqueness across all SRD content
+- validates that every choice's `from` resolves to a real source file or list
+
+Adding a new content file or new `kind` value requires updating this test.
+
+Note: this test does not yet exist. Do not create it until content changes require it.
+
+---
+
 ## ID and Naming Conventions
 
 ### IDs
 
-Use lowercase underscore-separated IDs.
+Use stable lowercase hyphen-separated IDs.
+
+Allowed characters are lowercase ASCII letters (`a-z`), digits (`0-9`), and hyphens (`-`).
 
 Good:
 
-- `life_domain`
-- `college_of_lore`
-- `chain_mail`
-- `light_crossbow`
+- `life-domain`
+- `college-of-lore`
+- `chain-mail`
+- `light-crossbow`
 
 Avoid:
 
 - `LifeDomain`
-- `life-domain`
 - `Light Crossbow`
+- `studded leather`
 
 ### Display names
 
@@ -740,6 +857,10 @@ Current planned builtin registry files:
 - `backgrounds.json`
 - `feats.json`
 - `subclasses.json`
+- `traits.json`
+- `draconic-ancestries.json`
+- `languages.json`
+- `skills.json`
 - `spells.json` *(optional/later if needed for granted builtin spell support or broader spell workflows)*
 - `equipment.armor.json`
 - `equipment.weapons.json`

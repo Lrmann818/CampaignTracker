@@ -541,12 +541,17 @@ Important spell rule:
 
 When working with `game-data/srd/*.json`:
 
-- use stable lowercase underscore-separated IDs
+- use stable lowercase hyphen-separated IDs (lowercase ASCII letters, digits, hyphens)
 - use explicit `kind` fields
 - use explicit `source` fields (`"srd-5.1"` for current shipped builtin SRD data)
 - prefer structured fields over prose blobs
 - do not hardcode registry facts in UI modules when they belong in data files
 - keep record shapes aligned with `docs/reference/content-registry-plan.md`
+- traits in `traits.json` are purely descriptive — they never carry a `choiceRef` field; the relationship between a trait and a build-time choice flows through the parent race/class/background/subclass entry's `choices` array
+- the `kind` vocabulary in build-time choices is a closed set (currently: `language`, `ancestry`, `skill`, `cantrip`); adding a new `kind` requires updating `docs/reference/content-registry-plan.md` and the referential integrity test
+- IDs are globally unique across all `game-data/srd/*.json` content files (no namespace prefixes)
+- the referential integrity test at `tests/data/referential-integrity.test.js` (planned) is a quality gate for content changes — it must pass before any SRD content change is considered complete
+- anchor tests cover mechanics, not text — assert structured fields (size, speed, damage type, breath weapon shape/save, choice shape) but never assert exact description or flavor text
 
 If you introduce a new category shape or cross-record convention, update the registry plan doc too.
 
