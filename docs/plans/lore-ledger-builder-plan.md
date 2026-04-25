@@ -1,6 +1,6 @@
 # Lore Ledger — Character Builder: Cleanup & Implementation Plan
 
-_Drafted: April 20, 2026 — Updated to reflect current Refactoring branch state_
+Drafted: April 20, 2026 — Updated to reflect current Refactoring branch state
 
 ---
 
@@ -10,9 +10,9 @@ SRD 5.1 is the primary source. SRD 5.2.1 is retired. Both are CC-BY-4.0 licensed
 attribution requirement is identical and simple:
 
 > "This work includes material taken from the System Reference Document 5.1 ("SRD 5.1") by
-> Wizards of the Coast LLC and available at https://dnd.wizards.com/resources/systems-reference-document.
+> Wizards of the Coast LLC and available at <https://dnd.wizards.com/resources/systems-reference-document>.
 > The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License
-> available at https://creativecommons.org/licenses/by/4.0/legalcode."
+> available at <https://creativecommons.org/licenses/by/4.0/legalcode>."
 
 One statement in your README and an in-app credits page. That's it.
 
@@ -40,6 +40,7 @@ Everything needs to be consistent.
 **Files with "species" that need updating:**
 
 `js/domain/rules/builtinContent.js`
+
 - `BuiltinContentKind` typedef: `"species"` → `"race"`
 - All stub entry `kind` fields: `"species"` → `"race"`
 - All stub entry `id` fields: `"species_human"` → `"race_human"`, etc.
@@ -47,12 +48,14 @@ Everything needs to be consistent.
 - `ruleset` field in typedef: `"srd-5.2.1"` → `"srd-5.1"`
 
 `js/domain/characterHelpers.js`
+
 - `DEFAULT_CHARACTER_RULESET`: `"srd-5.2.1"` → `"srd-5.1"`
 - `speciesId: null` in builder character init → `raceId: null`
 - Comment referencing "species" → "race"
 - `isBuilderCharacter()` check: `build.speciesId` → `build.raceId`
 
 `js/domain/rules/deriveCharacter.js`
+
 - All `speciesId` references → `raceId`
 - All `speciesEntry` references → `raceEntry`
 - `getBuildContentId(build, "species")` → `getBuildContentId(build, "race")`
@@ -61,6 +64,7 @@ Everything needs to be consistent.
 - `race: build ? speciesEntry?.name` → `race: build ? raceEntry?.name`
 
 `js/pages/character/panels/builderIdentityPanel.js`
+
 - `BUILD_FIELD_BY_KIND` map: `species: "speciesId"` → `race: "raceId"`
 - All `speciesSelect` variable references → `raceSelect`
 - DOM selector `"#charBuilderSpeciesSelect"` → `"#charBuilderRaceSelect"`
@@ -68,41 +72,51 @@ Everything needs to be consistent.
 - `updateContentId("species", ...)` calls → `updateContentId("race", ...)`
 
 `js/pages/character/panels/builderSummaryPanel.js`
+
 - `speciesLabel` → `raceLabel`
 - Display label `"Species"` → `"Race"`
 
 `js/state.js`
+
 - `speciesId?: string | null` in build typedef → `raceId?: string | null`
 
 `index.html`
+
 - One mention of "species" in builder panel comment → "race"
 - DOM element `id="charBuilderSpeciesSelect"` → `id="charBuilderRaceSelect"`
 
 `docs/reference/builder-scope-greenlist.md`
+
 - Any "species" references → "race"
 - `game-data/srd/species.json` filename reference → `game-data/srd/races.json`
 
 `docs/reference/content-registry-plan.md`
+
 - Any "species" references → "race"
 - `game-data/srd/species.json` filename reference → `game-data/srd/races.json`
 
 `docs/architecture.md`
+
 - `build.speciesId` → `build.raceId`
 - `species` terminology in builder descriptions → "race"
 
 `docs/state-schema.md`
+
 - `speciesId` in build typedef description → `raceId`
 - `species` terminology → "race"
 
 `./new-features-roadmap.md`
+
 - "species" references in builder feature descriptions → "race"
 
 `../features/multi-character-design.md`
+
 - `species` references → "race"
 - `speciesId` references → `raceId`
 - `"kind": "species"` in schema examples → `"kind": "race"`
 
 `AGENTS.md`
+
 - Any "species" references → "race" where applicable
 
 > ⚠️ **Note for Claude Code:** This is a terminology rename, not a logic change. Do not
@@ -184,6 +198,7 @@ follow conflicting instructions.
 ### 1.7 — Equipment JSON filenames (note for later, do NOT do now)
 
 Currently in `game-data/srd/`:
+
 - `equipment.armor.json`
 - `equipment.weapons.json`
 
@@ -230,48 +245,48 @@ third-party API.
 
 **Phase 1 — Character Creator (blocks everything else)**
 
-| dnd5eapi endpoint | Your JSON file | Status |
-|---|---|---|
-| `/races` + `/subraces` | `game-data/srd/races.json` | Empty ← ready |
-| `/classes` + `/subclasses` | `game-data/srd/classes.json` | Empty ← ready |
-| `/backgrounds` | `game-data/srd/backgrounds.json` | Empty placeholder |
-| `/features` | `game-data/srd/features.json` | Doesn't exist yet |
-| `/traits` | `game-data/srd/traits.json` | Doesn't exist yet |
-| `/proficiencies` | `game-data/srd/proficiencies.json` | Doesn't exist yet |
-| `/skills` | `game-data/srd/skills.json` | Doesn't exist yet |
-| `/languages` | `game-data/srd/languages.json` | Doesn't exist yet |
-| `/ability-scores` | `game-data/srd/ability-scores.json` | Doesn't exist yet |
+| dnd5eapi endpoint          | Your JSON file                      | Status            |
+|----------------------------|-------------------------------------|-------------------|
+| `/races` + `/subraces`     | `game-data/srd/races.json`          | Empty ← ready     |
+| `/classes` + `/subclasses` | `game-data/srd/classes.json`        | Empty ← ready     |
+| `/backgrounds`             | `game-data/srd/backgrounds.json`    | Empty placeholder |
+| `/features`                | `game-data/srd/features.json`       | Doesn't exist yet |
+| `/traits`                  | `game-data/srd/traits.json`         | Doesn't exist yet |
+| `/proficiencies`           | `game-data/srd/proficiencies.json`  | Doesn't exist yet |
+| `/skills`                  | `game-data/srd/skills.json`         | Doesn't exist yet |
+| `/languages`               | `game-data/srd/languages.json`      | Doesn't exist yet |
+| `/ability-scores`          | `game-data/srd/ability-scores.json` | Doesn't exist yet |
 
 **Phase 2 — Equipment & Inventory**
 
-| dnd5eapi endpoint | Your JSON file |
-|---|---|
-| `/equipment` + `/equipment-categories` | `game-data/srd/equipment.json` |
-| `/weapon-properties` | `game-data/srd/weapon-properties.json` |
-| `/magic-items` | `game-data/srd/magic-items.json` |
+| dnd5eapi endpoint                      | Your JSON file                         |
+|----------------------------------------|----------------------------------------|
+| `/equipment` + `/equipment-categories` | `game-data/srd/equipment.json`         |
+| `/weapon-properties`                   | `game-data/srd/weapon-properties.json` |
+| `/magic-items`                         | `game-data/srd/magic-items.json`       |
 
 This is where the Explorer's Pack auto-expansion lives. The existing `equipment.armor.json`
 and `equipment.weapons.json` get replaced by the single `equipment.json` at this phase.
 
 **Phase 3 — Spells & Combat**
 
-| dnd5eapi endpoint | Your JSON file |
-|---|---|
-| `/spells` | `game-data/srd/spells.json` |
-| `/magic-schools` | `game-data/srd/magic-schools.json` |
-| `/damage-types` | `game-data/srd/damage-types.json` |
-| `/conditions` | `game-data/srd/conditions.json` |
+| dnd5eapi endpoint | Your JSON file                     |
+|-------------------|------------------------------------|
+| `/spells`         | `game-data/srd/spells.json`        |
+| `/magic-schools`  | `game-data/srd/magic-schools.json` |
+| `/damage-types`   | `game-data/srd/damage-types.json`  |
+| `/conditions`     | `game-data/srd/conditions.json`    |
 
 Note: spells is 300+ entries. Decide before Phase 3 whether it gets lazy-loaded or bundled.
 
 **Phase 4 — Lore & Reference (your differentiator)**
 
-| dnd5eapi endpoint | Your JSON file |
-|---|---|
-| `/rules` + `/rule-sections` | `game-data/srd/rules.json` |
-| `/monsters` | `game-data/srd/monsters.json` |
-| `/feats` | `game-data/srd/feats.json` |
-| `/alignments` | `game-data/srd/alignments.json` |
+| dnd5eapi endpoint           | Your JSON file                  |
+|-----------------------------|---------------------------------|
+| `/rules` + `/rule-sections` | `game-data/srd/rules.json`      |
+| `/monsters`                 | `game-data/srd/monsters.json`   |
+| `/feats`                    | `game-data/srd/feats.json`      |
+| `/alignments`               | `game-data/srd/alignments.json` |
 
 ### 2.3 — The adapter layer
 
@@ -394,29 +409,36 @@ mode exactly as today. No new code needed.
 ## Part 4: Implementation Order
 
 ### Phase 0 — Branch cleanup (current task)
+
 Complete everything in Part 1. No new features.
 
 ### Phase 1 — Real SRD data
+
 Adapter scripts + populate `races.json`, `classes.json`, `backgrounds.json`,
 `features.json`, `traits.json`. Makes existing dropdowns actually useful.
 Do this before touching wizard UI.
 
 ### Phase 2 — Wizard shell
+
 Overlay/modal wrapper turning existing panels into a step-by-step flow.
 Back/Next navigation and progress indicator. No new panels yet.
 
 ### Phase 3 — Skills & Equipment steps
+
 Skills selection step and equipment step. Explorer's Pack auto-expansion lives here.
 Requires Phase 1 equipment data.
 
 ### Phase 4 — Polish & locked fields
+
 Wizard-locked field behavior. In-app attribution/credits page. Full smoke test.
 
 ### Phase 5 — Spells
+
 Spellcasting progression from class data. Automatically granted spells.
 Not a full spell compendium — existing spells panel stays as manual entry UI.
 
 ### Phase 6+ — Lore & reference layer
+
 Rules reference browser, monster reference, feat browser. The differentiators.
 
 ---
@@ -440,9 +462,9 @@ When updating `AGENTS.md` as part of cleanup, confirm it reflects:
 `LEGAL.md` content — this is the entire obligation, nothing else needed:
 
 > This work includes material taken from the System Reference Document 5.1 ("SRD 5.1") by
-> Wizards of the Coast LLC and available at https://dnd.wizards.com/resources/systems-reference-document.
+> Wizards of the Coast LLC and available at <https://dnd.wizards.com/resources/systems-reference-document>.
 > The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License
-> available at https://creativecommons.org/licenses/by/4.0/legalcode.
+> available at <https://creativecommons.org/licenses/by/4.0/legalcode>.
 
 Use "compatible with fifth edition" or "5E compatible" to describe the app.
 Do not use "Dungeons & Dragons" or "D&D."
