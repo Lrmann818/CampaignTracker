@@ -1,10 +1,8 @@
 # CLAUDE.md
 
-The canonical coding-agent rules for this repo live in [`AGENTS.md`](./AGENTS.md). **Read that file first**, before this one and before any other doc.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-This file exists as a pointer because Claude Code looks for `CLAUDE.md` at the repo root for orientation. The rules themselves are in `AGENTS.md` so that all coding agents (Claude Code, Codex, Cursor, etc.) work from the same source of truth.
-
-If anything in this file appears to conflict with `AGENTS.md`, **`AGENTS.md` wins**. Update this file to match.
+The canonical coding-agent rules live in [`AGENTS.md`](./AGENTS.md). **Read that file first**, before this one and before any other doc. If anything here conflicts with `AGENTS.md`, **`AGENTS.md` wins**.
 
 ---
 
@@ -13,9 +11,13 @@ If anything in this file appears to conflict with `AGENTS.md`, **`AGENTS.md` win
 - `npm run dev` — Start Vite dev server
 - `npm run build` — Production build to `dist/`
 - `npm run test` — Run Vitest in watch mode
-- `npm run test:run` — Run Vitest once
-- `npm run verify` — Run the full verification gate when available
-- Playwright smoke tests may run in CI and must not be bypassed casually
+- `npm run test:run` — Run Vitest once (all tests)
+- `npx vitest run tests/foo.test.js` — Run a single test file
+- `npm run typecheck` — Run CheckJS static validation (`typescript@5.9.3`)
+- `npm run preview` — Serve the production build (required for PWA and offline validation; dev server does not register the service worker)
+- `npm run test:smoke` — Run Playwright smoke suite (install Chromium once with `npx playwright install chromium`)
+- `npm run verify` — Full gate: typecheck + test:run + build; run before any merge
+- Dev URL for state-safety work: `/?dev=1&stateGuard=warn`
 
 ---
 
@@ -31,4 +33,48 @@ This is a quick-reference summary. The full rules and reasoning are in `AGENTS.m
 
 ---
 
-For everything else — architecture overview, character architecture, UI contracts, workspace rules, JavaScript/CSS/accessibility rules, state and persistence rules, testing expectations, and the full SRD content rules — see `AGENTS.md`.
+## Architecture Quick Reference
+
+`app.js` is the **sole composition root** — it wires every service and injects them downward. Nothing imports `app.js`.
+
+**Layer order (dependencies flow downward only):**
+
+```text
+app.js
+  js/state.js      canonical state object; schema v6; migrations in migrateState()
+  js/domain/*      factories and explicit state-action helpers
+  js/storage/*     persistence, save lifecycle, IndexedDB helpers
+  js/ui/*          shared page-agnostic UI systems
+  js/features/*    reusable cross-page flows
+  js/pages/*       page-specific controllers and panels
+  js/pwa/*         service worker and update handling
+  js/utils/*       low-level helpers with minimal app knowledge
+```
+
+`js/pages/*` must not become a dependency for any layer above it. Shared behavior is extracted to `js/ui/*`, `js/features/*`, or `js/domain/*` only when at least two callers need it.
+
+**State and save lifecycle:**
+
+- Mutate through `createStateActions()` helpers or `withAllowedStateMutation()`.
+- Every user-visible structured-state change must call `SaveManager.markDirty()`.
+- `sanitizeForSave()` is the source of truth for what is persisted — a field living on `state` is not automatically saved.
+- Main save: `localStorage["localCampaignTracker_v1"]` (campaign vault). Binary assets: IndexedDB `blobs`. Long spell notes: IndexedDB `texts`.
+- New persisted fields require: default in `js/state.js`, an entry in `SCHEMA_MIGRATION_HISTORY`, and a `migrateState()` step for old saves.
+
+**Character model:**
+
+- Active character lives in `state.characters.entries`, selected by `state.characters.activeId`. Resolve it with `getActiveCharacter(state)`.
+- The legacy `state.character` key is valid only in migration/backward-compatibility code. Never use it in new production code.
+- Builder characters have `build !== null`; freeform characters have `build: null`. Do not collapse the two modes.
+
+**Module conventions:**
+
+- `create*` builds a service/controller; `init*` wires a concrete UI module; `setup*` is a one-time composition helper.
+- New modules accept a single `deps` injection object and return `destroy()` for lifecycle cleanup.
+- New shared infrastructure, storage, and page-orchestration modules start with `// @ts-check` + JSDoc typedefs.
+- DOM anchors: use `requireEl(...)` / `requireMany(...)` and fail soft in production.
+- Prefer `AbortController` for listener ownership over manual `removeEventListener` bookkeeping.
+
+---
+
+For full workspace rules, UI contracts, SRD/builder rules, CSS rules, accessibility rules, persistence rules, testing expectations, and the output format — see `AGENTS.md`.
