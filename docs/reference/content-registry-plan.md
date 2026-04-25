@@ -697,7 +697,8 @@ The test:
 
 Adding a new content file or new `kind` value requires updating this test.
 
-Note: this test does not yet exist. Do not create it until content changes require it.
+Note: this test now exists and should remain part of the normal verification path for
+SRD registry content changes.
 
 ---
 

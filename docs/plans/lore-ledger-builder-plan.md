@@ -100,24 +100,24 @@ The active first implementation slice is the Dragonborn race-choice path describ
 sequence is the concrete Phase 1 plan; this document owns the implementation tracking,
 while the design record explains why this slice proves the schema.
 
-Initial Phase 1 sequence:
+Phase 1 sequence status, last verified April 25, 2026:
 
-1. Update `racesAdapter.js` to populate the `choices` field on races from
+- [x] Update `racesAdapter.js` to populate the `choices` field on races from
    `raw.language_options` for races like Human and to hardcode the ancestry choice for
    Dragonborn because the API race endpoint does not expose it directly.
-2. Build `draconicAncestriesAdapter.js` to pull from the SRD API trait endpoint for
+- [x] Build `draconicAncestriesAdapter.js` to pull from the SRD API trait endpoint for
    Draconic Ancestry, extract the ancestry table, and produce normalized records in
    `game-data/srd/draconic-ancestries.json`. Verify every mechanical field against the
    SRD 5.1 PDF table.
-3. Build `traitsAdapter.js` to pull SRD trait records and include `derivedFrom` on traits
+- [x] Build `traitsAdapter.js` to pull SRD trait records and include `derivedFrom` on traits
    whose mechanics depend on the Dragonborn ancestry choice.
-4. Regenerate all affected `game-data/srd/*.json` files through the adapter pipeline.
-5. Write anchor tests for the generated Dragonborn race choice, draconic ancestry records,
+- [x] Regenerate all affected `game-data/srd/*.json` files through the adapter pipeline.
+- [x] Write anchor tests for the generated Dragonborn race choice, draconic ancestry records,
    and trait derivation fields using the strategy in `docs/design/vertical-slice-schema.md`.
-6. Write the referential integrity test for cross-record IDs, choice sources, choice
+- [x] Write the referential integrity test for cross-record IDs, choice sources, choice
    options, globally unique IDs, and `derivedFrom` references.
-7. Run the full applicable verification suite and confirm green.
-8. Commit the completed Phase 1 vertical slice.
+- [x] Run the full applicable verification suite and confirm green.
+- [ ] Commit the completed Phase 1 vertical slice.
 
 Expected first-slice content should be representative, not exhaustive. It should include
 Dragonborn, Human language-choice coverage, supporting traits, supporting languages, and
