@@ -256,7 +256,6 @@ export function initBuilderWizard(deps = {}) {
     draft.build.classId = normalizeContentId(classSelect.value, "class");
     draft.build.backgroundId = normalizeContentId(backgroundSelect.value, "background");
     draft.build.level = clampInteger(levelInput.value, MIN_LEVEL, MAX_LEVEL, draft.build.level || MIN_LEVEL);
-    draft.build.abilityMethod = "manual";
     if (!draft.build.abilities || typeof draft.build.abilities !== "object") {
       draft.build.abilities = { base: {} };
     }
@@ -483,7 +482,6 @@ export function initBuilderWizard(deps = {}) {
   closeBtn.addEventListener("click", close, { signal });
   methodManualInput.addEventListener("change", () => {
     abilityMethod = "manual";
-    draft.build.abilityMethod = "manual";
     renderAbilityMethods();
   }, { signal });
   overlay.addEventListener("click", (event) => {

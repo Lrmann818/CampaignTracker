@@ -315,7 +315,6 @@ export const SCHEMA_MIGRATION_HISTORY = Object.freeze([
  *   subclassId?: string | null,
  *   backgroundId?: string | null,
  *   level?: number,
- *   abilityMethod?: string,
  *   abilities?: { base?: NumberLookup, [key: string]: unknown },
  *   choicesByLevel?: Record<string, unknown>,
  *   [key: string]: unknown

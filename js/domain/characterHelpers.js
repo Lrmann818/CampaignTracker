@@ -47,7 +47,6 @@ export function makeDefaultCharacterBuild() {
     subclassId: null,
     backgroundId: null,
     level: 1,
-    abilityMethod: "manual",
     abilities: {
       base: neutralAbilities
     },
@@ -152,7 +151,6 @@ function hasMeaningfulBuilderShape(build) {
   if (isNonEmptyString(build.subclassId)) return true;
   if (isNonEmptyString(build.backgroundId)) return true;
   if (isFiniteNumberLike(build.level)) return true;
-  if (isNonEmptyString(build.abilityMethod)) return true;
   if (isPlainPersistedObject(build.abilities)) return true;
   if (isPlainPersistedObject(build.abilityBase)) return true;
   return isPlainPersistedObject(build.choicesByLevel);

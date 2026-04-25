@@ -1305,7 +1305,6 @@ describe("character page selector", () => {
         subclassId: null,
         backgroundId: "background_soldier",
         level: 5,
-        abilityMethod: "manual",
         abilities: {
           base: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }
         },
@@ -1326,6 +1325,24 @@ describe("character page selector", () => {
     });
     expect(derived.proficiencyBonus).toBe(3);
     expect(derived.abilities.str).toMatchObject({ base: 15, total: 15, modifier: 2 });
+
+    controller.destroy();
+  });
+
+  it("does not persist abilityMethod on the build object after wizard Finish", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await finishBuilderWizardWith();
+
+    const build = deps.state.characters.entries[2].build;
+    expect(build).not.toBeNull();
+    expect("abilityMethod" in build).toBe(false);
 
     controller.destroy();
   });
