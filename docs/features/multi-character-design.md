@@ -61,16 +61,16 @@ A character-specific toolbar is added between the main app toolbar/nav row and t
 
 Contents (compact single row for mobile):
 
-  - Left side: character selector
-  - Right side: `...` actions menu containing:
-  - New Character
-  - New Builder Character
-  - Rename Character
-  - Add to NPCs
-  - Add to Party
-  - Export Character
-  - Import Character
-  - Delete Character
+- Left side: character selector
+- Right side: `...` actions menu containing:
+- New Character
+- New Builder Character
+- Rename Character
+- Add to NPCs
+- Add to Party
+- Export Character
+- Import Character
+- Delete Character
 
 Step 2 tracker-card linking actions and Step 4 import/export actions have since shipped. Step 3 character builder/rules-engine work is now in progress: the minimal builder-character creation action has shipped, but the full builder wizard and automation have not.
 
@@ -131,7 +131,7 @@ A future enhancement could let the Combat workspace pin a specific character ind
 
 **Status:** Complete, audited, and fully verified (2026-04-15). See `STEP2_TASKS.md` for the full task list and closeout summary.
 
-### Goal
+### Goals
 
 A character can be added to the party cards or NPC cards from the character page. Linked cards are bidirectional views into the shared character fields. Location-card linking was deliberately deferred because location cards do not share the same HP/class/status shape.
 
@@ -213,62 +213,58 @@ If a `characterId` points to a character that no longer exists (data corruption,
 
 ### Goal
 
-Add a character creation wizard and level-up flow backed by SRD 5.2.1 content, with a clean builtin/custom content split.
+Add a character creation wizard and level-up flow backed by SRD 5.1 content, with a clean builtin/custom content split.
 
 ### Character state evolution
 
-Each character entry gains a `build` object and an `overrides` object alongside the existing flat fields:
+Each character entry gains a `build` object and an `overrides` object alongside the existing flat fields. The shape below reflects the schema-v6 implementation; see `docs/state-schema.md` for the canonical schema-of-record.
 
 ```
 {
-  id: "char_abc123",
-  
-  // Build choices (source of truth for the rules engine)
-  build: {
-    race: "dwarf",           // green-list id or custom id
-    class: "fighter",
-    subclass: "champion",       // null until subclass level
-    level: 3,
-    background: "soldier",
-    abilityMethod: "standard-array",
-    abilityBase: { str: 15, dex: 13, con: 14, int: 8, wis: 10, cha: 12 },
-    equippedArmor: "armor_studded_leather",  // content registry id or null
-    equippedShield: true,                     // whether a shield is equipped
-    // level-up choices recorded per level
-    levelChoices: {
-      1: { skills: ["athletics", "intimidation"], ... },
-      4: { feat: null, asi: { str: 2 } },
-      ...
-    }
-  },
-  
-  // Manual overrides — additive, never replace computed values
-  overrides: {
-    strMisc: 0,
-    dexMisc: 0,
-    // ...per-ability misc bonus
-    strSaveMisc: 0,
-    dexSaveMisc: 0,
-    // ...per-save misc bonus
-    acMisc: 0,
-    acShieldBonus: 0,             // manual shield bonus input (typically 0 or 2)
-    acAdditionalAbility: null,    // "wis", "con", etc. or null — for Monk/Barbarian unarmored defense
-    initiativeMisc: 0,
-    speedMisc: 0,
-    hpMisc: 0,
-    // ...any additional escape hatches
-  },
-  
-  // Existing flat fields become computed outputs
-  // OR: if build is null, these remain freeform (manual mode)
-  name: "Thorin",
-  classLevel: "Fighter 3",
-  race: "Dwarf",
-  hpMax: 28,
-  ac: 18,
-  // ...etc
+id: "char_abc123",
+// Build choices (source of truth for the rules engine when build !== null)
+build: {
+version: 1,
+ruleset: "srd-5.1",
+raceId: "dwarf",                  // registry id or null
+classId: "fighter",               // registry id or null
+subclassId: "champion",           // registry id or null until subclass level
+backgroundId: "soldier",          // registry id or null
+level: 3,
+abilityMethod: "standard-array",  // "standard-array" | "point-buy" | "rolled" | "manual"
+abilities: {
+base: { str: 15, dex: 13, con: 14, int: 8, wis: 10, cha: 12 }
+},
+// user selections for build-time choices, keyed by level then by choice id.
+// Example: a Dragonborn picking Red ancestry at character creation:
+//   choicesByLevel["1"]["dragonborn-ancestry"] = "red"
+// See docs/reference/content-registry-plan.md "Build-Time Choices Schema".
+choicesByLevel: {
+"1": { /* per-choice picks / },
+"4": { / ASI/feat picks at level 4, etc. */ }
+}
+},
+// Manual overrides — additive deltas applied on top of derived values.
+// Currently shipped scope: ability/save/skill/initiative deltas only.
+overrides: {
+abilities:   { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+saves:       { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+skills:      { /* skillId: delta */ },
+initiative:  0
+},
+// Existing flat freeform fields. For builder characters these remain as fallback
+// storage; derived display values are read from deriveCharacter(...) per panel.
+// For freeform characters (build: null), these are the source of truth.
+name: "Thorin",
+classLevel: "Fighter 3",
+race: "Dwarf",
+hpMax: 28,
+ac: 18,
+// ...etc
 }
 ```
+
+The `overrides` shape above is intentionally narrower than the original aspirational design. It will expand as automation lands for HP, AC, hit points, speed, AC additional-ability (Unarmored Defense), shield bonus, and similar fields. New override fields must be added through the schema migration path (current schema version `6`). See `docs/plans/lore-ledger-builder-plan.md` for the implementation roadmap.
 
 ### Freeform vs builder mode
 
@@ -292,9 +288,9 @@ Every piece of game content follows one schema:
 }
 ```
 
-- `builtin` items ship with the app, are read-only, and are backed by SRD 5.2.1.
+- `builtin` items ship with the app, are read-only, and are backed by SRD 5.1.
 - `custom` items are user-created. Editing a builtin item creates a custom copy.
-- The green list (SRD 5.2.1 baseline) defines exactly which items are builtin.
+- The green list (SRD 5.1 baseline) defines exactly which items are builtin.
 
 Content registry lives at app level, not per-campaign. All campaigns share the same builtin + custom content library.
 
@@ -417,31 +413,33 @@ Triggered from the sub-toolbar menu:
 
 Both operate on the active character only.
 
-### SRD 5.2.1 green list (builtin baseline)
+### SRD 5.1 green list (builtin baseline)
 
-Species: Dragonborn, Dwarf, Elf, Gnome, Goliath, Halfling, Human, Orc, Tiefling
+Race: Dragonborn, Dwarf, Elf, Gnome, Goliath, Halfling, Human, Orc, Tiefling
 
 Classes (one subclass each): Barbarian (Berserker), Bard (College of Lore), Cleric (Life Domain), Druid (Circle of the Land), Fighter (Champion), Monk (Warrior of the Open Hand), Paladin (Oath of Devotion), Ranger (Hunter), Rogue (Thief), Sorcerer (Draconic Sorcery), Warlock (Fiend Patron), Wizard (Evoker)
 
 Backgrounds: Acolyte, Criminal, Sage, Soldier (plus others present in SRD — to be confirmed against source PDFs)
 
-Spells: subset present in SRD 5.2.1 (to be extracted from PDF)
+Spells: subset present in SRD 5.1 (to be extracted from PDF)
 
-Feats: subset present in SRD 5.2.1 (to be extracted from PDF)
+Feats: subset present in SRD 5.1 (to be extracted from PDF)
 
 Armor (all SRD armor):
+
 - Light: Padded, Leather, Studded Leather
 - Medium: Hide, Chain Shirt, Scale Mail, Breastplate, Half Plate
 - Heavy: Ring Mail, Chain Mail, Splint, Plate
 - Shield
 
 Weapons (all SRD weapons):
+
 - Simple Melee: Club, Dagger, Greatclub, Handaxe, Javelin, Light Hammer, Mace, Quarterstaff, Sickle, Spear, Unarmed Strike
 - Simple Ranged: Crossbow (light), Dart, Shortbow, Sling
 - Martial Melee: Battleaxe, Flail, Glaive, Greataxe, Greatsword, Halberd, Lance, Longsword, Maul, Morningstar, Pike, Rapier, Scimitar, Shortsword, Trident, War Pick, Warhammer, Whip
 - Martial Ranged: Blowgun, Crossbow (hand), Crossbow (heavy), Longbow, Net
 
-(Exact list to be confirmed against SRD 5.2.1 PDF — the above is the expected set.)
+(Exact list to be confirmed against SRD 5.1 PDF — the above is the expected set.)
 
 ---
 
@@ -505,7 +503,7 @@ One character at a time. No batch export/import.
 3. **Migration safety is mandatory.** Every state shape change gets a defensive migration with tests.
 4. **Freeform mode is always available.** Users who don't want the builder can use the sheet manually.
 5. **Builtin content is read-only.** Edits fork into custom copies.
-6. **The green-list rule is absolute.** If it's not in the SRD 5.2.1 green list, it's custom.
+6. **The green-list rule is absolute.** If it's not in the SRD 5.1 green list, it's custom.
 
 ---
 

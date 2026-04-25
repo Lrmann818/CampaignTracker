@@ -594,19 +594,22 @@ Any persisted shape change must be handled through the existing versioned migrat
 The pipeline is:
 
 ```
-scripts/fetch-srd-data.js    — orchestrator
-scripts/adapters/
-  racesAdapter.js            — produces races.json
-  classesAdapter.js          — produces classes.json
-  backgroundsAdapter.js
-  equipmentAdapter.js
-  spellsAdapter.js
-  ... etc
+scripts/fetch-srd-data.js.       — orchestrator
+scripts/adapters/racesAdapter.js — produces races.json, including the inline choices array on parent race entries (e.g. Dragonborn's draconic ancestry choice; Human's bonus language choice)
+classesAdapter.js                — produces classes.json
+backgroundsAdapter.js            — produces backgrounds.json
+draconicAncestriesAdapter.js     — produces draconic-ancestries.json
+traitsAdapter.js                 — produces traits.json, including derivedFrom on traits whose mechanics depend on a build-time choice (e.g. Breath Weapon, Damage Resistance)
+equipmentAdapter.js              — produces equipment.armor.json and equipment.weapons.json
+spellsAdapter.js                 — produces spells.json (deferred until needed)
+... etc
 ```
 
 These scripts fetch from `dnd5eapi.co` during development and transform the results into the repo's structured JSON format. The JSON files are then committed and shipped with the app — there are no runtime API calls.
 
 **Rule:** If the content in a `game-data/srd/*.json` file needs to change, edit the relevant adapter script in `scripts/adapters/` and re-run it. Do not edit the JSON files directly. Direct edits will be overwritten the next time the adapter runs.
+
+**Choices field rule:** When a race, class, background, or subclass grants a build-time choice (pick a language, pick an ancestry, pick a fighting style, etc.), that choice lives **inline on the parent entry** as a `choices: []` array, not in a separate file. The corresponding adapter is responsible for emitting it. See `docs/reference/content-registry-plan.md` "Build-Time Choices Schema" for the choice shape.
 
 ### Practical Working Rule
 

@@ -12,10 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Step 3 rules-engine / character-builder foundation: schema v6 adds `build` and `overrides` metadata to character entries while preserving freeform characters with `build: null`.
-- Pure builder derivation helpers for class/level labels, species/race, background, level, proficiency bonus, ability totals/modifiers, saves, skills, and initiative.
+- Pure builder derivation helpers for class/level labels, race, background, level, proficiency bonus, ability totals/modifiers, saves, skills, and initiative.
 - Minimal `New Builder Character` creation path that creates a valid builder-mode character without changing the existing freeform `New Character` flow.
 - Accessible informational Builder Mode badge for builder characters.
-- Display-only Builder Summary panel for builder characters, shown after Basics and before Vitals, with derived class/level, species/race, background, level, proficiency bonus, and ability totals/modifiers.
+- Display-only Builder Summary panel for builder characters, shown after Basics and before Vitals, with derived class/level, race, background, level, proficiency bonus, and ability totals/modifiers.
 
 ### Not Shipped Yet
 

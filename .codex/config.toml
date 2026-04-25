@@ -5,14 +5,13 @@
 
 [project]
 name = "LoreLedger"
-description = "Lore Ledger production SPA with SRD 5.2.1-backed builder work"
+description = "Lore Ledger production SPA with SRD 5.1-backed builder work"
 
 [context]
 primary_instructions_file = "AGENTS.md"
 
 [builder]
 active_builtin_source = "srd-5.1"
-reference_only_source = "srd-5.1"
 registry_root = "game-data/srd"
 docs_root = "docs/reference"
 

@@ -219,7 +219,7 @@ Category-specific fields then extend that shape.
 
 The following sections define the recommended first-pass shape for each current builder category.
 
-### Species
+### Races
 
 Stored in:
 
@@ -554,6 +554,38 @@ Notes:
 
 - keep properties normalized as stable string IDs
 - represent range explicitly instead of embedding it only in display text
+
+### Draconic Ancestries
+
+Stored in:
+
+- `game-data/srd/draconic-ancestries.json`
+
+Recommended shape:
+
+```json
+{
+  "id": "red",
+  "kind": "ancestry",
+  "name": "Red",
+  "source": "srd-5.1",
+  "category": "chromatic",
+  "damageType": "fire",
+  "breathWeapon": {
+    "shape": "cone",
+    "size": 15,
+    "save": "dex"
+  }
+}
+```
+
+Notes:
+
+- `breathWeapon` is a structured object (not a stringly-encoded value like `"cone-15-dex"`) so each component is independently queryable and anchor-testable
+- `category` is `"chromatic"` or `"metallic"` and is lore metadata only — SRD 5.1 presents ancestries as a flat table with no chromatic/metallic split, so this field exists for UI grouping affordances, not as a schema-level grouping
+- `damageType` is one of `"acid"`, `"cold"`, `"fire"`, `"lightning"`, or `"poison"`
+- `breathWeapon.shape` is `"cone"` or `"line"`; `breathWeapon.size` is the area dimension in feet (5 or 15 in SRD 5.1); `breathWeapon.save` is `"dex"` or `"con"`
+- ten records total: black, blue, brass, bronze, copper, gold, green, red, silver, white — all values verified against the SRD 5.1 PDF Draconic Ancestry table
 
 ---
 
