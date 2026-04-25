@@ -595,6 +595,8 @@ Every choice the user makes during character building is represented as a `choic
 
 Examples include picking a language, picking a draconic ancestry, picking a cantrip, or picking a fighting style.
 
+Design rationale for this schema and the vertical-slice-first SRD registry strategy lives in `docs/design/vertical-slice-schema.md`. This document remains the canonical schema/rules reference.
+
 Choice objects use this shape:
 
 ```json

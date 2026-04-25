@@ -196,7 +196,7 @@ tracks outcomes, not adapter or schema implementation detail.
 
 This remains the largest active feature in the product. The foundation is now in place, but the shipped Step 3 UI is intentionally limited to minimal builder-character creation, an informational badge, a builtin-ID-only Builder Identity editor for race/class/background/level, a manual Builder Abilities editor for base scores, a display-only summary, builder-derived identity display in the normal Basics panel, builder-derived proficiency plus speed and hit-dice display in normal and embedded Vitals, builder-derived ability score/modifier display in the normal Abilities/Skills panel, builder-only use of the derived proficiency scalar in existing Abilities/Skills formulas, and builder-aware ability adjustments through the existing Abilities & Skills controls. Builder Identity remains temporary scaffolding for editing builder identity inputs, and Phase 3H adds no schema change or derived-field materialization. HP/AC automation, combat/card linking changes, new overrides, schema migration, materialization, the full builder wizard, subclass choices, save/skill override expansion, custom content, save/skill automation, and spell/combat automation are not shipped yet.
 
-The current implementation strategy is vertical-slice-first: prove one complete SRD data path through registry data, validation, and builder consumption before expanding the full registry category set.
+The current implementation strategy is vertical-slice-first: prove one complete SRD data path through registry data, validation, and builder consumption before expanding the full registry category set. Design rationale lives in `docs/design/vertical-slice-schema.md`.
 
 ### Step 4 — Cross-Campaign Character Import / Export
 

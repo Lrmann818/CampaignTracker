@@ -5,6 +5,7 @@ This is the navigation index for everything in `docs/`. Files are organized by p
 - **Reference** — load-bearing technical docs that describe current state of the system
 - **Operations** — release, testing, and maintenance procedures
 - **Plans** — active forward-looking planning docs
+- **Design** — decision records and rationale for architecture or schema choices
 - **Features** — design and implementation notes for specific features
 - **Reference (policy)** — ratified policies for content, attribution, and scope
 - **Personal notes** — personal working notes and prompts retained for context
@@ -50,6 +51,15 @@ Planning docs for work that's queued or in progress. These get updated as plans 
 
 - [`plans/new-features-roadmap.md`](./plans/new-features-roadmap.md) — Forward-looking roadmap of features and improvements under consideration.
 - [`plans/lore-ledger-builder-plan.md`](./plans/lore-ledger-builder-plan.md) — Plan for the in-app builder feature: scope, content registry approach, attribution requirements.
+
+---
+
+## Design (decision records and rationale)
+
+Design records explain why a major schema or architecture direction was chosen. Canonical
+rules still live in reference docs.
+
+- [`design/vertical-slice-schema.md`](./design/vertical-slice-schema.md) — Rationale for the build-time choices schema and vertical-slice-first SRD registry strategy.
 
 ---
 

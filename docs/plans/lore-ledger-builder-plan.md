@@ -15,11 +15,8 @@ Canonical references:
 - `docs/reference/srd-licensing-notes.md` — SRD source and attribution posture
 - `docs/reference/builder-scope-greenlist.md` — shipped builtin content scope
 - `docs/reference/content-registry-plan.md` — canonical registry/schema rules
+- `docs/design/vertical-slice-schema.md` — design rationale for the build-time choices schema and vertical-slice-first SRD registry strategy
 - `game-data/srd/*.json` — committed generated builtin data
-
-Local rationale and exploratory notes may live under `docs/#personal/`, including
-`docs/#personal/vertical-slice-schema.md`, but those files are not the public plan or the
-canonical schema contract.
 
 ---
 
@@ -36,6 +33,7 @@ The implementation strategy is vertical-slice-first:
 4. Expand category coverage only after the first slice is working and test-backed.
 
 This is intentionally not a "populate every SRD category at once" project.
+The rationale for this strategy is recorded in `docs/design/vertical-slice-schema.md`.
 
 ---
 
@@ -52,8 +50,8 @@ Completed outcomes:
 - Builder source values use `srd-5.1`.
 - The branch policy now describes the SRD data fetch pipeline.
 - The canonical registry/schema rules now live in `docs/reference/content-registry-plan.md`.
-- Personal design rationale is kept under `docs/#personal/` instead of being treated as
-  the public implementation plan.
+- Design rationale is tracked separately in `docs/design/vertical-slice-schema.md` instead
+  of being treated as the public implementation plan.
 
 Do not treat Phase 0 as current work. Future builder work starts from the vertical slice
 below.
