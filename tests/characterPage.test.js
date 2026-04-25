@@ -62,6 +62,7 @@ import {
   BUILTIN_CONTENT_REGISTRY,
   listContentByKind
 } from "../js/domain/rules/registry.js";
+import { deriveCharacter } from "../js/domain/rules/deriveCharacter.js";
 
 class FakeClassList {
   constructor(owner) {
@@ -365,7 +366,7 @@ function installCharacterSelectorDom() {
   actionMenuDropdown.setAttribute("aria-hidden", "true");
   [
     ["charActionNewBtn", "new", "New Character"],
-    ["charActionNewBuilderBtn", "new-builder", "New Builder Character"],
+    ["charActionNewBuilderBtn", "new-builder", "Create with Builder"],
     ["charActionRenameBtn", "rename", "Rename Character"],
     ["charActionAddNpcBtn", "add-npc", "Add to NPCs"],
     ["charActionAddPartyBtn", "add-party", "Add to Party"],
@@ -503,6 +504,70 @@ function installBuilderAbilitiesDom(document) {
   return panel;
 }
 
+function installBuilderWizardDom(document) {
+  const overlay = appendWithId(document, document.body, "div", "builderWizardOverlay", "modalOverlay");
+  overlay.hidden = true;
+  overlay.setAttribute("aria-hidden", "true");
+  const panel = appendWithId(document, overlay, "div", "builderWizardPanel", "modalPanel builderWizardPanel");
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-labelledby", "builderWizardTitle");
+  panel.setAttribute("tabindex", "-1");
+  const header = appendWithId(document, panel, "div", "builderWizardHeader", "builderWizardHeader");
+  appendWithId(document, header, "div", "builderWizardTitle", "modalTitle").textContent = "Create with Builder";
+  appendWithId(document, header, "button", "builderWizardClose", "npcSmallBtn").type = "button";
+
+  const body = appendWithId(document, panel, "div", "builderWizardBody", "builderWizardBody");
+  const identity = appendWithId(document, body, "section", "builderWizardStepIdentity", "builderWizardStep");
+  appendWithId(document, identity, "h3", "builderWizardIdentityTitle", "builderWizardStepTitle").textContent = "Identity";
+  const identityGrid = appendWithId(document, identity, "div", "builderWizardGrid", "builderWizardGrid");
+  appendWithId(document, identityGrid, "input", "builderWizardName");
+  appendWithId(document, identityGrid, "select", "builderWizardRace");
+  appendWithId(document, identityGrid, "select", "builderWizardClass");
+  appendWithId(document, identityGrid, "select", "builderWizardBackground");
+  const level = appendWithId(document, identityGrid, "input", "builderWizardLevel");
+  level.type = "number";
+
+  const abilities = appendWithId(document, body, "section", "builderWizardStepAbilities", "builderWizardStep");
+  abilities.hidden = true;
+  appendWithId(document, abilities, "h3", "builderWizardAbilitiesTitle", "builderWizardStepTitle").textContent = "Ability Scores";
+  const methodGroup = appendWithId(document, abilities, "fieldset", "builderWizardAbilityMethodGroup", "builderAbilityMethodGroup");
+  appendWithId(document, methodGroup, "legend", "builderWizardAbilityMethodLegend").textContent = "Method";
+  ["manual", "standard-array", "point-buy", "roll"].forEach((methodId) => {
+    const input = appendWithId(document, methodGroup, "input", `builderWizardAbilityMethod-${methodId}`);
+    input.type = "radio";
+    input.setAttribute("name", "builderWizardAbilityMethod");
+    input.setAttribute("value", methodId);
+    if (methodId === "manual") {
+      input.id = "builderWizardAbilityMethodManual";
+      input.checked = true;
+    } else {
+      input.disabled = true;
+    }
+  });
+  const abilityGrid = appendWithId(document, abilities, "div", "builderWizardAbilityGrid", "builderWizardAbilityGrid");
+  ["Str", "Dex", "Con", "Int", "Wis", "Cha"].forEach((suffix) => {
+    const input = appendWithId(document, abilityGrid, "input", `builderWizardAbility${suffix}`);
+    input.type = "number";
+  });
+
+  const summary = appendWithId(document, body, "section", "builderWizardStepSummary", "builderWizardStep");
+  summary.hidden = true;
+  appendWithId(document, summary, "h3", "builderWizardSummaryTitle", "builderWizardStepTitle").textContent = "Summary";
+  appendWithId(document, summary, "div", "builderWizardSummary", "builderSummaryContent");
+
+  const footer = appendWithId(document, panel, "div", "builderWizardFooter", "builderWizardFooter");
+  appendWithId(document, footer, "button", "builderWizardCancel", "npcSmallBtn").type = "button";
+  const back = appendWithId(document, footer, "button", "builderWizardBack", "npcSmallBtn");
+  back.type = "button";
+  back.hidden = true;
+  appendWithId(document, footer, "button", "builderWizardNext", "npcSmallBtn").type = "button";
+  const finish = appendWithId(document, footer, "button", "builderWizardFinish", "npcSmallBtn");
+  finish.type = "button";
+  finish.hidden = true;
+  return overlay;
+}
+
 function installFlatAbilitiesDom(document) {
   const root = document.getElementById("page-character");
   let columns = document.getElementById("charColumns");
@@ -533,6 +598,28 @@ function getSelectOptions(select) {
 
 function dispatchChange(el) {
   el.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+}
+
+async function finishBuilderWizardWith({
+  name = "Mira",
+  raceId = "race_human",
+  classId = "class_fighter",
+  backgroundId = "background_soldier",
+  level = "5",
+  abilities = { Str: 15, Dex: 14, Con: 13, Int: 12, Wis: 10, Cha: 8 }
+} = {}) {
+  document.getElementById("builderWizardName").value = name;
+  document.getElementById("builderWizardRace").value = raceId;
+  document.getElementById("builderWizardClass").value = classId;
+  document.getElementById("builderWizardBackground").value = backgroundId;
+  document.getElementById("builderWizardLevel").value = String(level);
+  document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+  Object.entries(abilities).forEach(([suffix, value]) => {
+    document.getElementById(`builderWizardAbility${suffix}`).value = String(value);
+  });
+  document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+  document.getElementById("builderWizardFinish").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+  await flushPromises();
 }
 
 function createFakePopovers() {
@@ -731,7 +818,7 @@ describe("character page selector", () => {
       .map((match) => ({ action: match[1], label: match[2] }));
     expect(actions).toEqual([
       { action: "new", label: "New Character" },
-      { action: "new-builder", label: "New Builder Character" },
+      { action: "new-builder", label: "Create with Builder" },
       { action: "rename", label: "Rename Character" },
       { action: "add-npc", label: "Add to NPCs" },
       { action: "add-party", label: "Add to Party" },
@@ -825,7 +912,7 @@ describe("character page selector", () => {
     expect(actionMenuDropdown.getAttribute("aria-hidden")).toBe("true");
     expect(actionItems.map((button) => button.textContent)).toEqual([
       "New Character",
-      "New Builder Character",
+      "Create with Builder",
       "Rename Character",
       "Add to NPCs",
       "Add to Party",
@@ -1142,8 +1229,9 @@ describe("character page selector", () => {
     controller.destroy();
   });
 
-  it("runs New Builder Character from the action overflow menu", async () => {
-    const { actionMenuButton } = installCharacterSelectorDom();
+  it("opens Create with Builder from the action overflow menu without mutating state", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
     const Popovers = createFakePopovers();
     const deps = createCharacterPageDeps(Popovers);
 
@@ -1153,16 +1241,214 @@ describe("character page selector", () => {
     await flushPromises();
 
     const entries = deps.state.characters.entries;
+    expect(entries).toHaveLength(2);
+    expect(deps.state.characters.activeId).toBe("char_a");
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+    expect(document.getElementById("builderWizardOverlay").hidden).toBe(false);
+    expect(document.getElementById("builderWizardOverlay").getAttribute("aria-hidden")).toBe("false");
+    expect(document.getElementById("builderWizardName").value).toBe("New Builder Character");
+    expect(document.getElementById("charBuilderModeBadge").hidden).toBe(true);
+    expect(document.getElementById("charActionDropdownMenu").hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("enhances builder wizard identity selects with the shared select dropdown", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    ["builderWizardRace", "builderWizardClass", "builderWizardBackground"].forEach((id) => {
+      const select = document.getElementById(id);
+      const wrap = select.nextElementSibling;
+      const button = wrap?.querySelector(".builderWizardSelectBtn");
+      const menu = wrap?.querySelector(".dropdownMenu");
+      expect(select.classList.contains("nativeSelectHidden")).toBe(true);
+      expect(wrap?.classList.contains("selectDropdown")).toBe(true);
+      expect(button?.getAttribute("aria-expanded")).toBe("false");
+      expect(menu?.hidden).toBe(true);
+    });
+
+    controller.destroy();
+  });
+
+  it("creates a populated builder character on wizard Finish", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await finishBuilderWizardWith();
+
+    const entries = deps.state.characters.entries;
     expect(entries).toHaveLength(3);
     expect(entries[2]).toMatchObject({
-      name: "New Builder Character",
-      build: makeDefaultCharacterBuild()
+      name: "Mira",
+      classLevel: "",
+      race: "",
+      background: "",
+      proficiency: null,
+      build: {
+        version: 1,
+        ruleset: "srd-5.1",
+        raceId: "race_human",
+        classId: "class_fighter",
+        subclassId: null,
+        backgroundId: "background_soldier",
+        level: 5,
+        abilityMethod: "manual",
+        abilities: {
+          base: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }
+        },
+        choicesByLevel: {}
+      }
     });
     expect(isBuilderCharacter(entries[2])).toBe(true);
     expect(deps.state.characters.activeId).toBe(entries[2].id);
     expect(deps.SaveManager.markDirty).toHaveBeenCalledTimes(1);
-    expect(document.getElementById("charBuilderModeBadge").hidden).toBe(false);
-    expect(document.getElementById("charActionDropdownMenu").hidden).toBe(true);
+    expect(document.getElementById("builderWizardOverlay").hidden).toBe(true);
+
+    const derived = deriveCharacter(entries[2]);
+    expect(derived.mode).toBe("builder");
+    expect(derived.labels).toEqual({
+      classLevel: "Fighter 5",
+      race: "Human",
+      background: "Soldier"
+    });
+    expect(derived.proficiencyBonus).toBe(3);
+    expect(derived.abilities.str).toMatchObject({ base: 15, total: 15, modifier: 2 });
+
+    controller.destroy();
+  });
+
+  it("renders wizard Summary from the draft build before Finish", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    document.getElementById("builderWizardName").value = "Preview Mira";
+    document.getElementById("builderWizardRace").value = "race_elf";
+    document.getElementById("builderWizardClass").value = "class_wizard";
+    document.getElementById("builderWizardBackground").value = "background_sage";
+    document.getElementById("builderWizardLevel").value = "9";
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardAbilityInt").value = "16";
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    expect(deps.state.characters.entries).toHaveLength(2);
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+    const summary = document.getElementById("builderWizardSummary").textContent;
+    expect(summary).toContain("Preview Mira");
+    expect(summary).toContain("Wizard 9");
+    expect(summary).toContain("Elf");
+    expect(summary).toContain("Sage");
+    expect(summary).toContain("+4");
+    expect(summary).toContain("16 (+3)");
+
+    controller.destroy();
+  });
+
+  it("keeps the Summary name field synced to the wizard draft used on Finish", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardName").value = "Identity Name";
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    const summaryName = document.getElementById("builderWizardSummaryName");
+    expect(summaryName.value).toBe("Identity Name");
+    summaryName.value = "Summary Name";
+    summaryName.dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
+    expect(document.getElementById("builderWizardName").value).toBe("Summary Name");
+
+    document.getElementById("builderWizardFinish").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    const created = deps.state.characters.entries[2];
+    expect(created.name).toBe("Summary Name");
+    expect(created.build).not.toBeNull();
+
+    controller.destroy();
+  });
+
+  it("keeps non-manual ability score methods disabled for the polish pass", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    expect(document.getElementById("builderWizardAbilityMethodManual").checked).toBe(true);
+    ["standard-array", "point-buy", "roll"].forEach((methodId) => {
+      expect(document.getElementById(`builderWizardAbilityMethod-${methodId}`).disabled).toBe(true);
+    });
+
+    controller.destroy();
+  });
+
+  it("cancels Create with Builder without creating or marking dirty", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardName").value = "Cancelled";
+    document.getElementById("builderWizardCancel").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    expect(deps.state.characters.entries).toHaveLength(2);
+    expect(deps.state.characters.activeId).toBe("char_a");
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+    expect(document.getElementById("builderWizardOverlay").hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("closes Create with Builder on Escape without creating or marking dirty", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    const event = new Event("keydown", { bubbles: true, cancelable: true });
+    event.key = "Escape";
+    document.dispatchEvent(event);
+    await flushPromises();
+
+    expect(deps.state.characters.entries).toHaveLength(2);
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+    expect(document.getElementById("builderWizardOverlay").hidden).toBe(true);
 
     controller.destroy();
   });
@@ -1323,13 +1609,21 @@ describe("character page selector", () => {
   it("shows Not selected choices and level 1 for new builder characters", async () => {
     const { document, actionMenuButton } = installCharacterSelectorDom();
     installBuilderIdentityDom(document);
+    installBuilderWizardDom(document);
     const Popovers = createFakePopovers();
     const deps = createCharacterPageDeps(Popovers);
 
     const controller = initCharacterPageUI(deps);
     actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
     document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
-    await flushPromises();
+    await finishBuilderWizardWith({
+      name: "",
+      raceId: "",
+      classId: "",
+      backgroundId: "",
+      level: "1",
+      abilities: { Str: 10, Dex: 10, Con: 10, Int: 10, Wis: 10, Cha: 10 }
+    });
 
     const entry = deps.state.characters.entries[2];
     expect(entry.build).toMatchObject({
@@ -1716,13 +2010,21 @@ describe("character page selector", () => {
   it("shows neutral base scores for new builder characters", async () => {
     const { document, actionMenuButton } = installCharacterSelectorDom();
     installBuilderAbilitiesDom(document);
+    installBuilderWizardDom(document);
     const Popovers = createFakePopovers();
     const deps = createCharacterPageDeps(Popovers);
 
     const controller = initCharacterPageUI(deps);
     actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
     document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
-    await flushPromises();
+    await finishBuilderWizardWith({
+      name: "",
+      raceId: "",
+      classId: "",
+      backgroundId: "",
+      level: "1",
+      abilities: { Str: 10, Dex: 10, Con: 10, Int: 10, Wis: 10, Cha: 10 }
+    });
 
     const entry = deps.state.characters.entries[2];
     expect(entry.build.abilities.base).toEqual({ str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });

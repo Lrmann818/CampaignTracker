@@ -146,14 +146,45 @@ Work items:
 - Preserve the freeform vs builder distinction: `build === null` remains manual/freeform.
 - Keep builder inputs as canonical choices, not duplicated sheet data.
 - Mark user-visible state changes dirty through the existing save lifecycle.
+- Reuse Lore Ledger's existing custom dropdown/select pattern for wizard pickers if it is already accessible, mobile-safe, and reusable.
+- Do not introduce a second custom dropdown implementation for the wizard.
+- If the existing dropdown pattern is tightly coupled to another panel, extract a shared helper/component before using it in the wizard.
+- Native selects are acceptable as a fallback only if reuse would expand Phase 2A beyond polish scope.
+- Treat ability-score entry methods as wizard-local draft state until Finish, then persist only the canonical builder ability base scores.
+- Allow the character name to be edited during final review, while preserving normal post-creation name editing in the character sheet.
 
 Initial step order:
 
 1. Identity — name, race, class, background, level
-2. Ability scores — manual first, later standard array / point buy / roll support
+2. Ability scores — manual first, then standard array, point buy, and roll support through wizard-local draft state
 3. Class and background choices — only after data supports them
 4. Equipment — only after the equipment slice exists
 5. Summary — review before finishing
+
+Phase 2A polish scope:
+
+- CSS-only or near-CSS-only visual polish for the existing wizard shell.
+- Wizard pickers should use Lore Ledger's existing custom dropdown/select pattern when practical, so the wizard matches app-wide picker styling and behavior.
+- Do not build a new wizard-only custom dropdown; reuse or extract the existing app dropdown pattern instead.
+- Before reuse, verify keyboard navigation, focus behavior, screen-reader semantics, escape handling, outside-click behavior, and mobile behavior still work inside the wizard modal.
+- Improve spacing, mobile layout, and review readability without changing persisted character shape.
+
+Phase 2B ability-score method scope:
+
+- Add a method selector for Manual, Standard Array, Point Buy, and Roll.
+- Manual uses six numeric fields constrained to 1–20.
+- Standard Array exposes the pool `15, 14, 13, 12, 10, 8` and prevents duplicate assignment.
+- Point Buy starts all scores at 8, shows remaining points clearly, and disables invalid increases/decreases.
+- Roll supports `3d6` and `4d6 drop lowest`, generates a rolled pool, and assigns rolled values to abilities.
+- Keep method-specific intermediate values in wizard-local draft state; persist only the final ability base scores used by builder derivation.
+- Add tests for validation, disabled states, assignment uniqueness, point-buy cost rules, and roll-pool assignment before widening the UI.
+
+Summary review scope:
+
+- Show the final derived preview before Finish.
+- Include an editable character name field on Summary as a final review convenience.
+- The Summary name field must update the same draft character name used by Identity, not a separate copy.
+- Finishing the wizard must still produce a character whose name can be edited later through the normal character sheet flow.
 
 ---
 

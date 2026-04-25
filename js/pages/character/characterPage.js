@@ -10,6 +10,7 @@ import { initBasicsPanel } from "../character/panels/basicsPanel.js";
 import { initBuilderIdentityPanel } from "../character/panels/builderIdentityPanel.js";
 import { initBuilderAbilitiesPanel } from "../character/panels/builderAbilitiesPanel.js";
 import { initBuilderSummaryPanel } from "../character/panels/builderSummaryPanel.js";
+import { initBuilderWizard } from "../character/builderWizard.js";
 import { initProficienciesPanel } from "../character/panels/proficienciesPanel.js";
 import { initAbilitiesPanel } from "../character/panels/abilitiesPanel.js";
 import { initPersonalityPanel, setupCharacterCollapsibleTextareas } from "../character/panels/personalityPanel.js";
@@ -276,6 +277,22 @@ export function initCharacterPageUI(deps) {
       return result;
     }
 
+    const builderWizard = initBuilderWizard({
+      root: document,
+      Popovers,
+      setStatus,
+      onFinish: ({ name, build }) => {
+        const entry = makeDefaultBuilderCharacterEntry(name);
+        entry.build = build;
+        mutateCharactersAndNotify((s) => {
+          s.characters.entries.push(entry);
+          s.characters.activeId = entry.id;
+        });
+        rerender();
+      }
+    });
+    addDestroy(() => builderWizard.destroy());
+
     // --- populate selector ---
     const entries = state.characters?.entries ?? [];
     const activeId = state.characters?.activeId ?? null;
@@ -420,12 +437,7 @@ export function initCharacterPageUI(deps) {
     }
 
     async function runNewBuilderCharacterAction() {
-      const entry = makeDefaultBuilderCharacterEntry();
-      mutateCharactersAndNotify((s) => {
-        s.characters.entries.push(entry);
-        s.characters.activeId = entry.id;
-      });
-      rerender();
+      builderWizard.open();
     }
 
     async function runRenameCharacterAction() {

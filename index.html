@@ -495,7 +495,7 @@
             <button type="button" class="swatchOption charActionMenuItem" id="charActionNewBtn"
               data-char-action="new">New Character</button>
             <button type="button" class="swatchOption charActionMenuItem" id="charActionNewBuilderBtn"
-              data-char-action="new-builder">New Builder Character</button>
+              data-char-action="new-builder">Create with Builder</button>
             <button type="button" class="swatchOption charActionMenuItem" id="charActionRenameBtn"
               data-char-action="rename">Rename Character</button>
             <button type="button" class="swatchOption charActionMenuItem" id="charActionAddNpcBtn"
@@ -1138,6 +1138,112 @@
       </section>
     </section>
   </main>
+
+  <!-- Builder Wizard modal -->
+  <div id="builderWizardOverlay" class="modalOverlay" hidden aria-hidden="true">
+    <div class="modalPanel builderWizardPanel" id="builderWizardPanel" role="dialog" aria-modal="true"
+      aria-labelledby="builderWizardTitle" tabindex="-1">
+      <div class="builderWizardHeader">
+        <div class="modalTitle" id="builderWizardTitle">Create with Builder</div>
+        <button type="button" class="npcSmallBtn" id="builderWizardClose" aria-label="Close">✕</button>
+      </div>
+
+      <div class="builderWizardBody">
+        <section class="builderWizardStep" id="builderWizardStepIdentity" aria-labelledby="builderWizardIdentityTitle">
+          <h3 class="builderWizardStepTitle" id="builderWizardIdentityTitle">Identity</h3>
+          <div class="builderWizardGrid">
+            <label class="builderIdentityField" for="builderWizardName">
+              <span>Name</span>
+              <input id="builderWizardName" class="settingsInput" />
+            </label>
+            <label class="builderIdentityField" for="builderWizardRace">
+              <span>Race</span>
+              <select id="builderWizardRace" class="settingsSelect builderWizardSelect"></select>
+            </label>
+            <label class="builderIdentityField" for="builderWizardClass">
+              <span>Class</span>
+              <select id="builderWizardClass" class="settingsSelect builderWizardSelect"></select>
+            </label>
+            <label class="builderIdentityField" for="builderWizardBackground">
+              <span>Background</span>
+              <select id="builderWizardBackground" class="settingsSelect builderWizardSelect"></select>
+            </label>
+            <label class="builderIdentityField" for="builderWizardLevel">
+              <span>Level</span>
+              <input id="builderWizardLevel" type="number" min="1" max="20" step="1" inputmode="numeric" />
+            </label>
+          </div>
+        </section>
+
+        <section class="builderWizardStep" id="builderWizardStepAbilities" aria-labelledby="builderWizardAbilitiesTitle" hidden>
+          <h3 class="builderWizardStepTitle" id="builderWizardAbilitiesTitle">Ability Scores</h3>
+          <fieldset class="builderAbilityMethodGroup" aria-describedby="builderWizardAbilityMethodNote">
+            <legend>Method</legend>
+            <label class="builderAbilityMethodOption">
+              <input id="builderWizardAbilityMethodManual" type="radio" name="builderWizardAbilityMethod" value="manual" checked>
+              <span>Manual</span>
+            </label>
+            <label class="builderAbilityMethodOption isDisabled">
+              <input type="radio" name="builderWizardAbilityMethod" value="standard-array" disabled>
+              <span>Standard Array</span>
+              <small>Coming soon</small>
+            </label>
+            <label class="builderAbilityMethodOption isDisabled">
+              <input type="radio" name="builderWizardAbilityMethod" value="point-buy" disabled>
+              <span>Point Buy</span>
+              <small>Coming soon</small>
+            </label>
+            <label class="builderAbilityMethodOption isDisabled">
+              <input type="radio" name="builderWizardAbilityMethod" value="roll" disabled>
+              <span>Roll</span>
+              <small>Coming soon</small>
+            </label>
+          </fieldset>
+          <p class="builderAbilityMethodNote" id="builderWizardAbilityMethodNote">
+            Manual is available now. Other methods are reserved for the next builder pass.
+          </p>
+          <div class="builderWizardAbilityGrid">
+            <label class="builderAbilitiesField" for="builderWizardAbilityStr">
+              <span>Strength</span>
+              <input id="builderWizardAbilityStr" type="number" min="1" max="20" step="1" inputmode="numeric" />
+            </label>
+            <label class="builderAbilitiesField" for="builderWizardAbilityDex">
+              <span>Dexterity</span>
+              <input id="builderWizardAbilityDex" type="number" min="1" max="20" step="1" inputmode="numeric" />
+            </label>
+            <label class="builderAbilitiesField" for="builderWizardAbilityCon">
+              <span>Constitution</span>
+              <input id="builderWizardAbilityCon" type="number" min="1" max="20" step="1" inputmode="numeric" />
+            </label>
+            <label class="builderAbilitiesField" for="builderWizardAbilityInt">
+              <span>Intelligence</span>
+              <input id="builderWizardAbilityInt" type="number" min="1" max="20" step="1" inputmode="numeric" />
+            </label>
+            <label class="builderAbilitiesField" for="builderWizardAbilityWis">
+              <span>Wisdom</span>
+              <input id="builderWizardAbilityWis" type="number" min="1" max="20" step="1" inputmode="numeric" />
+            </label>
+            <label class="builderAbilitiesField" for="builderWizardAbilityCha">
+              <span>Charisma</span>
+              <input id="builderWizardAbilityCha" type="number" min="1" max="20" step="1" inputmode="numeric" />
+            </label>
+          </div>
+        </section>
+
+        <section class="builderWizardStep" id="builderWizardStepSummary" aria-labelledby="builderWizardSummaryTitle" hidden>
+          <h3 class="builderWizardStepTitle" id="builderWizardSummaryTitle">Summary</h3>
+          <div id="builderWizardSummary" class="builderSummaryContent"></div>
+        </section>
+      </div>
+
+      <div class="builderWizardFooter">
+        <button type="button" class="npcSmallBtn" id="builderWizardCancel">Cancel</button>
+        <button type="button" class="npcSmallBtn" id="builderWizardBack" hidden>Back</button>
+        <button type="button" class="npcSmallBtn" id="builderWizardNext">Next</button>
+        <button type="button" class="npcSmallBtn" id="builderWizardFinish" hidden>Finish</button>
+      </div>
+    </div>
+  </div>
 
 
   <!-- Data & Settings modal -->

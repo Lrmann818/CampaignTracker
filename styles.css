@@ -3748,6 +3748,250 @@ div.mutedSmall {
   border-top: 1px solid var(--hairline);
 }
 
+/* ======================
+   Builder Wizard modal
+   ====================== */
+
+.builderWizardPanel {
+  width: min(760px, 100%);
+  max-height: calc(100dvh - 36px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.builderWizardHeader,
+.builderWizardFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+}
+
+.builderWizardHeader {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.builderWizardFooter {
+  justify-content: flex-end;
+  border-top: 1px solid var(--hairline);
+  flex-wrap: wrap;
+}
+
+.builderWizardBody {
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 8px;
+}
+
+.builderWizardStep {
+  display: grid;
+  gap: 12px;
+}
+
+.builderWizardStep[hidden] {
+  display: none;
+}
+
+.builderWizardStepTitle {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.builderWizardGrid {
+  display: grid;
+  gap: 12px 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+
+.builderWizardAbilityGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#builderWizardPanel .builderWizardGrid>.builderIdentityField:first-child {
+  grid-column: 1 / -1;
+}
+
+#builderWizardPanel .builderIdentityField,
+#builderWizardPanel .builderAbilitiesField {
+  gap: 6px;
+  min-width: 0;
+}
+
+#builderWizardPanel .selectDropdown,
+#builderWizardPanel .selectDropdown.selectDropdownClamp {
+  width: 100%;
+  max-width: 100%;
+}
+
+#builderWizardPanel .builderWizardSelectBtn {
+  min-height: 36px;
+}
+
+#builderWizardPanel :is(input, select) {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 7px 9px;
+  box-shadow: 0 0 0 1px var(--shadow-inset) inset;
+}
+
+#builderWizardPanel select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 34px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+#builderWizardPanel select:hover {
+  background-color: var(--surface-3-hover);
+}
+
+#builderWizardPanel :is(input, select):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring) inset;
+}
+
+#builderWizardPanel .builderAbilityMethodGroup {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-3) 52%, transparent);
+}
+
+#builderWizardPanel .builderAbilityMethodGroup legend {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+#builderWizardPanel .builderAbilityMethodOption {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 6px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+#builderWizardPanel .builderAbilityMethodOption input {
+  width: auto;
+  min-height: 0;
+  box-shadow: none;
+}
+
+#builderWizardPanel .builderAbilityMethodOption span,
+#builderWizardPanel .builderAbilityMethodOption small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#builderWizardPanel .builderAbilityMethodOption small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+#builderWizardPanel .builderAbilityMethodOption.isDisabled {
+  opacity: 0.68;
+}
+
+#builderWizardPanel .builderAbilityMethodNote {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+#builderWizardPanel .builderWizardAbilityGrid>.builderAbilitiesField {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-3) 70%, transparent);
+}
+
+#builderWizardPanel .builderWizardAbilityGrid input[type="number"] {
+  text-align: center;
+  font-weight: 700;
+}
+
+#builderWizardSummary {
+  gap: 12px;
+}
+
+#builderWizardSummary .builderSummaryNameField {
+  display: grid;
+  gap: 6px;
+}
+
+#builderWizardSummary .builderWizardSummaryRows {
+  display: grid;
+  gap: 7px;
+}
+
+#builderWizardSummary .builderSummaryRow,
+#builderWizardSummary .builderAbilityRow {
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-3) 58%, transparent);
+}
+
+#builderWizardSummary .builderSummaryLabel,
+#builderWizardSummary .builderAbilityLabel,
+#builderWizardSummary .builderSummarySubhead {
+  line-height: 1.25;
+}
+
+#builderWizardSummary .builderSummaryValue,
+#builderWizardSummary .builderAbilityValue {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#builderWizardSummary .builderSummaryAbilities {
+  padding-top: 10px;
+}
+
+#builderWizardSummary .builderAbilityGrid {
+  gap: 8px;
+}
+
 .modalBtnRow {
   display: flex;
   justify-content: flex-end;
@@ -4598,6 +4842,45 @@ select.npcField:focus {
 }
 
 @media (max-width: 600px) {
+  .builderWizardPanel {
+    width: min(100%, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+  }
+
+  .builderWizardHeader,
+  .builderWizardFooter {
+    padding: 8px 6px;
+  }
+
+  .builderWizardBody {
+    padding: 12px 6px;
+  }
+
+  .builderWizardGrid,
+  .builderWizardAbilityGrid {
+    gap: 10px;
+    grid-template-columns: 1fr;
+  }
+
+  #builderWizardPanel .builderAbilityMethodGroup {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #builderWizardPanel .builderWizardAbilityGrid>.builderAbilitiesField {
+    grid-template-columns: minmax(0, 1fr) minmax(60px, 78px);
+    align-items: center;
+  }
+
+  #builderWizardPanel .builderWizardAbilityGrid input[type="number"] {
+    justify-self: end;
+  }
+
+  #builderWizardSummary .builderSummaryRow,
+  #builderWizardSummary .builderAbilityRow {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
   .charTwo {
     grid-template-columns: 1fr;
   }
@@ -4609,7 +4892,10 @@ select.npcField:focus {
 
   .builderSummaryRow,
   .builderAbilityRow,
-  .builderAbilityGrid {
+  .builderAbilityGrid,
+  #builderWizardPanel .builderAbilityMethodGroup,
+  .builderWizardGrid,
+  .builderWizardAbilityGrid {
     grid-template-columns: 1fr;
   }
 }
