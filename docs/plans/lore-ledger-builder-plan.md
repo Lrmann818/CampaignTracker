@@ -96,7 +96,7 @@ Goal: ship the smallest complete data slice that proves the full path from adapt
 to builder consumption.
 
 The active first implementation slice is the Dragonborn race-choice path described in
-`docs/design/vertical-slice-schema.md#what-happens-next-implementation-sequence`. That
+`docs/design/vertical-slice-schema.md#initial-dragonborn-vertical-slice-sequence`. That
 sequence is the concrete Phase 1 plan; this document owns the implementation tracking,
 while the design record explains why this slice proves the schema.
 

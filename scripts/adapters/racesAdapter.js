@@ -16,10 +16,12 @@
 //   traits         — array of trait ids (look up full text from traits.json)
 //   languages      — array of language ids (race only)
 //   subraceIds     — array of subrace ids (race only, may be empty)
+//   choices        — array of build-time choices, only present when needed
 //   lore           — { age, alignment, sizeDescription, languageDesc, desc }
 //                    all optional, only present if API provides them
 
 const BASE_URL = "https://www.dnd5eapi.co/api/2014";
+const DRAGONBORN_RACE_ID = "dragonborn";
 
 /**
  * Fetch JSON from the API with basic error handling.
@@ -59,6 +61,11 @@ function transformRace(raw) {
       languageDesc: raw.language_desc,
     }),
   };
+
+  const choices = buildRaceChoices(raw);
+  if (choices.length > 0) {
+    entry.choices = choices;
+  }
 
   return entry;
 }
@@ -101,6 +108,83 @@ function buildLore(fields) {
     }
   }
   return Object.keys(lore).length > 0 ? lore : null;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+function normalizeRegistryId(value) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase().replace(/[_\s]+/g, "-");
+  return /^[a-z0-9-]+$/.test(normalized) ? normalized : null;
+}
+
+/**
+ * @param {any} raw
+ * @returns {object[]}
+ */
+function buildRaceChoices(raw) {
+  const choices = [];
+  const languageChoice = buildLanguageChoice(raw);
+  if (languageChoice) choices.push(languageChoice);
+
+  if (normalizeRegistryId(raw?.index) === DRAGONBORN_RACE_ID) {
+    choices.push({
+      id: "dragonborn-ancestry",
+      kind: "ancestry",
+      count: 1,
+      from: { type: "list", source: "draconic-ancestries" },
+      source: "race:dragonborn",
+    });
+  }
+
+  return choices;
+}
+
+/**
+ * @param {any} raw
+ * @returns {object | null}
+ */
+function buildLanguageChoice(raw) {
+  const raceId = normalizeRegistryId(raw?.index);
+  const languageOptions = raw?.language_options;
+  const count = Number(languageOptions?.choose);
+
+  if (!raceId || languageOptions?.type !== "languages" || !Number.isInteger(count) || count < 1) {
+    return null;
+  }
+
+  const optionIds = collectLanguageOptionIds(languageOptions);
+
+  return {
+    id: `${raceId}-language`,
+    kind: "language",
+    count,
+    from: optionIds.length > 0
+      ? { type: "list", options: optionIds }
+      : { type: "any" },
+    source: `race:${raceId}`,
+  };
+}
+
+/**
+ * @param {any} languageOptions
+ * @returns {string[]}
+ */
+function collectLanguageOptionIds(languageOptions) {
+  const options = languageOptions?.from?.options;
+  if (!Array.isArray(options)) return [];
+
+  const seen = new Set();
+  const ids = [];
+  for (const option of options) {
+    const id = normalizeRegistryId(option?.item?.index);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
 }
 
 /**
