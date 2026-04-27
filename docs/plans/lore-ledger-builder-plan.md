@@ -282,7 +282,7 @@ These items were identified during the Phase 2A polish pass review and are defer
 
 - **Disabled method button focusability**: Non-manual ability-score method buttons currently use native `disabled`, which removes them from the tab order entirely. Keyboard-only users cannot discover or read their labels. Switch to `aria-disabled="true"` + `tabindex="-1"` when wiring up non-manual methods so the options remain discoverable.
 - **`installBuilderWizardDom` test helper**: The helper does not add `#builderWizardSummaryName`. The summary-name-sync test may be passing silently against optional-chaining no-ops in the wizard rather than exercising the feature. Verify and update the helper to add the element before adding more summary-step tests.
-- **`abilityMethod` persistence decision**: Now treated as wizard-local draft state (not persisted). Once non-manual methods are wired up in Phase 2B, decide whether the chosen method should be persisted on the build object. If yes, update `docs/state-schema.md` and `js/state.js` at that time.
+- **`abilityMethod` persistence decision**: Closed for Phase 2B. Ability-score entry method remains wizard-local draft state and is not persisted on the build object. Derivation and sheet-editing paths consume only the final `build.abilities.base` scores after creation, not the method used to enter them, including after builder-only scaffolding panels retire and the normal character sheet becomes builder-aware. The only plausible consumer would be a future "reopen wizard with previous method preselected" feature, which is not on the roadmap.
 
 ---
 

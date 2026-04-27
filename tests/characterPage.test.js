@@ -3,32 +3,32 @@ import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../js/pages/character/panels/equipmentPanel.js", () => ({
-  initEquipmentPanel: () => ({ destroy: () => {} })
+  initEquipmentPanel: () => ({ destroy: () => { } })
 }));
 vi.mock("../js/pages/character/panels/attackPanel.js", () => ({
-  initAttacksPanel: () => ({ destroy: () => {} })
+  initAttacksPanel: () => ({ destroy: () => { } })
 }));
 vi.mock("../js/pages/character/characterSectionReorder.js", () => ({
-  setupCharacterSectionReorder: () => ({ destroy: () => {} })
+  setupCharacterSectionReorder: () => ({ destroy: () => { } })
 }));
 vi.mock("../js/pages/character/panels/spellsPanel.js", () => ({
-  initSpellsPanel: () => ({ destroy: () => {} })
+  initSpellsPanel: () => ({ destroy: () => { } })
 }));
 vi.mock("../js/pages/character/panels/vitalsPanel.js", () => ({
-  initVitalsPanel: () => ({ destroy: () => {} })
+  initVitalsPanel: () => ({ destroy: () => { } })
 }));
 vi.mock("../js/pages/character/panels/basicsPanel.js", () => ({
-  initBasicsPanel: () => ({ destroy: () => {} })
+  initBasicsPanel: () => ({ destroy: () => { } })
 }));
 vi.mock("../js/pages/character/panels/proficienciesPanel.js", () => ({
-  initProficienciesPanel: () => ({ destroy: () => {} })
+  initProficienciesPanel: () => ({ destroy: () => { } })
 }));
 vi.mock("../js/pages/character/panels/abilitiesPanel.js", () => ({
-  initAbilitiesPanel: () => ({ destroy: () => {} })
+  initAbilitiesPanel: () => ({ destroy: () => { } })
 }));
 vi.mock("../js/pages/character/panels/personalityPanel.js", () => ({
-  initPersonalityPanel: () => ({ destroy: () => {} }),
-  setupCharacterCollapsibleTextareas: () => ({ destroy: () => {} })
+  initPersonalityPanel: () => ({ destroy: () => { } }),
+  setupCharacterCollapsibleTextareas: () => ({ destroy: () => { } })
 }));
 vi.mock("../js/domain/characterPortability.js", () => ({
   MAX_IMPORT_FILE_SIZE: 10 * 1024 * 1024,
@@ -117,7 +117,9 @@ class FakeElement extends EventTarget {
     this.hidden = false;
     this.disabled = false;
     this.readOnly = false;
+    this.checked = false;
     this.selected = false;
+    this.name = "";
     this.value = "";
     this.type = "";
     this.accept = "";
@@ -221,6 +223,8 @@ class FakeElement extends EventTarget {
     if (name === "id") this.id = value;
     if (name === "class") this.className = value;
     if (name === "hidden") this.hidden = true;
+    if (name === "name") this.name = String(value);
+    if (name === "value") this.value = String(value);
   }
 
   getAttribute(name) {
@@ -234,6 +238,25 @@ class FakeElement extends EventTarget {
 
   focus() {
     if (this.ownerDocument) this.ownerDocument.activeElement = this;
+  }
+
+  dispatchEvent(event) {
+    if (!event.target) {
+      try {
+        Object.defineProperty(event, "target", {
+          configurable: true,
+          value: this
+        });
+      } catch {
+        // Native Event.target is read-only in some environments; best effort for fake DOM bubbling.
+      }
+    }
+
+    const result = super.dispatchEvent(event);
+    if (event.bubbles && !event.cancelBubble && this.parentElement) {
+      this.parentElement.dispatchEvent(event);
+    }
+    return result;
   }
 
   click() {
@@ -327,6 +350,13 @@ function matchesSelector(el, selector) {
   if (selector === "button.active:not([disabled])") {
     return el.tagName === "BUTTON" && el.classList.contains("active") && !el.disabled;
   }
+  if (selector.startsWith("input[")) {
+    const nameMatch = selector.match(/\[name="([^"]+)"\]/);
+    const valueMatch = selector.match(/\[value="([^"]+)"\]/);
+    return el.tagName === "INPUT"
+      && (!nameMatch || el.name === nameMatch[1])
+      && (!valueMatch || el.value === valueMatch[1]);
+  }
   if (selector === "[data-select-label]") return el.dataset?.selectLabel === "1";
   if (selector.startsWith(".")) return el.classList.contains(selector.slice(1));
   return false;
@@ -391,8 +421,8 @@ function installCharacterSelectorDom() {
   vi.stubGlobal("window", window);
   vi.stubGlobal("Node", FakeElement);
   vi.stubGlobal("MutationObserver", class {
-    observe() {}
-    disconnect() {}
+    observe() { }
+    disconnect() { }
   });
 
   return { document, selector, actionMenu, actionMenuButton, actionMenuDropdown };
@@ -542,7 +572,8 @@ function installBuilderWizardDom(document) {
       input.id = "builderWizardAbilityMethodManual";
       input.checked = true;
     } else {
-      input.disabled = true;
+      input.setAttribute("aria-disabled", "true");
+      input.setAttribute("tabindex", "-1");
     }
   });
   const abilityGrid = appendWithId(document, abilities, "div", "builderWizardAbilityGrid", "builderWizardAbilityGrid");
@@ -840,7 +871,7 @@ describe("character page selector", () => {
     const calls = [];
     const target = new EventTarget();
     target.addEventListener(ACTIVE_CHARACTER_CHANGED_EVENT, (event) => {
-      calls.push(/** @type {CustomEvent} */ (event).detail);
+      calls.push(/** @type {CustomEvent} */(event).detail);
     });
     vi.stubGlobal("window", target);
 
@@ -1416,7 +1447,7 @@ describe("character page selector", () => {
     controller.destroy();
   });
 
-  it("keeps non-manual ability score methods disabled for the polish pass", async () => {
+  it("keeps non-manual ability score methods discoverable but unavailable for the polish pass", async () => {
     const { document, actionMenuButton } = installCharacterSelectorDom();
     installBuilderWizardDom(document);
     const Popovers = createFakePopovers();
@@ -1429,8 +1460,72 @@ describe("character page selector", () => {
 
     expect(document.getElementById("builderWizardAbilityMethodManual").checked).toBe(true);
     ["standard-array", "point-buy", "roll"].forEach((methodId) => {
-      expect(document.getElementById(`builderWizardAbilityMethod-${methodId}`).disabled).toBe(true);
+      const input = document.getElementById(`builderWizardAbilityMethod-${methodId}`);
+      expect(input.disabled).toBe(false);
+      expect(input.getAttribute("aria-disabled")).toBe("true");
+      expect(input.getAttribute("tabindex")).toBe("-1");
     });
+
+    controller.destroy();
+  });
+
+  it("confirms non-manual ability score method radios expose aria-disabled and tabindex after wizard open", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    const manualRadio = document.getElementById("builderWizardAbilityMethodManual");
+    expect(manualRadio.getAttribute("aria-disabled")).not.toBe("true");
+    expect(manualRadio.getAttribute("tabindex")).not.toBe("-1");
+    expect(manualRadio.checked).toBe(true);
+
+    ["standard-array", "point-buy", "roll"].forEach((methodId) => {
+      const radio = document.getElementById(`builderWizardAbilityMethod-${methodId}`);
+      expect(radio).not.toBeNull();
+      expect(radio.getAttribute("aria-disabled")).toBe("true");
+      expect(radio.getAttribute("tabindex")).toBe("-1");
+      // Native `disabled` must NOT be set — that's the whole point of the migration.
+      expect(radio.disabled).toBe(false);
+    });
+
+    controller.destroy();
+  });
+
+  it("confirms activating a non-manual ability score method radio does not change the selected method from manual", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    const manualRadio = document.getElementById("builderWizardAbilityMethodManual");
+    const standardArrayRadio = document.getElementById("builderWizardAbilityMethod-standard-array");
+    expect(standardArrayRadio).not.toBeNull();
+
+    expect(manualRadio.checked).toBe(true);
+    expect(standardArrayRadio.checked).toBe(false);
+
+    // Simulate what a real browser does pre-event: radio click flips .checked
+    // BEFORE the change handler runs. The guard should catch aria-disabled and
+    // renderAbilityMethods() should restore manual as the checked radio.
+    standardArrayRadio.checked = true;
+    manualRadio.checked = false;
+    standardArrayRadio.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    standardArrayRadio.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    expect(manualRadio.checked).toBe(true);
+    expect(standardArrayRadio.checked).toBe(false);
 
     controller.destroy();
   });

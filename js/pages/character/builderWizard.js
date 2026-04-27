@@ -307,8 +307,30 @@ export function initBuilderWizard(deps = {}) {
       );
       if (!input) continue;
       input.checked = method.id === abilityMethod;
-      input.disabled = !method.enabled;
+      if (method.enabled) {
+        input.removeAttribute("aria-disabled");
+        input.removeAttribute("tabindex");
+      } else {
+        input.setAttribute("aria-disabled", "true");
+        input.setAttribute("tabindex", "-1");
+      }
     }
+  }
+
+  /**
+   * @param {Event} event
+   */
+  function handleAbilityMethodActivation(event) {
+    const target = event.target;
+    if (!hasTagName(target, "input") || target.name !== "builderWizardAbilityMethod") return;
+    if (target.getAttribute("aria-disabled") === "true") {
+      event.preventDefault();
+      event.stopPropagation();
+      renderAbilityMethods();
+      return;
+    }
+    abilityMethod = target.value === "manual" ? "manual" : abilityMethod;
+    renderAbilityMethods();
   }
 
   function renderSummary() {
@@ -480,10 +502,8 @@ export function initBuilderWizard(deps = {}) {
   finishBtn.addEventListener("click", finish, { signal });
   cancelBtn.addEventListener("click", close, { signal });
   closeBtn.addEventListener("click", close, { signal });
-  methodManualInput.addEventListener("change", () => {
-    abilityMethod = "manual";
-    renderAbilityMethods();
-  }, { signal });
+  panel.addEventListener("click", handleAbilityMethodActivation, { signal });
+  panel.addEventListener("change", handleAbilityMethodActivation, { signal });
   overlay.addEventListener("click", (event) => {
     if (event.target === overlay) close();
   }, { signal });

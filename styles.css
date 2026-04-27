@@ -5452,7 +5452,8 @@ select.npcField:focus {
 .skillRow input[type="checkbox"],
 .abilityStat input[type="checkbox"],
 .skillMenuRow input[type="checkbox"],
-.settingsToggleItem input[type="checkbox"] {
+.settingsToggleItem input[type="checkbox"],
+#builderWizardPanel .builderAbilityMethodOption input[type="radio"] {
   appearance: none;
   -webkit-appearance: none;
   width: 14px;
@@ -5466,9 +5467,14 @@ select.npcField:focus {
 .skillRow input[type="checkbox"]:checked,
 .abilityStat input[type="checkbox"]:checked,
 .skillMenuRow input[type="checkbox"]:checked,
-.settingsToggleItem input[type="checkbox"]:checked {
+.settingsToggleItem input[type="checkbox"]:checked,
+#builderWizardPanel .builderAbilityMethodOption input[type="radio"]:checked {
   background: var(--skill-prof-dot);
   border-color: var(--skill-prof-dot);
+}
+
+#builderWizardPanel .builderAbilityMethodOption input[type="radio"][aria-disabled="true"] {
+  cursor: not-allowed;
 }
 
 /* Skill proficiency options button */
