@@ -144,7 +144,7 @@ Current `@ts-check` coverage is concentrated in:
 - `js/state.js`
 - all current `js/domain/*` and `js/storage/*`
 - tracker and map orchestration modules
-- shared UI boundary modules such as `dataPanel`, `navigation`, `pagePanelReorder`, `panelHeaderCollapse`, `popovers`, `positioning`, `saveBanner`, `settingsPanel`, `status`, `theme`, and `topbar`
+- shared UI boundary modules such as `dataPanel`, `navigation`, `pagePanelReorder`, `panelHeaderCollapse`, `persistentBanner`, `popovers`, `positioning`, `saveBanner`, `settingsPanel`, `status`, `theme`, and `topbar`
 - focused utility/feature modules such as `autosize`, `numberSteppers`, `updates`, `updateBanner`, and `utils/dev`
 
 Rules:

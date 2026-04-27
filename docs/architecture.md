@@ -35,7 +35,7 @@ Current Phase 1 coverage is concentrated in boundary and orchestration modules:
 - Tracker orchestration: `js/pages/tracker/trackerPage.js`, `js/pages/tracker/trackerSectionReorder.js`
 - Map orchestration/persistence: `js/pages/map/mapPage.js`, `js/pages/map/mapController.js`, `js/pages/map/mapDrawing.js`, `js/pages/map/mapCanvas.js`, `js/pages/map/mapPersistence.js`
 - Character boundary helper: `js/pages/character/characterSectionReorder.js`
-- Shared UI primitives: `js/ui/dataPanel.js`, `js/ui/navigation.js`, `js/ui/pagePanelReorder.js`, `js/ui/panelHeaderCollapse.js`, `js/ui/popovers.js`, `js/ui/positioning.js`, `js/ui/safeAsync.js`, `js/ui/saveBanner.js`, `js/ui/settingsPanel.js`, `js/ui/status.js`, `js/ui/support.js`, `js/ui/theme.js`, `js/ui/topbar/topbar.js`
+- Shared UI primitives: `js/ui/dataPanel.js`, `js/ui/navigation.js`, `js/ui/pagePanelReorder.js`, `js/ui/panelHeaderCollapse.js`, `js/ui/persistentBanner.js`, `js/ui/popovers.js`, `js/ui/positioning.js`, `js/ui/safeAsync.js`, `js/ui/saveBanner.js`, `js/ui/settingsPanel.js`, `js/ui/status.js`, `js/ui/support.js`, `js/ui/theme.js`, `js/ui/topbar/topbar.js`
 - Focused shared features/utilities: `js/features/autosize.js`, `js/features/numberSteppers.js`, `js/pwa/updateBanner.js`, `js/pwa/updates.js`, `js/utils/dev.js`
 
 This list is intentionally narrower than the files included by `tsconfig.checkjs.json`. The config covers `app.js`, `boot.js`, `vite.config.js`, `js/**/*.js`, and `types/**/*.d.ts`, but not every included file has been hardened to the same standard yet.
@@ -714,6 +714,8 @@ Map boundary rule:
   - promise wrapper for async event handlers
 - `bindings.js`
   - generic text/number/contenteditable/checkbox bind helpers
+- `persistentBanner.js`
+  - generic factory for persistent banners (consumed by saveBanner and updateBanner)
 
 ### UI boundary rules
 
