@@ -17,6 +17,10 @@ const MIN_ABILITY_SCORE = 1;
 const MAX_ABILITY_SCORE = 20;
 const DEFAULT_NAME = "New Builder Character";
 const NOT_SELECTED_LABEL = "Not selected";
+const LEVEL_ONE_CHOICE_KEY = "1";
+const DRAGONBORN_RACE_ID = "dragonborn";
+const DRAGONBORN_ANCESTRY_CHOICE_ID = "dragonborn-ancestry";
+const DRACONIC_ANCESTRY_SOURCE = "draconic-ancestries";
 const STANDARD_ARRAY_SCORES = Object.freeze([15, 14, 13, 12, 10, 8]);
 const ROLL_MODE_4D6_DROP_LOWEST = "4d6-drop-lowest";
 const ROLL_MODE_3D6_STRAIGHT = "3d6-straight";
@@ -52,6 +56,11 @@ const ABILITY_META = Object.freeze({
   wis: { suffix: "Wis", label: "WIS" },
   cha: { suffix: "Cha", label: "CHA" }
 });
+
+const STEP_IDENTITY = "identity";
+const STEP_RACE_CHOICES = "race-choices";
+const STEP_ABILITIES = "abilities";
+const STEP_SUMMARY = "summary";
 
 /**
  * @typedef {{
@@ -116,6 +125,45 @@ function populateContentSelect(select, kind, selectedId) {
   }
 
   select.value = selected && entries.some((entry) => entry.id === selected) ? selected : "";
+}
+
+/**
+ * @param {unknown} choice
+ * @returns {choice is { id: string, kind: string, count?: unknown, from?: { type?: unknown, source?: unknown } }}
+ */
+function isDragonbornAncestryChoice(choice) {
+  if (!choice || typeof choice !== "object" || Array.isArray(choice)) return false;
+  const record = /** @type {Record<string, unknown>} */ (choice);
+  return record.id === DRAGONBORN_ANCESTRY_CHOICE_ID &&
+    record.kind === "ancestry" &&
+    record.count === 1 &&
+    !!record.from &&
+    typeof record.from === "object" &&
+    !Array.isArray(record.from) &&
+    /** @type {Record<string, unknown>} */ (record.from).type === "list" &&
+    /** @type {Record<string, unknown>} */ (record.from).source === DRACONIC_ANCESTRY_SOURCE;
+}
+
+/**
+ * @param {unknown} raceId
+ * @returns {{ id: string, kind: string, count?: unknown, from?: { type?: unknown, source?: unknown } } | null}
+ */
+function getSupportedRaceChoice(raceId) {
+  const id = cleanString(raceId);
+  if (id !== DRAGONBORN_RACE_ID) return null;
+  const race = getContentById(BUILTIN_CONTENT_REGISTRY, id);
+  const choices = Array.isArray(race?.data?.choices) ? race.data.choices : [];
+  return choices.find(isDragonbornAncestryChoice) || null;
+}
+
+/**
+ * @param {unknown} id
+ * @returns {string}
+ */
+function normalizeAncestryId(id) {
+  const ancestryId = cleanString(id);
+  if (!ancestryId) return "";
+  return getContentById(BUILTIN_CONTENT_REGISTRY, ancestryId)?.kind === "ancestry" ? ancestryId : "";
 }
 
 /**
@@ -242,6 +290,9 @@ export function initBuilderWizard(deps = {}) {
       background: "#builderWizardBackground",
       level: "#builderWizardLevel",
       identityValidation: "#builderWizardIdentityValidation",
+      stepRaceChoices: "#builderWizardStepRaceChoices",
+      draconicAncestry: "#builderWizardDraconicAncestry",
+      raceChoicesValidation: "#builderWizardRaceChoicesValidation",
       methodManual: "#builderWizardAbilityMethodManual",
       stepIdentity: "#builderWizardStepIdentity",
       stepAbilities: "#builderWizardStepAbilities",
@@ -278,6 +329,9 @@ export function initBuilderWizard(deps = {}) {
   const backgroundSelect = /** @type {HTMLSelectElement} */ (guard.els.background);
   const levelDisplay = /** @type {HTMLElement} */ (guard.els.level);
   const identityValidation = /** @type {HTMLElement} */ (guard.els.identityValidation);
+  const stepRaceChoices = /** @type {HTMLElement} */ (guard.els.stepRaceChoices);
+  const draconicAncestrySelect = /** @type {HTMLSelectElement} */ (guard.els.draconicAncestry);
+  const raceChoicesValidation = /** @type {HTMLElement} */ (guard.els.raceChoicesValidation);
   const methodManualInput = /** @type {HTMLInputElement} */ (guard.els.methodManual);
   const stepIdentity = /** @type {HTMLElement} */ (guard.els.stepIdentity);
   const stepAbilities = /** @type {HTMLElement} */ (guard.els.stepAbilities);
@@ -342,9 +396,10 @@ export function initBuilderWizard(deps = {}) {
   const signal = listenerController.signal;
   /** @type {Element | null} */
   let previousFocus = null;
-  let stepIndex = 0;
+  let currentStep = STEP_IDENTITY;
   let abilityMethod = "manual";
   let identityValidationAttempted = false;
+  let raceChoicesValidationAttempted = false;
   let abilityValidationAttempted = false;
   /** @type {Record<string, number>} */
   let manualAbilityBase = {};
@@ -549,6 +604,70 @@ export function initBuilderWizard(deps = {}) {
   }
 
   /**
+   * @param {unknown} value
+   * @returns {Record<string, unknown>}
+   */
+  function getPlainChoiceLevel(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return /** @type {Record<string, unknown>} */ (value);
+  }
+
+  function ensureLevelOneChoices() {
+    if (!draft.build.choicesByLevel || typeof draft.build.choicesByLevel !== "object" || Array.isArray(draft.build.choicesByLevel)) {
+      draft.build.choicesByLevel = {};
+    }
+    const choicesByLevel = /** @type {Record<string, unknown>} */ (draft.build.choicesByLevel);
+    const levelChoices = getPlainChoiceLevel(choicesByLevel[LEVEL_ONE_CHOICE_KEY]);
+    choicesByLevel[LEVEL_ONE_CHOICE_KEY] = levelChoices;
+    return levelChoices;
+  }
+
+  function getSelectedDraconicAncestryId() {
+    if (!draft.build.choicesByLevel || typeof draft.build.choicesByLevel !== "object" || Array.isArray(draft.build.choicesByLevel)) {
+      return "";
+    }
+    const choicesByLevel = /** @type {Record<string, unknown>} */ (draft.build.choicesByLevel);
+    const levelChoices = getPlainChoiceLevel(choicesByLevel[LEVEL_ONE_CHOICE_KEY]);
+    return normalizeAncestryId(levelChoices[DRAGONBORN_ANCESTRY_CHOICE_ID]);
+  }
+
+  function clearDraconicAncestryChoice() {
+    if (!draft.build.choicesByLevel || typeof draft.build.choicesByLevel !== "object" || Array.isArray(draft.build.choicesByLevel)) {
+      draft.build.choicesByLevel = {};
+      return;
+    }
+    const choicesByLevel = /** @type {Record<string, unknown>} */ (draft.build.choicesByLevel);
+    const levelChoices = getPlainChoiceLevel(choicesByLevel[LEVEL_ONE_CHOICE_KEY]);
+    delete levelChoices[DRAGONBORN_ANCESTRY_CHOICE_ID];
+    if (Object.keys(levelChoices).length) choicesByLevel[LEVEL_ONE_CHOICE_KEY] = levelChoices;
+    else delete choicesByLevel[LEVEL_ONE_CHOICE_KEY];
+  }
+
+  function syncRaceChoicesFromControls() {
+    if (!getSupportedRaceChoice(draft.build.raceId)) {
+      clearDraconicAncestryChoice();
+      return;
+    }
+    const ancestryId = normalizeAncestryId(draconicAncestrySelect.value);
+    if (!ancestryId) {
+      clearDraconicAncestryChoice();
+      return;
+    }
+    const levelChoices = ensureLevelOneChoices();
+    levelChoices[DRAGONBORN_ANCESTRY_CHOICE_ID] = ancestryId;
+  }
+
+  /**
+   * @param {{ showIncomplete?: boolean }} [options]
+   */
+  function getRaceChoicesValidationMessage(options = {}) {
+    if (!getSupportedRaceChoice(draft.build.raceId)) return "";
+    const ancestryId = normalizeAncestryId(draconicAncestrySelect.value) || getSelectedDraconicAncestryId();
+    if (!ancestryId && !options.showIncomplete) return "";
+    return ancestryId ? "" : "Draconic Ancestry is required before continuing.";
+  }
+
+  /**
    * @param {string} message
    */
   function showIdentityValidation(message) {
@@ -565,6 +684,15 @@ export function initBuilderWizard(deps = {}) {
       abilityValidation.textContent = message;
       abilityValidation.hidden = !message;
     }
+    if (message) setStatus?.(message, { stickyMs: 2500 });
+  }
+
+  /**
+   * @param {string} message
+   */
+  function showRaceChoicesValidation(message) {
+    raceChoicesValidation.textContent = message;
+    raceChoicesValidation.hidden = !message;
     if (message) setStatus?.(message, { stickyMs: 2500 });
   }
 
@@ -686,6 +814,29 @@ export function initBuilderWizard(deps = {}) {
     syncEnhancedSelects();
   }
 
+  function renderRaceChoices() {
+    const choice = getSupportedRaceChoice(draft.build.raceId);
+    const selected = getSelectedDraconicAncestryId();
+    draconicAncestrySelect.innerHTML = "";
+
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.textContent = "Choose ancestry";
+    draconicAncestrySelect.appendChild(emptyOption);
+
+    if (choice) {
+      for (const entry of listContentByKind(BUILTIN_CONTENT_REGISTRY, "ancestry")) {
+        const option = document.createElement("option");
+        option.value = entry.id;
+        option.textContent = entry.name;
+        draconicAncestrySelect.appendChild(option);
+      }
+    }
+
+    draconicAncestrySelect.value = selected && normalizeAncestryId(selected) ? selected : "";
+    syncEnhancedSelects();
+  }
+
   /**
    * @param {string} nextMethod
    * @returns {boolean}
@@ -704,13 +855,14 @@ export function initBuilderWizard(deps = {}) {
 
   function syncDraftFromControls() {
     const summaryNameInput = /** @type {HTMLInputElement | null} */ (root.querySelector?.("#builderWizardSummaryName"));
-    const summaryName = stepIndex === 2 && !stepSummary.hidden ? cleanString(summaryNameInput?.value) : "";
+    const summaryName = currentStep === STEP_SUMMARY && !stepSummary.hidden ? cleanString(summaryNameInput?.value) : "";
     draft.name = summaryName || cleanString(nameInput.value) || DEFAULT_NAME;
     nameInput.value = draft.name;
     draft.build.raceId = normalizeContentId(raceSelect.value, "race");
     draft.build.classId = normalizeContentId(classSelect.value, "class");
     draft.build.backgroundId = normalizeContentId(backgroundSelect.value, "background");
     draft.build.level = MIN_LEVEL;
+    syncRaceChoicesFromControls();
     if (!draft.build.abilities || typeof draft.build.abilities !== "object") {
       draft.build.abilities = { base: {} };
     }
@@ -771,8 +923,11 @@ export function initBuilderWizard(deps = {}) {
     }
     abilityMethod = "manual";
     identityValidationAttempted = false;
+    raceChoicesValidationAttempted = false;
     abilityValidationAttempted = false;
     showIdentityValidation("");
+    showRaceChoicesValidation("");
+    renderRaceChoices();
     methodManualInput.checked = true;
     renderAbilityControlsForMethod();
   }
@@ -992,13 +1147,17 @@ export function initBuilderWizard(deps = {}) {
 
     const rows = appendDiv(summaryEl, "builderWizardSummaryRows", "");
     const labels = /** @type {{ classLevel?: unknown, race?: unknown, background?: unknown }} */ (derived.labels || {});
-    [
+    const summaryRows = [
       ["Name", draft.name],
       ["Class / Level", cleanString(labels.classLevel) || NOT_SELECTED_LABEL],
       ["Race", cleanString(labels.race) || NOT_SELECTED_LABEL],
       ["Background", cleanString(labels.background) || NOT_SELECTED_LABEL],
       ["Proficiency Bonus", derived.proficiencyBonus == null ? "" : signedNumber(derived.proficiencyBonus)]
-    ].forEach(([label, value]) => {
+    ];
+    const ancestryId = getSupportedRaceChoice(draft.build.raceId) ? getSelectedDraconicAncestryId() : "";
+    const ancestry = ancestryId ? getContentById(BUILTIN_CONTENT_REGISTRY, ancestryId) : null;
+    if (ancestry) summaryRows.splice(4, 0, ["Draconic Ancestry", ancestry.name]);
+    summaryRows.forEach(([label, value]) => {
       const row = appendDiv(rows, "builderSummaryRow", "");
       appendDiv(row, "builderSummaryLabel", label);
       appendDiv(row, "builderSummaryValue", value || NOT_SELECTED_LABEL);
@@ -1018,15 +1177,35 @@ export function initBuilderWizard(deps = {}) {
     }
   }
 
+  function getNextStep(step) {
+    if (step === STEP_IDENTITY) {
+      return getSupportedRaceChoice(draft.build.raceId) ? STEP_RACE_CHOICES : STEP_ABILITIES;
+    }
+    if (step === STEP_RACE_CHOICES) return STEP_ABILITIES;
+    if (step === STEP_ABILITIES) return STEP_SUMMARY;
+    return STEP_SUMMARY;
+  }
+
+  function getPreviousStep(step) {
+    if (step === STEP_SUMMARY) return STEP_ABILITIES;
+    if (step === STEP_ABILITIES) {
+      return getSupportedRaceChoice(draft.build.raceId) ? STEP_RACE_CHOICES : STEP_IDENTITY;
+    }
+    if (step === STEP_RACE_CHOICES) return STEP_IDENTITY;
+    return STEP_IDENTITY;
+  }
+
   function syncStep() {
     renderAbilityMethods();
-    stepIdentity.hidden = stepIndex !== 0;
-    stepAbilities.hidden = stepIndex !== 1;
-    stepSummary.hidden = stepIndex !== 2;
-    backBtn.hidden = stepIndex === 0;
-    nextBtn.hidden = stepIndex === 2;
-    finishBtn.hidden = stepIndex !== 2;
-    if (stepIndex === 2) renderSummary();
+    stepIdentity.hidden = currentStep !== STEP_IDENTITY;
+    stepRaceChoices.hidden = currentStep !== STEP_RACE_CHOICES;
+    stepAbilities.hidden = currentStep !== STEP_ABILITIES;
+    stepSummary.hidden = currentStep !== STEP_SUMMARY;
+    backBtn.hidden = currentStep === STEP_IDENTITY;
+    nextBtn.hidden = currentStep === STEP_SUMMARY;
+    finishBtn.hidden = currentStep !== STEP_SUMMARY;
+    if (currentStep === STEP_RACE_CHOICES) renderRaceChoices();
+    if (currentStep === STEP_SUMMARY) renderSummary();
   }
 
   function close() {
@@ -1054,7 +1233,7 @@ export function initBuilderWizard(deps = {}) {
       build: makeDefaultCharacterBuild()
     };
     draft.build.level = MIN_LEVEL;
-    stepIndex = 0;
+    currentStep = STEP_IDENTITY;
     previousFocus = document.activeElement;
     summaryEl.innerHTML = "";
     syncControlsFromDraft();
@@ -1108,28 +1287,42 @@ export function initBuilderWizard(deps = {}) {
 
   nextBtn.addEventListener("click", () => {
     syncDraftFromControls();
-    if (stepIndex === 0) {
+    if (currentStep === STEP_IDENTITY) {
       identityValidationAttempted = true;
       const identityMessage = getIdentityValidationMessage();
       showIdentityValidation(identityMessage);
       if (identityMessage) return;
     }
-    if (stepIndex === 1) abilityValidationAttempted = true;
+    if (currentStep === STEP_RACE_CHOICES) {
+      raceChoicesValidationAttempted = true;
+      const raceChoicesMessage = getRaceChoicesValidationMessage({ showIncomplete: true });
+      showRaceChoicesValidation(raceChoicesMessage);
+      if (raceChoicesMessage) return;
+    }
+    if (currentStep === STEP_ABILITIES) abilityValidationAttempted = true;
     const validationMessage = getAbilityValidationMessage({ showIncomplete: abilityValidationAttempted });
-    if (stepIndex === 1 && validationMessage) {
+    if (currentStep === STEP_ABILITIES && validationMessage) {
       showAbilityValidation(validationMessage);
       return;
     }
-    stepIndex = Math.min(2, stepIndex + 1);
+    currentStep = getNextStep(currentStep);
     syncStep();
   }, { signal });
   backBtn.addEventListener("click", () => {
     syncDraftFromControls();
-    stepIndex = Math.max(0, stepIndex - 1);
+    currentStep = getPreviousStep(currentStep);
     syncStep();
   }, { signal });
   finishBtn.addEventListener("click", () => {
     syncDraftFromControls();
+    const raceChoicesMessage = getRaceChoicesValidationMessage({ showIncomplete: true });
+    if (raceChoicesMessage) {
+      currentStep = STEP_RACE_CHOICES;
+      raceChoicesValidationAttempted = true;
+      syncStep();
+      showRaceChoicesValidation(raceChoicesMessage);
+      return;
+    }
     abilityValidationAttempted = true;
     const validationMessage = getAbilityValidationMessage({ showIncomplete: true });
     if (validationMessage) {
@@ -1147,10 +1340,20 @@ export function initBuilderWizard(deps = {}) {
   rollModeSelect?.addEventListener("change", handleRollModeChange, { signal });
   for (const select of [raceSelect, classSelect, backgroundSelect]) {
     select.addEventListener("change", () => {
+      syncDraftFromControls();
+      if (select === raceSelect) {
+        raceChoicesValidationAttempted = false;
+        showRaceChoicesValidation("");
+        renderRaceChoices();
+      }
       if (!identityValidationAttempted) return;
       showIdentityValidation(getIdentityValidationMessage());
     }, { signal });
   }
+  draconicAncestrySelect.addEventListener("change", () => {
+    syncRaceChoicesFromControls();
+    showRaceChoicesValidation(getRaceChoicesValidationMessage({ showIncomplete: raceChoicesValidationAttempted }));
+  }, { signal });
   for (const select of Object.values(standardArraySelects)) {
     select.addEventListener("change", handleStandardArrayChange, { signal });
   }
@@ -1167,6 +1370,7 @@ export function initBuilderWizard(deps = {}) {
       raceSelect,
       classSelect,
       backgroundSelect,
+      draconicAncestrySelect,
       ...(rollModeSelect ? [rollModeSelect] : []),
       ...Object.values(standardArraySelects),
       ...Object.values(rollAssignmentSelects)

@@ -565,6 +565,16 @@ function installBuilderWizardDom(document) {
   identityValidation.setAttribute("role", "status");
   identityValidation.setAttribute("aria-live", "polite");
 
+  const raceChoices = appendWithId(document, body, "section", "builderWizardStepRaceChoices", "builderWizardStep");
+  raceChoices.hidden = true;
+  appendWithId(document, raceChoices, "h3", "builderWizardRaceChoicesTitle", "builderWizardStepTitle").textContent = "Race Choices";
+  const raceChoicesGrid = appendWithId(document, raceChoices, "div", "builderWizardGrid", "builderWizardGrid");
+  appendWithId(document, raceChoicesGrid, "select", "builderWizardDraconicAncestry");
+  const raceChoicesValidation = appendWithId(document, raceChoices, "div", "builderWizardRaceChoicesValidation", "builderWizardValidation");
+  raceChoicesValidation.hidden = true;
+  raceChoicesValidation.setAttribute("role", "status");
+  raceChoicesValidation.setAttribute("aria-live", "polite");
+
   const abilities = appendWithId(document, body, "section", "builderWizardStepAbilities", "builderWizardStep");
   abilities.hidden = true;
   appendWithId(document, abilities, "h3", "builderWizardAbilitiesTitle", "builderWizardStepTitle").textContent = "Ability Scores";
@@ -702,6 +712,7 @@ async function finishBuilderWizardWith({
   raceId = "race_human",
   classId = "class_fighter",
   backgroundId = "background_soldier",
+  ancestryId = "",
   abilities = { Str: 15, Dex: 14, Con: 13, Int: 12, Wis: 10, Cha: 8 }
 } = {}) {
   document.getElementById("builderWizardName").value = name;
@@ -709,6 +720,13 @@ async function finishBuilderWizardWith({
   document.getElementById("builderWizardClass").value = classId;
   document.getElementById("builderWizardBackground").value = backgroundId;
   document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+  if (!document.getElementById("builderWizardStepRaceChoices").hidden) {
+    if (ancestryId) {
+      document.getElementById("builderWizardDraconicAncestry").value = ancestryId;
+      document.getElementById("builderWizardDraconicAncestry").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    }
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+  }
   Object.entries(abilities).forEach(([suffix, value]) => {
     document.getElementById(`builderWizardAbility${suffix}`).value = String(value);
   });
@@ -1512,6 +1530,98 @@ describe("character page selector", () => {
     controller.destroy();
   });
 
+  it("routes Dragonborn Identity to Race Choices before Ability Scores", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    expect(document.getElementById("builderWizardStepIdentity").hidden).toBe(true);
+    expect(document.getElementById("builderWizardStepRaceChoices").hidden).toBe(false);
+    expect(document.getElementById("builderWizardStepAbilities").hidden).toBe(true);
+    expect(document.getElementById("builderWizardRaceChoicesValidation").hidden).toBe(true);
+    expect(document.getElementById("builderWizardRaceChoicesValidation").textContent).toBe("");
+    expect(getSelectOptionValues(document.getElementById("builderWizardDraconicAncestry"))).toContain("red");
+
+    controller.destroy();
+  });
+
+  it("blocks Dragonborn Race Choices until Draconic Ancestry is selected", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    expect(document.getElementById("builderWizardStepRaceChoices").hidden).toBe(false);
+    expect(document.getElementById("builderWizardStepAbilities").hidden).toBe(true);
+    expect(document.getElementById("builderWizardRaceChoicesValidation").textContent)
+      .toBe("Draconic Ancestry is required before continuing.");
+    expect(deps.setStatus).toHaveBeenCalledWith(
+      "Draconic Ancestry is required before continuing.",
+      { stickyMs: 2500 }
+    );
+
+    controller.destroy();
+  });
+
+  it("allows selected Dragonborn ancestry to progress to Ability Scores", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardDraconicAncestry").value = "red";
+    document.getElementById("builderWizardDraconicAncestry").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    expect(document.getElementById("builderWizardStepRaceChoices").hidden).toBe(true);
+    expect(document.getElementById("builderWizardStepAbilities").hidden).toBe(false);
+    expect(document.getElementById("builderWizardRaceChoicesValidation").hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("enhances the Dragonborn ancestry select with the shared select dropdown", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    const select = document.getElementById("builderWizardDraconicAncestry");
+    const wrap = select.nextElementSibling;
+    const button = wrap?.querySelector(".builderWizardSelectBtn");
+    const menu = wrap?.querySelector(".dropdownMenu");
+    expect(select.classList.contains("nativeSelectHidden")).toBe(true);
+    expect(wrap?.classList.contains("selectDropdown")).toBe(true);
+    expect(button?.getAttribute("aria-expanded")).toBe("false");
+    expect(menu?.hidden).toBe(true);
+
+    controller.destroy();
+  });
+
   it("creates a populated builder character on wizard Finish", async () => {
     const { document, actionMenuButton } = installCharacterSelectorDom();
     installBuilderWizardDom(document);
@@ -1563,6 +1673,104 @@ describe("character page selector", () => {
     controller.destroy();
   });
 
+  it("persists selected Dragonborn ancestry without derived mechanics on Finish", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await finishBuilderWizardWith({ raceId: "dragonborn", ancestryId: "red" });
+
+    const created = deps.state.characters.entries[2];
+    expect(created.build.choicesByLevel["1"]["dragonborn-ancestry"]).toBe("red");
+    expect(created).not.toHaveProperty("breathWeapon");
+    expect(created).not.toHaveProperty("damageResistance");
+    expect(created.build).not.toHaveProperty("breathWeapon");
+    expect(created.build).not.toHaveProperty("damageResistance");
+    expect(created.build).not.toHaveProperty("abilityMethod");
+
+    controller.destroy();
+  });
+
+  it("skips Race Choices and persists no Dragonborn ancestry for non-Dragonborn", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await finishBuilderWizardWith({ raceId: "race_human" });
+
+    const created = deps.state.characters.entries[2];
+    expect(created.build.raceId).toBe("race_human");
+    expect(created.build.choicesByLevel["1"]?.["dragonborn-ancestry"]).toBeUndefined();
+    expect(document.getElementById("builderWizardStepRaceChoices").hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("clears stale Dragonborn ancestry when Race changes away from Dragonborn", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardDraconicAncestry").value = "red";
+    document.getElementById("builderWizardDraconicAncestry").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardBack").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardRace").value = "race_human";
+    document.getElementById("builderWizardRace").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardFinish").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    const created = deps.state.characters.entries[2];
+    expect(created.build.raceId).toBe("race_human");
+    expect(created.build.choicesByLevel["1"]?.["dragonborn-ancestry"]).toBeUndefined();
+
+    controller.destroy();
+  });
+
+  it("requires a fresh ancestry selection after changing away from and back to Dragonborn", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardDraconicAncestry").value = "red";
+    document.getElementById("builderWizardDraconicAncestry").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardBack").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardRace").value = "race_human";
+    document.getElementById("builderWizardRace").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardRace").value = "dragonborn";
+    document.getElementById("builderWizardRace").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    expect(document.getElementById("builderWizardStepRaceChoices").hidden).toBe(false);
+    expect(document.getElementById("builderWizardDraconicAncestry").value).toBe("");
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    expect(document.getElementById("builderWizardRaceChoicesValidation").textContent)
+      .toBe("Draconic Ancestry is required before continuing.");
+
+    controller.destroy();
+  });
+
   it("does not persist abilityMethod on the build object after wizard Finish", async () => {
     const { document, actionMenuButton } = installCharacterSelectorDom();
     installBuilderWizardDom(document);
@@ -1610,6 +1818,38 @@ describe("character page selector", () => {
     expect(summary).toContain("Sage");
     expect(summary).toContain("+2");
     expect(summary).toContain("16 (+3)");
+
+    controller.destroy();
+  });
+
+  it("renders selected Dragonborn ancestry in Summary without mechanics", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    completeBuilderIdentity({
+      name: "Dragon Mira",
+      raceId: "dragonborn",
+      classId: "class_fighter",
+      backgroundId: "background_soldier"
+    });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardDraconicAncestry").value = "red";
+    document.getElementById("builderWizardDraconicAncestry").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    const summary = document.getElementById("builderWizardSummary").textContent;
+    expect(summary).toContain("Dragonborn");
+    expect(summary).toContain("Draconic Ancestry");
+    expect(summary).toContain("Red");
+    expect(summary).not.toContain("Breath Weapon");
+    expect(summary).not.toContain("Damage Resistance");
 
     controller.destroy();
   });

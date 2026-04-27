@@ -166,7 +166,7 @@ export function enhanceSelectDropdown(args) {
         if (!isCardHosted()) {
           try { popoverApi?.close?.(); } catch { /* noop */ }
         }
-      }, { signal: listenerSignal });
+      });
 
       menu.appendChild(b);
     };

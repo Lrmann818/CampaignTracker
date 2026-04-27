@@ -1,19 +1,75 @@
 // @ts-check
 // Minimal read-only builtin content for the Step 3 rules foundation.
 
+import draconicAncestries from "../../../game-data/srd/draconic-ancestries.json";
+import races from "../../../game-data/srd/races.json";
+
 /**
- * @typedef {"race" | "class" | "background"} BuiltinContentKind
+ * @typedef {"race" | "class" | "background" | "ancestry"} BuiltinContentKind
  * @typedef {{
  *   id: string,
  *   kind: BuiltinContentKind,
  *   name: string,
- *   source: "builtin",
+ *   source: "builtin" | "srd-5.1",
  *   ruleset: "srd-5.1",
  *   data: Record<string, unknown>
  * }} BuiltinContentEntry
  */
 
 const RULESET = "srd-5.1";
+
+/**
+ * @param {unknown} value
+ * @returns {value is Record<string, unknown>}
+ */
+function isRecord(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * @param {unknown} source
+ * @returns {BuiltinContentEntry[]}
+ */
+function makeDragonbornEntries(source) {
+  if (!Array.isArray(source)) return [];
+  const dragonborn = source.find((entry) =>
+    isRecord(entry) && entry.id === "dragonborn" && entry.kind === "race"
+  );
+  if (!isRecord(dragonborn) || typeof dragonborn.name !== "string") return [];
+  return [
+    Object.freeze({
+      id: "dragonborn",
+      kind: "race",
+      name: dragonborn.name,
+      source: "srd-5.1",
+      ruleset: RULESET,
+      data: Object.freeze({ ...dragonborn })
+    })
+  ];
+}
+
+/**
+ * @param {unknown} source
+ * @returns {BuiltinContentEntry[]}
+ */
+function makeDraconicAncestryEntries(source) {
+  if (!Array.isArray(source)) return [];
+  return source
+    .filter((entry) =>
+      isRecord(entry) &&
+      typeof entry.id === "string" &&
+      entry.kind === "ancestry" &&
+      typeof entry.name === "string"
+    )
+    .map((entry) => Object.freeze({
+      id: /** @type {string} */ (entry.id),
+      kind: "ancestry",
+      name: /** @type {string} */ (entry.name),
+      source: "srd-5.1",
+      ruleset: RULESET,
+      data: Object.freeze({ ...entry })
+    }));
+}
 
 /** @type {readonly BuiltinContentEntry[]} */
 export const BUILTIN_CONTENT = Object.freeze([
@@ -88,6 +144,7 @@ export const BUILTIN_CONTENT = Object.freeze([
     source: "builtin",
     ruleset: RULESET,
     data: Object.freeze({})
-  })
+  }),
+  ...makeDragonbornEntries(races),
+  ...makeDraconicAncestryEntries(draconicAncestries)
 ]);
-

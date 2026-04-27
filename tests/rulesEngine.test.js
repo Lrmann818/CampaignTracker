@@ -27,7 +27,8 @@ describe("builtin content registry", () => {
     expect(listContentByKind(BUILTIN_CONTENT_REGISTRY, "race").map((entry) => entry.id)).toEqual([
       "race_human",
       "race_dwarf",
-      "race_elf"
+      "race_elf",
+      "dragonborn"
     ]);
     expect(listContentByKind(BUILTIN_CONTENT_REGISTRY, "class").map((entry) => entry.id)).toEqual([
       "class_fighter",
@@ -39,6 +40,7 @@ describe("builtin content registry", () => {
       "background_sage",
       "background_soldier"
     ]);
+    expect(listContentByKind(BUILTIN_CONTENT_REGISTRY, "ancestry").map((entry) => entry.id)).toContain("red");
   });
 
   it("returns null or an empty list for unknown content", () => {
