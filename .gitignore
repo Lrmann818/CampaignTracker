@@ -31,3 +31,6 @@ temp/
 
 # Private personal notes
 docs/#personal/
+
+# Markdownlint config gile
+.markdownlint.json

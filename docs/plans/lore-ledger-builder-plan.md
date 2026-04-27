@@ -22,8 +22,7 @@ Canonical references:
 
 ## Current Direction
 
-SRD 5.1 is the active builtin source. SRD 5.2.1 is retired and must not be used as a
-source for shipped builder content.
+SRD 5.1 is the active builtin source. SRD 5.2.1 is retired and must not be used as a source for shipped builder content.
 
 The implementation strategy is vertical-slice-first:
 
