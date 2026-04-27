@@ -4,7 +4,7 @@ _Status: **RATIFIED 2026-04-22.** All open design questions resolved. Project-of
 
 _This file is a design record. It explains **why** the build-time choices schema and vertical-slice-first SRD registry strategy were chosen. `docs/reference/content-registry-plan.md` and `AGENTS.md` remain the authoritative **what** and rules. If they conflict with this record, the reference docs win and this file should be updated to reflect the discrepancy._
 
-Last updated: 2026-04-22
+Last updated: 2026-04-27
 
 ---
 
@@ -313,6 +313,8 @@ When the user picks Dragonborn, the wizard:
 2. Renders a "Pick your Draconic Ancestry" picker, with options pulled from `draconic-ancestries.json` (per `from.source`).
 3. User picks `red`. Stored as `build.choicesByLevel["1"]["dragonborn-ancestry"] = "red"`.
 4. When rendering trait cards, looks up the three traits. For `breath-weapon` and `damage-resistance`, sees `derivedFrom: "dragonborn-ancestry"`, looks up the user's chosen value, and pulls the derived fields (fire damage, 15-foot cone, Dex save, fire resistance) from the ancestry record into the rendered card.
+
+**Implementation status (as of April 27, 2026):** Steps 1–3 are complete (Phase 3A). Step 4 — trait card rendering with derived Breath Weapon and Damage Resistance values — is deferred to Phase 3B. The current builder surfaces the selected ancestry label in Summary but does not yet derive trait mechanics from the ancestry record.
 
 Notice: the same `race.choices` iteration handles every choice, regardless of whether a trait is involved. Human's "extra language" choice flows through identical builder code; it just resolves to a language picker instead of an ancestry picker.
 

@@ -156,14 +156,14 @@ Work items:
 Initial step order:
 
 1. Identity — name, race, class, background, fixed starting level 1
-2. Race choices — required race-specific build choices once data supports them
+2. Race choices — required race-specific build choices; Dragonborn routes through this step for Draconic Ancestry selection; non-Dragonborn races skip this step until their choices are implemented
 3. Class choices — required class/subclass/proficiency/spell choices once data supports them
 4. Background choices — required background choices once data supports them
 5. Ability scores — Manual, Standard Array, Point Buy, and Roll through wizard-local draft state
 6. Equipment — only after the equipment slice exists
 7. Summary — review before finishing
 
-NOTE: Ability-score methods were implemented before the full choice flow as an isolated Phase 2B slice, but the final wizard order should place ability scores after identity and supported race/class/background choices so users can assign scores with better context.
+NOTE: Ability-score methods were implemented before the full choice flow as an isolated Phase 2B slice. The intended and current final wizard order places ability scores after identity and supported race/class/background choices. As of Phase 3A, Dragonborn characters route through Race Choices before Ability Scores; other races proceed directly from Identity to Ability Scores until their choices are implemented.
 
 Phase 2A polish scope:
 
@@ -198,7 +198,7 @@ Completed:
 - Builder-created characters are fixed at level 1 for this phase.
 - Ability-score methods remain wizard-local draft state and persist only final `build.abilities.base` scores.
 - Roll supports duplicate numeric results by tracking rolled score instances rather than score values alone.
-- The final wizard order should place ability scores after supported race/class/background choices, even though ability-score methods were implemented first as an isolated slice.
+- The final wizard order places ability scores after identity and supported race/class/background choices. As of Phase 3A, Dragonborn characters route through Race Choices between Identity and Ability Scores; non-Dragonborn characters proceed directly from Identity to Ability Scores until their race choices are implemented.
 
 ---
 
@@ -206,9 +206,40 @@ Completed:
 
 Goal: expand beyond minimal identity and abilities once Phase 1 proves the registry path.
 
+### Phase 3A: Dragonborn Draconic Ancestry Choice — COMPLETE
+
+Completed April 27, 2026.
+
+- Added a Race Choices step to the wizard that routes between Identity and Ability Scores for races that require build-time choices.
+- Dragonborn routes through Race Choices before Ability Scores. Non-Dragonborn races skip Race Choices until their choices are implemented.
+- The Race Choices step presents a Draconic Ancestry picker populated from `draconic-ancestries.json` through a narrow runtime registry bridge.
+- The selected ancestry persists as `build.choicesByLevel["1"]["dragonborn-ancestry"] = "<ancestry-id>"`, where the value is the bare ancestry id (e.g. `"red"`).
+- Changing away from Dragonborn clears stale ancestry draft state.
+- Summary displays the selected ancestry label.
+- The registry bridge preserves existing saved builder ID compatibility and does not broadly convert saved IDs.
+- No schema migration, adapter regeneration, or generated JSON edits were introduced.
+
+Not implemented in Phase 3A (deferred to Phase 3B):
+
+- Breath Weapon derivation from the chosen ancestry
+- Damage Resistance derivation from the chosen ancestry
+
+### Phase 3B: Dragonborn Trait Derivation (Upcoming)
+
+Goal: derive Breath Weapon and Damage Resistance mechanics from the chosen Draconic Ancestry.
+
 Work items:
 
-- Add picker UI for supported build-time choices.
+- Read `build.choicesByLevel["1"]["dragonborn-ancestry"]` to resolve the chosen ancestry record.
+- Surface Breath Weapon damage type, shape, size, and save ability from the ancestry data.
+- Surface Damage Resistance damage type from the ancestry data.
+- Add derivation tests before expanding derivation to other races or traits.
+
+### Remaining Phase 3 Work Items
+
+Applicable to future choice expansion beyond Dragonborn:
+
+- Add picker UI for supported build-time choices as races and classes gain choice data.
 - Keep choice kinds aligned with the closed set in the registry plan.
 - Derive sheet-facing values from build choices and registry data.
 - Avoid materializing derived fields into persisted character fields unless a later phase
@@ -216,10 +247,9 @@ Work items:
 - Add tests for derivation behavior before widening the content set.
 - Add race ability bonus previews to the Ability Scores step once racial modifiers are derived.
 
-Examples of likely choice areas:
+Examples of likely future choice areas:
 
 - Languages
-- Ancestry selections
 - Skills
 - Automatically granted cantrips or spells where greenlit
 
