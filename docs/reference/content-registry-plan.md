@@ -662,6 +662,30 @@ appropriate normal-sheet home when the value is derivable. Future class-derived
 resources, such as Sorcery Points, should follow the same read-only derivation
 pattern before any intentional tracking or editing slice is added.
 
+Normal sheet ownership should stay explicit:
+
+- Vitals owns compact derived stats and canonical resource counters.
+- Weapons owns normal weapon/equipment attacks.
+- Spells owns actual spells.
+- Abilities & Features owns special feature/action mechanics such as Dragonborn
+  Breath Weapon, Dhampir Vampiric Bite, class/race feature actions, and similar
+  rules-backed abilities that need structured fields such as activation, source,
+  save type, DC, area/range, damage, damage type, recovery, cost, and rules
+  description.
+
+Do not route Breath Weapon or similar feature actions into Spells just because
+they have DCs, damage, descriptions, or limited uses. Do not route them into
+Weapons unless they are actually normal weapon/equipment attacks. Dragonborn
+Breath Weapon should first surface as a derived, display-only Abilities &
+Features card, while its derived save DC may also appear in Vitals as a compact
+combat stat.
+
+Resource state must have one canonical counter. Feature cards may reference,
+spend, restore, or explain that resource, but they must not duplicate the
+counter. Rest actions should be character-level actions, not panel-local
+buttons, so Short Rest and Long Rest can eventually apply recovery rules across
+all relevant systems.
+
 These derived values are not registry records and are not flat stored character
 fields by default. Race bonuses, derived combat stats, damage resistance, breath
 weapon area, save DC, damage dice, and future derived resources should be

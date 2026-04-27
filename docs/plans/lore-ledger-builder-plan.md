@@ -256,6 +256,36 @@ Still deferred beyond Phase 3B:
 - Action tracking, uses/rest tracking, rest recharge, and combat automation for Breath Weapon.
 - Broader normal-sheet surfacing for derived ancestry mechanics beyond the current Vitals display of Breath Weapon DC.
 
+### Phase 3C: Abilities & Features Panel Foundation — PLANNED
+
+Goal: add the normal character-page home for special rule-backed abilities and feature actions that do not fit cleanly into Weapons, Spells, Vitals, or simple resource trackers.
+
+This is the next planned slice after Dragonborn ancestry preview and Breath Weapon DC display. It is an architecture/product decision, not shipped behavior yet.
+
+Initial scope:
+
+- Add a character-page panel named "Abilities & Features" as the shared normal-sheet surface for builder and freeform characters.
+- Display special rule-backed abilities/features such as Dragonborn Breath Weapon, Dhampir Vampiric Bite, class/race feature actions, and other feature-like mechanics that need fields beyond normal weapon tiles, spell sections, or vitals/resource tiles.
+- Start simple for Dragonborn: Breath Weapon should first appear as a derived, display-only Abilities & Features card.
+- The initial Dragonborn card should not track uses, automate rests, mutate Weapons or Spells, or copy derived mechanics into flat character fields.
+- Keep freeform behavior unaffected while establishing the shared panel surface.
+
+Surface ownership:
+
+- Vitals owns compact derived stats and canonical resource counters. Breath Weapon DC can appear in Vitals as a derived combat stat. Sorcery Points, Luck/Inspiration points, Ki, and similar pools should be tracked once in Vitals/resource trackers when tracking exists.
+- Weapons owns normal weapon/equipment attacks. Do not put Breath Weapon or similar feature actions into Weapons unless they are actually normal weapon/equipment attacks.
+- Spells owns actual spells. Do not put Breath Weapon or similar feature actions into Spells just because they have DCs, damage, descriptions, or limited uses.
+- Abilities & Features owns the structured "how this ability works" display: activation, source, save type, DC, area/range, damage, damage type, recovery, cost, and rules description.
+- Rest buttons should live near the character page menu button as character-level actions, not inside Abilities & Features.
+
+Resource ownership:
+
+- Resources must not be tracked in multiple places.
+- A resource has one canonical counter.
+- Feature cards may reference, spend, restore, or explain that resource, but they must not duplicate resource state.
+- Short Rest and Long Rest should eventually apply recovery rules across all relevant systems from the character-level action path.
+- Complex features/resources may later need specialized cards or renderers. For example, Sorcery Points plus Metamagic plus Flexible Casting may need a specialized UI. Even specialized UIs must read/write the same canonical resource counter.
+
 ### Derived Resources and Derived Combat Stats Pattern
 
 Derived table-use values should appear in the normal character sheet panel where users need them during play. Builder Summary can collect and explain builder-derived mechanics, but it must not be the only place users can find values they need at the table.
@@ -263,6 +293,7 @@ Derived table-use values should appear in the normal character sheet panel where
 Current example:
 
 - Dragonborn Breath Weapon DC is derivable from ancestry, Constitution modifier, and proficiency bonus, so Vitals is the appropriate normal-sheet home for that combat DC.
+- Dragonborn Breath Weapon's full action-style mechanics belong in the planned Abilities & Features panel, not in Spells or Weapons.
 
 Future examples may include class-derived resources such as Sorcery Points or similar level/class features. These values should be derived and read-only first. Do not persist them into flat/freeform fields unless a later explicit tracking or editing slice intentionally adds that behavior.
 
