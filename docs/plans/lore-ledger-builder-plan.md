@@ -190,6 +190,13 @@ Summary review scope:
 - The Summary name field updates the same draft character name used by Identity, not a separate copy.
 - Finishing the wizard must still produce a character whose name can be edited later through the normal character sheet flow.
 
+Choice preview rule:
+
+- Builder choice steps should show a read-only selected-option preview before Continue when the selected option has meaningful explanation or mechanical impact available from local SRD/generated data.
+- The preview is explanatory UI only. It must derive from registry records plus domain derivation logic, and must not duplicate derived values into persisted flat character fields or create a second source of truth.
+- Stored choices remain normalized IDs in `build.choicesByLevel`; preview labels and mechanics are resolved from those IDs at render time.
+- Dragonborn Draconic Ancestry is the first concrete example of this pattern, not a Dragonborn-only rule.
+
 Completed:
 
 - Phase 2A established and polished the builder wizard shell using existing modal/dropdown patterns.
@@ -213,27 +220,36 @@ Completed April 27, 2026.
 - Added a Race Choices step to the wizard that routes between Identity and Ability Scores for races that require build-time choices.
 - Dragonborn routes through Race Choices before Ability Scores. Non-Dragonborn races skip Race Choices until their choices are implemented.
 - The Race Choices step presents a Draconic Ancestry picker populated from `draconic-ancestries.json` through a narrow runtime registry bridge.
+- The Race Choices step previews the selected ancestry's derived breath weapon and resistance before the user continues, following the general selected-option preview rule for rules-backed choices.
 - The selected ancestry persists as `build.choicesByLevel["1"]["dragonborn-ancestry"] = "<ancestry-id>"`, where the value is the bare ancestry id (e.g. `"red"`).
 - Changing away from Dragonborn clears stale ancestry draft state.
 - Summary displays the selected ancestry label.
 - The registry bridge preserves existing saved builder ID compatibility and does not broadly convert saved IDs.
 - No schema migration, adapter regeneration, or generated JSON edits were introduced.
 
-Not implemented in Phase 3A (deferred to Phase 3B):
+Deferred from Phase 3A to Phase 3B:
 
 - Breath Weapon derivation from the chosen ancestry
 - Damage Resistance derivation from the chosen ancestry
 
-### Phase 3B: Dragonborn Trait Derivation (Upcoming)
+### Phase 3B: Dragonborn Trait Derivation — COMPLETE
 
 Goal: derive Breath Weapon and Damage Resistance mechanics from the chosen Draconic Ancestry.
 
-Work items:
+Completed April 27, 2026.
 
-- Read `build.choicesByLevel["1"]["dragonborn-ancestry"]` to resolve the chosen ancestry record.
-- Surface Breath Weapon damage type, shape, size, and save ability from the ancestry data.
-- Surface Damage Resistance damage type from the ancestry data.
-- Add derivation tests before expanding derivation to other races or traits.
+- `deriveCharacter(...)` reads `build.choicesByLevel["1"]["dragonborn-ancestry"]` and resolves the chosen ancestry record through the builtin registry/rules data.
+- Derived Dragonborn ancestry mechanics now include damage resistance, breath weapon damage type, breath weapon area/shape, save ability, save DC, and damage dice scaling.
+- Breath Weapon save DC is derived as `8 + Constitution modifier + proficiency bonus`.
+- Breath Weapon damage dice scale by builder level: `2d6` before level 6, `3d6` from level 6, `4d6` from level 11, and `5d6` from level 16.
+- Builder Summary displays the selected ancestry mechanics as the current temporary builder-specific surface for this vertical slice.
+- The persisted builder record still stores only the normalized ancestry choice ID. Derived ancestry mechanics are not copied into flat character fields or persisted as duplicate builder fields.
+- Freeform characters remain unchanged.
+- Derivation and Summary rendering tests cover the Dragonborn vertical slice before expanding the same pattern to other races or traits.
+
+Still deferred beyond Phase 3B:
+
+- Surfacing derived ancestry mechanics through the normal character sheet trait/panel experience rather than only through builder-specific Summary UI.
 
 ### Remaining Phase 3 Work Items
 

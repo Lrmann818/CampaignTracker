@@ -626,6 +626,28 @@ Example:
 build.choicesByLevel["1"]["dragonborn-ancestry"] = "red";
 ```
 
+Choice storage remains normalized. The persisted value is the selected option's ID,
+not a copied label, description, or mechanical summary.
+
+When a choice option has meaningful explanation or mechanical impact available in
+registry data, the wizard may render a read-only selected-option preview before
+the user continues. Content records should expose enough displayable, structured
+data for that preview when the data is already part of the approved SRD-backed
+model. The preview is derived UI, not persisted character data: labels,
+descriptions, and mechanics are resolved from the stored choice ID, registry
+records, and domain derivation logic at render time.
+
+Dragonborn Draconic Ancestry is the first concrete example. The stored value is a
+bare ancestry ID such as `"red"`; the selected ancestry record supplies the
+damage type, breath weapon shape/size, save ability, and related display text.
+Rules derivation combines that record with builder level, Constitution modifier,
+and proficiency bonus to display damage resistance, breath weapon damage type,
+breath weapon area/shape, save ability, save DC (`8 + Constitution modifier +
+proficiency bonus`), and level-scaled damage dice. These values are derived from
+the stored choice ID and registry/rules data for preview and builder display;
+they are not duplicated into flat persisted character fields by default. Choices
+without meaningful displayable data are not required to invent preview content.
+
 ### Choice `from` Types
 
 `from` takes one of three shapes:

@@ -22,6 +22,14 @@ const ABILITY_LABELS = Object.freeze({
   wis: "WIS",
   cha: "CHA"
 });
+const ABILITY_FULL_NAMES = Object.freeze({
+  str: "Strength",
+  dex: "Dexterity",
+  con: "Constitution",
+  int: "Intelligence",
+  wis: "Wisdom",
+  cha: "Charisma"
+});
 
 /**
  * @param {unknown} value
@@ -85,7 +93,8 @@ function getSafeAbilityRows(derived) {
  *   backgroundLabel: string,
  *   level: number,
  *   proficiencyBonus: number,
- *   abilities: Array<{ key: string, label: string, total: number, modifier: number }>
+ *   abilities: Array<{ key: string, label: string, total: number, modifier: number }>,
+ *   dragonbornAncestry: import("../../../domain/rules/deriveCharacter.js").DragonbornAncestryDerived | null
  * } | null}
  */
 function getBuilderSummaryViewModel(character) {
@@ -118,7 +127,8 @@ function getBuilderSummaryViewModel(character) {
     backgroundLabel: cleanString(labels.background) || PLACEHOLDER,
     level: derived.level,
     proficiencyBonus: derived.proficiencyBonus,
-    abilities
+    abilities,
+    dragonbornAncestry: derived.dragonbornAncestry ?? null
   };
 }
 
@@ -134,6 +144,18 @@ function appendDiv(parent, className, text = null) {
   if (text != null) el.textContent = text;
   parent.appendChild(el);
   return el;
+}
+
+/**
+ * @param {import("../../../domain/rules/deriveCharacter.js").DragonbornAncestryDerived["breathWeapon"]} bw
+ * @returns {string}
+ */
+function formatBreathWeaponArea(bw) {
+  if (bw.shape === "cone" && bw.size != null) return `${bw.size} ft. cone`;
+  if (bw.shape === "line" && bw.width != null && bw.length != null) {
+    return `${bw.width} by ${bw.length} ft. line`;
+  }
+  return bw.shape;
 }
 
 /**
@@ -164,6 +186,34 @@ function renderSummary(contentEl, vm) {
     appendDiv(row, "builderSummaryLabel", label);
     appendDiv(row, "builderSummaryValue", value);
   });
+
+  const da = vm.dragonbornAncestry;
+  if (da) {
+    const conAbility = vm.abilities.find((a) => a.key === "con");
+    const conMod = conAbility?.modifier ?? null;
+    const saveLabel = /** @type {Record<string, string>} */ (ABILITY_FULL_NAMES)[da.breathWeapon.saveAbility] ?? da.breathWeapon.saveAbility;
+    const damageTypeLabel = da.damageType.charAt(0).toUpperCase() + da.damageType.slice(1);
+    const areaLabel = formatBreathWeaponArea(da.breathWeapon);
+    const breathSummary = `${areaLabel}, ${damageTypeLabel}, ${saveLabel} save`;
+
+    let dcDisplay = "—";
+    if (da.breathWeapon.saveDC != null && conMod != null) {
+      dcDisplay = `8 + ${conMod} + ${vm.proficiencyBonus} = ${da.breathWeapon.saveDC}`;
+    }
+
+    const ancestryRows = appendDiv(contentEl, "builderSummaryRows");
+    [
+      ["Draconic Ancestry", da.name],
+      ["Damage Resistance", damageTypeLabel],
+      ["Breath Weapon", breathSummary],
+      ["Breath Weapon DC", dcDisplay],
+      ["Breath Weapon Damage", da.breathWeapon.damageDice]
+    ].forEach(([label, value]) => {
+      const row = appendDiv(ancestryRows, "builderSummaryRow");
+      appendDiv(row, "builderSummaryLabel", label);
+      appendDiv(row, "builderSummaryValue", value);
+    });
+  }
 
   const abilities = appendDiv(contentEl, "builderSummaryAbilities");
   appendDiv(abilities, "builderSummarySubhead", "Ability Totals");

@@ -56,6 +56,14 @@ const ABILITY_META = Object.freeze({
   wis: { suffix: "Wis", label: "WIS" },
   cha: { suffix: "Cha", label: "CHA" }
 });
+const ABILITY_FULL_NAMES = Object.freeze({
+  str: "Strength",
+  dex: "Dexterity",
+  con: "Constitution",
+  int: "Intelligence",
+  wis: "Wisdom",
+  cha: "Charisma"
+});
 
 const STEP_IDENTITY = "identity";
 const STEP_RACE_CHOICES = "race-choices";
@@ -172,6 +180,50 @@ function normalizeAncestryId(id) {
  */
 function signedNumber(value) {
   return value >= 0 ? `+${value}` : String(value);
+}
+
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+function titleCase(value) {
+  const clean = cleanString(value);
+  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : "";
+}
+
+/**
+ * @param {import("../../domain/rules/deriveCharacter.js").DragonbornAncestryDerived["breathWeapon"]} bw
+ * @returns {string}
+ */
+function formatBreathWeaponArea(bw) {
+  if (bw.shape === "cone" && bw.size != null) return `${bw.size} ft. cone`;
+  if (bw.shape === "line" && bw.width != null && bw.length != null) {
+    return `${bw.width} by ${bw.length} ft. line`;
+  }
+  return bw.shape;
+}
+
+/**
+ * @param {ReturnType<typeof deriveCharacter>} derived
+ * @returns {Array<[string, string]>}
+ */
+function getDragonbornAncestryRows(derived) {
+  const da = derived.dragonbornAncestry;
+  if (!da) return [];
+  const saveLabel = /** @type {Record<string, string>} */ (ABILITY_FULL_NAMES)[da.breathWeapon.saveAbility] ?? da.breathWeapon.saveAbility;
+  const damageTypeLabel = titleCase(da.damageType);
+  const breathSummary = `${formatBreathWeaponArea(da.breathWeapon)}, ${damageTypeLabel}, ${saveLabel} save`;
+  const conMod = derived.abilities.con?.modifier;
+  const dcDisplay = da.breathWeapon.saveDC != null && conMod != null && derived.proficiencyBonus != null
+    ? `8 + ${ABILITY_FULL_NAMES.con} modifier (${signedNumber(conMod)}) + Proficiency Bonus (${signedNumber(derived.proficiencyBonus)}) = ${da.breathWeapon.saveDC}`
+    : NOT_SELECTED_LABEL;
+  return [
+    ["Draconic Ancestry", da.name],
+    ["Damage Resistance", damageTypeLabel],
+    ["Breath Weapon", breathSummary],
+    ["Breath Weapon DC", dcDisplay],
+    ["Breath Weapon Damage", da.breathWeapon.damageDice]
+  ];
 }
 
 /**
@@ -332,6 +384,23 @@ export function initBuilderWizard(deps = {}) {
   const stepRaceChoices = /** @type {HTMLElement} */ (guard.els.stepRaceChoices);
   const draconicAncestrySelect = /** @type {HTMLSelectElement} */ (guard.els.draconicAncestry);
   const raceChoicesValidation = /** @type {HTMLElement} */ (guard.els.raceChoicesValidation);
+  let raceChoicePreview = /** @type {HTMLElement | null} */ (root.querySelector?.("#builderWizardRaceChoicePreview"));
+  if (!raceChoicePreview) {
+    raceChoicePreview = document.createElement("section");
+    raceChoicePreview.id = "builderWizardRaceChoicePreview";
+    raceChoicePreview.className = "builderChoicePreview";
+    raceChoicePreview.setAttribute("aria-labelledby", "builderWizardRaceChoicePreviewTitle");
+    raceChoicePreview.setAttribute("aria-describedby", "builderWizardRaceChoicePreviewBody");
+    const raceChoicesGrid = draconicAncestrySelect.closest?.(".builderWizardGrid");
+    raceChoicesGrid?.insertAdjacentElement?.("afterend", raceChoicePreview);
+  }
+  const describedBy = cleanString(draconicAncestrySelect.getAttribute("aria-describedby"));
+  draconicAncestrySelect.setAttribute(
+    "aria-describedby",
+    describedBy
+      ? Array.from(new Set([...describedBy.split(/\s+/), "builderWizardRaceChoicePreviewBody"])).join(" ")
+      : "builderWizardRaceChoicePreviewBody"
+  );
   const methodManualInput = /** @type {HTMLInputElement} */ (guard.els.methodManual);
   const stepIdentity = /** @type {HTMLElement} */ (guard.els.stepIdentity);
   const stepAbilities = /** @type {HTMLElement} */ (guard.els.stepAbilities);
@@ -835,6 +904,58 @@ export function initBuilderWizard(deps = {}) {
 
     draconicAncestrySelect.value = selected && normalizeAncestryId(selected) ? selected : "";
     syncEnhancedSelects();
+    renderRaceChoicePreview();
+  }
+
+  function getDraftDerivedCharacter() {
+    return deriveCharacter({
+      id: "builder_wizard_preview",
+      name: draft.name,
+      build: draft.build,
+      overrides: {
+        abilities: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+        saves: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+        skills: {},
+        initiative: 0
+      },
+      abilities: {},
+      skills: {}
+    });
+  }
+
+  function renderRaceChoicePreview() {
+    if (!raceChoicePreview) return;
+    raceChoicePreview.innerHTML = "";
+    const title = document.createElement("h4");
+    title.id = "builderWizardRaceChoicePreviewTitle";
+    title.textContent = "Choice Preview";
+    raceChoicePreview.appendChild(title);
+
+    const body = document.createElement("div");
+    body.id = "builderWizardRaceChoicePreviewBody";
+    body.className = "builderChoicePreviewBody";
+    raceChoicePreview.appendChild(body);
+
+    if (!getSupportedRaceChoice(draft.build.raceId)) {
+      raceChoicePreview.hidden = true;
+      return;
+    }
+
+    raceChoicePreview.hidden = false;
+    const derived = getDraftDerivedCharacter();
+    const rows = getDragonbornAncestryRows(derived);
+    if (!rows.length) {
+      body.classList.add("isEmpty");
+      body.textContent = "Choose a Draconic Ancestry to preview its breath weapon and resistance.";
+      return;
+    }
+
+    const rowsEl = appendDiv(body, "builderWizardSummaryRows", "");
+    rows.forEach(([label, value]) => {
+      const row = appendDiv(rowsEl, "builderSummaryRow", "");
+      appendDiv(row, "builderSummaryLabel", label);
+      appendDiv(row, "builderSummaryValue", value || NOT_SELECTED_LABEL);
+    });
   }
 
   /**
@@ -1111,19 +1232,7 @@ export function initBuilderWizard(deps = {}) {
       if (abilityInputs[key]) abilityInputs[key].value = String(draft.build.abilities.base[key]);
     }
 
-    const derived = deriveCharacter({
-      id: "builder_wizard_preview",
-      name: draft.name,
-      build: draft.build,
-      overrides: {
-        abilities: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
-        saves: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
-        skills: {},
-        initiative: 0
-      },
-      abilities: {},
-      skills: {}
-    });
+    const derived = getDraftDerivedCharacter();
 
     summaryEl.innerHTML = "";
     const nameReview = document.createElement("label");
@@ -1154,9 +1263,8 @@ export function initBuilderWizard(deps = {}) {
       ["Background", cleanString(labels.background) || NOT_SELECTED_LABEL],
       ["Proficiency Bonus", derived.proficiencyBonus == null ? "" : signedNumber(derived.proficiencyBonus)]
     ];
-    const ancestryId = getSupportedRaceChoice(draft.build.raceId) ? getSelectedDraconicAncestryId() : "";
-    const ancestry = ancestryId ? getContentById(BUILTIN_CONTENT_REGISTRY, ancestryId) : null;
-    if (ancestry) summaryRows.splice(4, 0, ["Draconic Ancestry", ancestry.name]);
+    const ancestryRows = getDragonbornAncestryRows(derived);
+    if (ancestryRows.length) summaryRows.splice(4, 0, ...ancestryRows);
     summaryRows.forEach(([label, value]) => {
       const row = appendDiv(rows, "builderSummaryRow", "");
       appendDiv(row, "builderSummaryLabel", label);
@@ -1352,6 +1460,7 @@ export function initBuilderWizard(deps = {}) {
   }
   draconicAncestrySelect.addEventListener("change", () => {
     syncRaceChoicesFromControls();
+    renderRaceChoicePreview();
     showRaceChoicesValidation(getRaceChoicesValidationMessage({ showIncomplete: raceChoicesValidationAttempted }));
   }, { signal });
   for (const select of Object.values(standardArraySelects)) {

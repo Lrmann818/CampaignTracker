@@ -1552,6 +1552,86 @@ describe("character page selector", () => {
     controller.destroy();
   });
 
+  it("shows a Race Choices helper before Dragonborn ancestry is selected", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    const preview = document.getElementById("builderWizardRaceChoicePreview");
+    expect(preview.hidden).toBe(false);
+    expect(preview.textContent).toContain("Choose a Draconic Ancestry to preview its breath weapon and resistance.");
+    expect(document.getElementById("builderWizardDraconicAncestry").getAttribute("aria-describedby"))
+      .toContain("builderWizardRaceChoicePreviewBody");
+
+    controller.destroy();
+  });
+
+  it("previews selected Red Dragonborn ancestry mechanics on Race Choices", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardDraconicAncestry").value = "red";
+    document.getElementById("builderWizardDraconicAncestry").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+
+    const preview = document.getElementById("builderWizardRaceChoicePreview").textContent;
+    expect(preview).toContain("Draconic Ancestry");
+    expect(preview).toContain("Red");
+    expect(preview).toContain("Damage Resistance");
+    expect(preview).toContain("Fire");
+    expect(preview).toContain("Breath Weapon");
+    expect(preview).toContain("15 ft. cone, Fire, Dexterity save");
+    expect(preview).toContain("Breath Weapon DC");
+    expect(preview).toContain("= 10");
+    expect(preview).toContain("Breath Weapon Damage");
+    expect(preview).toContain("2d6");
+
+    controller.destroy();
+  });
+
+  it("updates the Race Choices preview when Dragonborn ancestry changes", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    const select = document.getElementById("builderWizardDraconicAncestry");
+
+    select.value = "red";
+    select.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    expect(document.getElementById("builderWizardRaceChoicePreview").textContent)
+      .toContain("15 ft. cone, Fire, Dexterity save");
+
+    select.value = "black";
+    select.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    const preview = document.getElementById("builderWizardRaceChoicePreview").textContent;
+    expect(preview).toContain("Black");
+    expect(preview).toContain("Damage Resistance");
+    expect(preview).toContain("Acid");
+    expect(preview).toContain("5 by 30 ft. line, Acid, Dexterity save");
+    expect(preview).not.toContain("15 ft. cone, Fire");
+
+    controller.destroy();
+  });
+
   it("blocks Dragonborn Race Choices until Draconic Ancestry is selected", async () => {
     const { document, actionMenuButton } = installCharacterSelectorDom();
     installBuilderWizardDom(document);
@@ -1822,7 +1902,7 @@ describe("character page selector", () => {
     controller.destroy();
   });
 
-  it("renders selected Dragonborn ancestry in Summary without mechanics", async () => {
+  it("renders selected Dragonborn ancestry in Summary with derived mechanics", async () => {
     const { document, actionMenuButton } = installCharacterSelectorDom();
     installBuilderWizardDom(document);
     const Popovers = createFakePopovers();
@@ -1848,8 +1928,12 @@ describe("character page selector", () => {
     expect(summary).toContain("Dragonborn");
     expect(summary).toContain("Draconic Ancestry");
     expect(summary).toContain("Red");
-    expect(summary).not.toContain("Breath Weapon");
-    expect(summary).not.toContain("Damage Resistance");
+    expect(summary).toContain("Damage Resistance");
+    expect(summary).toContain("Fire");
+    expect(summary).toContain("Breath Weapon");
+    expect(summary).toContain("15 ft. cone, Fire, Dexterity save");
+    expect(summary).toContain("= 10");
+    expect(summary).toContain("2d6");
 
     controller.destroy();
   });

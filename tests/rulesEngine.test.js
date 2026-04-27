@@ -386,3 +386,158 @@ describe("rules derivation", () => {
     expect(proficiencyBonusForLevel(17)).toBe(6);
   });
 });
+
+describe("dragonborn ancestry derivation", () => {
+  function dragonbornCharacter(overrides = {}) {
+    return {
+      build: {
+        version: 1,
+        ruleset: "srd-5.1",
+        raceId: "dragonborn",
+        classId: "class_fighter",
+        backgroundId: "background_soldier",
+        level: 1,
+        abilities: { base: { str: 10, dex: 10, con: 14, int: 10, wis: 10, cha: 10 } },
+        choicesByLevel: { "1": { "dragonborn-ancestry": "red" } },
+        ...overrides
+      },
+      overrides: { abilities: {}, saves: {}, skills: {}, initiative: 0 }
+    };
+  }
+
+  it("derives cone ancestry fields for red (fire, 15 ft. cone, Dexterity save)", () => {
+    const derived = deriveCharacter(dragonbornCharacter());
+    const da = derived.dragonbornAncestry;
+
+    expect(da).not.toBeNull();
+    expect(da.id).toBe("red");
+    expect(da.name).toBe("Red");
+    expect(da.damageType).toBe("fire");
+    expect(da.damageResistance).toBe("fire");
+    expect(da.breathWeapon.shape).toBe("cone");
+    expect(da.breathWeapon.size).toBe(15);
+    expect(da.breathWeapon.width).toBeNull();
+    expect(da.breathWeapon.length).toBeNull();
+    expect(da.breathWeapon.saveAbility).toBe("dex");
+  });
+
+  it("derives line ancestry fields for black (acid, 5 by 30 ft. line, Dexterity save)", () => {
+    const character = dragonbornCharacter({
+      choicesByLevel: { "1": { "dragonborn-ancestry": "black" } }
+    });
+    const da = deriveCharacter(character).dragonbornAncestry;
+
+    expect(da).not.toBeNull();
+    expect(da.id).toBe("black");
+    expect(da.damageType).toBe("acid");
+    expect(da.breathWeapon.shape).toBe("line");
+    expect(da.breathWeapon.width).toBe(5);
+    expect(da.breathWeapon.length).toBe(30);
+    expect(da.breathWeapon.size).toBeNull();
+    expect(da.breathWeapon.saveAbility).toBe("dex");
+  });
+
+  it("derives a Constitution save for green ancestry", () => {
+    const character = dragonbornCharacter({
+      choicesByLevel: { "1": { "dragonborn-ancestry": "green" } }
+    });
+    const da = deriveCharacter(character).dragonbornAncestry;
+
+    expect(da).not.toBeNull();
+    expect(da.breathWeapon.saveAbility).toBe("con");
+    expect(da.damageType).toBe("poison");
+  });
+
+  it("computes saveDC as 8 + Constitution modifier + proficiency bonus", () => {
+    // CON 14 → mod +2, level 1 → prof +2, DC = 8 + 2 + 2 = 12
+    const da = deriveCharacter(dragonbornCharacter()).dragonbornAncestry;
+    expect(da.breathWeapon.saveDC).toBe(12);
+  });
+
+  it("computes saveDC correctly at higher level and CON", () => {
+    // CON 16 → mod +3, level 5 → prof +3, DC = 8 + 3 + 3 = 14
+    const character = dragonbornCharacter({
+      level: 5,
+      abilities: { base: { str: 10, dex: 10, con: 16, int: 10, wis: 10, cha: 10 } }
+    });
+    const da = deriveCharacter(character).dragonbornAncestry;
+    expect(da.breathWeapon.saveDC).toBe(14);
+  });
+
+  it("sets saveDC to null when Constitution score is missing", () => {
+    const character = dragonbornCharacter({
+      abilities: { base: {} }
+    });
+    const da = deriveCharacter(character).dragonbornAncestry;
+    expect(da.breathWeapon.saveDC).toBeNull();
+  });
+
+  it("derives damage dice as 2d6 at level 1", () => {
+    const da = deriveCharacter(dragonbornCharacter({ level: 1 })).dragonbornAncestry;
+    expect(da.breathWeapon.damageDice).toBe("2d6");
+  });
+
+  it("derives damage dice as 3d6 at level 6", () => {
+    const da = deriveCharacter(dragonbornCharacter({ level: 6 })).dragonbornAncestry;
+    expect(da.breathWeapon.damageDice).toBe("3d6");
+  });
+
+  it("derives damage dice as 4d6 at level 11", () => {
+    const da = deriveCharacter(dragonbornCharacter({ level: 11 })).dragonbornAncestry;
+    expect(da.breathWeapon.damageDice).toBe("4d6");
+  });
+
+  it("derives damage dice as 5d6 at level 16", () => {
+    const da = deriveCharacter(dragonbornCharacter({ level: 16 })).dragonbornAncestry;
+    expect(da.breathWeapon.damageDice).toBe("5d6");
+  });
+
+  it("returns null when ancestry choice is missing", () => {
+    const character = dragonbornCharacter({ choicesByLevel: {} });
+    expect(deriveCharacter(character).dragonbornAncestry).toBeNull();
+  });
+
+  it("returns null for a non-Dragonborn builder character", () => {
+    const character = {
+      build: {
+        version: 1,
+        ruleset: "srd-5.1",
+        raceId: "race_human",
+        classId: "class_fighter",
+        backgroundId: "background_soldier",
+        level: 1,
+        abilities: { base: { str: 10, dex: 10, con: 14, int: 10, wis: 10, cha: 10 } },
+        choicesByLevel: {}
+      },
+      overrides: { abilities: {}, saves: {}, skills: {}, initiative: 0 }
+    };
+    expect(deriveCharacter(character).dragonbornAncestry).toBeNull();
+  });
+
+  it("returns null and emits a warning for an unresolvable ancestry id", () => {
+    const character = dragonbornCharacter({
+      choicesByLevel: { "1": { "dragonborn-ancestry": "does-not-exist" } }
+    });
+    const derived = deriveCharacter(character);
+    expect(derived.dragonbornAncestry).toBeNull();
+    expect(derived.warnings).toContain("Unknown ancestry content: does-not-exist");
+  });
+
+  it("returns null for freeform characters", () => {
+    const character = {
+      build: null,
+      classLevel: "Fighter 1",
+      race: "Dragonborn",
+      proficiency: 2,
+      abilities: { con: { score: 14 } }
+    };
+    expect(deriveCharacter(character).dragonbornAncestry).toBeNull();
+  });
+
+  it("does not mutate the input character when deriving ancestry", () => {
+    const character = dragonbornCharacter();
+    const before = structuredClone(character);
+    deriveCharacter(character);
+    expect(character).toEqual(before);
+  });
+});

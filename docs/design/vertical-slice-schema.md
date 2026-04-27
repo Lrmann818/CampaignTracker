@@ -139,6 +139,12 @@ build.choicesByLevel["1"]["dragonborn-ancestry"] = "red"
 
 For race-level choices that happen at character creation, they live under level 1. Class/subclass choices made at later levels are keyed appropriately.
 
+Only the normalized choice ID is persisted. Any selected-option preview shown in
+the wizard is read-only explanatory UI derived from that ID, the registry record,
+and rules derivation logic. This keeps builder-owned values canonical through
+`build` metadata and derivation, while leaving freeform characters unchanged and
+avoiding duplicated flat character fields.
+
 ---
 
 ## Ratified Decisions
@@ -311,12 +317,19 @@ When the user picks Dragonborn, the wizard:
 
 1. Looks up `race.choices`. Finds one choice: `dragonborn-ancestry`.
 2. Renders a "Pick your Draconic Ancestry" picker, with options pulled from `draconic-ancestries.json` (per `from.source`).
-3. User picks `red`. Stored as `build.choicesByLevel["1"]["dragonborn-ancestry"] = "red"`.
-4. When rendering trait cards, looks up the three traits. For `breath-weapon` and `damage-resistance`, sees `derivedFrom: "dragonborn-ancestry"`, looks up the user's chosen value, and pulls the derived fields (fire damage, 15-foot cone, Dex save, fire resistance) from the ancestry record into the rendered card.
+3. Shows a read-only preview for the selected ancestry when available, using the ancestry record and derivation logic to explain consequences such as damage type, breath weapon area/shape, save ability, save DC formula, damage scaling, and resistance before the user continues.
+4. User picks `red`. Stored as `build.choicesByLevel["1"]["dragonborn-ancestry"] = "red"`.
+5. When rendering builder-derived ancestry mechanics, sees `derivedFrom: "dragonborn-ancestry"` on the ancestry-dependent traits, looks up the user's chosen value, and pulls the derived fields from the ancestry record and rules derivation. For Red ancestry, that yields fire damage resistance, a fire breath weapon, a 15-foot cone area, a Dexterity save, the SRD breath weapon save DC formula, and level-scaled damage dice.
 
-**Implementation status (as of April 27, 2026):** Steps 1–3 are complete (Phase 3A). Step 4 — trait card rendering with derived Breath Weapon and Damage Resistance values — is deferred to Phase 3B. The current builder surfaces the selected ancestry label in Summary but does not yet derive trait mechanics from the ancestry record.
+**Implementation status (as of April 27, 2026):** Steps 1–4 are complete (Phase 3A). Phase 3B now derives the selected Dragonborn ancestry mechanics from the stored ancestry ID plus registry/rules data and displays those mechanics in Builder Summary. The current temporary surface shows damage resistance, breath weapon damage type, breath weapon area/shape, save ability, save DC, and damage scaling. Normal character-sheet trait/panel display remains a later surfacing step; derived ancestry mechanics are not persisted into duplicated flat fields.
 
 Notice: the same `race.choices` iteration handles every choice, regardless of whether a trait is involved. Human's "extra language" choice flows through identical builder code; it just resolves to a language picker instead of an ancestry picker.
+
+The selected-option preview principle is general for rules-backed builder choices,
+not Dragonborn-only. Dragonborn Draconic Ancestry proves the pattern first
+because one selected ID drives multiple derived outputs. Future language, skill,
+cantrip, subclass, or feature choices should expose a preview only when the
+approved registry data contains meaningful explanation or mechanics to show.
 
 ### Anchor test (illustrative)
 

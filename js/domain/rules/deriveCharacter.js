@@ -7,6 +7,24 @@ import { BUILTIN_CONTENT_REGISTRY, getContentById } from "./registry.js";
 /** @typedef {import("../../state.js").CharacterEntry} CharacterEntry */
 /** @typedef {import("./registry.js").ContentRegistry} ContentRegistry */
 
+/**
+ * @typedef {{
+ *   id: string,
+ *   name: string,
+ *   damageType: string,
+ *   damageResistance: string,
+ *   breathWeapon: {
+ *     shape: string,
+ *     size: number | null,
+ *     width: number | null,
+ *     length: number | null,
+ *     saveAbility: string,
+ *     saveDC: number | null,
+ *     damageDice: string
+ *   }
+ * }} DragonbornAncestryDerived
+ */
+
 const SKILL_ABILITY = Object.freeze({
   acrobatics: "dex",
   animal: "wis",
@@ -180,6 +198,17 @@ function freeformSaveOptionsBonus(character, key, abilities) {
 }
 
 /**
+ * @param {number | null} level
+ * @returns {string}
+ */
+function dragonbornBreathDamageDice(level) {
+  if (level == null || level < 6) return "2d6";
+  if (level < 11) return "3d6";
+  if (level < 16) return "4d6";
+  return "5d6";
+}
+
+/**
  * @param {unknown} character
  * @param {ContentRegistry} [registry]
  * @returns {{
@@ -192,6 +221,7 @@ function freeformSaveOptionsBonus(character, key, abilities) {
  *   saves: Record<string, { proficient: boolean, misc: number, total: number | null }>,
  *   skills: Record<string, { ability: string, level: string, misc: number, override: number, total: number | null }>,
  *   initiative: number | null,
+ *   dragonbornAncestry: DragonbornAncestryDerived | null,
  *   warnings: string[]
  * }}
  */
@@ -299,6 +329,54 @@ export function deriveCharacter(character, registry = BUILTIN_CONTENT_REGISTRY) 
   const dexMod = abilities.dex?.modifier;
   const initiative = dexMod == null ? null : dexMod + finiteNumberOrZero(overrides.initiative);
 
+  /** @type {DragonbornAncestryDerived | null} */
+  let dragonbornAncestry = null;
+  if (build && raceEntry) {
+    const raceChoices = Array.isArray(raceEntry.data?.choices) ? raceEntry.data.choices : [];
+    const ancestryChoice = raceChoices.find(
+      (c) => isPlainObject(c) && c.kind === "ancestry" && typeof c.id === "string"
+    );
+    if (ancestryChoice) {
+      const choiceId = /** @type {string} */ (ancestryChoice.id);
+      const choicesByLevel = isPlainObject(build.choicesByLevel) ? build.choicesByLevel : {};
+      const level1Choices = isPlainObject(choicesByLevel["1"]) ? choicesByLevel["1"] : {};
+      const ancestryId = cleanString(level1Choices[choiceId]);
+      if (ancestryId) {
+        const ancestryEntry = getContentById(registry, ancestryId);
+        if (!ancestryEntry) {
+          warnings.push(`Unknown ancestry content: ${ancestryId}`);
+        } else {
+          const data = isPlainObject(ancestryEntry.data) ? ancestryEntry.data : {};
+          const damageType = cleanString(data.damageType);
+          const saveAbility = cleanString(data.saveAbility);
+          const breathWeaponRaw = isPlainObject(data.breathWeapon) ? data.breathWeapon : {};
+          const shape = cleanString(breathWeaponRaw.shape);
+          const isCone = shape === "cone";
+          const isLine = shape === "line";
+          const conMod = abilities.con?.modifier;
+          const saveDC = conMod != null && proficiencyBonus != null
+            ? 8 + conMod + proficiencyBonus
+            : null;
+          dragonbornAncestry = {
+            id: cleanString(ancestryEntry.id),
+            name: cleanString(ancestryEntry.name),
+            damageType,
+            damageResistance: damageType,
+            breathWeapon: {
+              shape,
+              size: isCone ? (typeof breathWeaponRaw.size === "number" ? breathWeaponRaw.size : null) : null,
+              width: isLine ? (typeof breathWeaponRaw.width === "number" ? breathWeaponRaw.width : null) : null,
+              length: isLine ? (typeof breathWeaponRaw.length === "number" ? breathWeaponRaw.length : null) : null,
+              saveAbility,
+              saveDC,
+              damageDice: dragonbornBreathDamageDice(level)
+            }
+          };
+        }
+      }
+    }
+  }
+
   return {
     mode,
     labels: {
@@ -319,6 +397,7 @@ export function deriveCharacter(character, registry = BUILTIN_CONTENT_REGISTRY) 
     saves,
     skills,
     initiative,
+    dragonbornAncestry,
     warnings
   };
 }

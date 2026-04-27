@@ -4089,6 +4089,33 @@ div.mutedSmall {
   font-weight: 700;
 }
 
+#builderWizardPanel .builderChoicePreview {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-3) 58%, transparent);
+}
+
+#builderWizardPanel .builderChoicePreview h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+#builderWizardPanel .builderChoicePreviewBody {
+  min-width: 0;
+}
+
+#builderWizardPanel .builderChoicePreviewBody.isEmpty {
+  color: var(--muted);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 #builderWizardSummary {
   gap: 12px;
 }
@@ -4098,13 +4125,15 @@ div.mutedSmall {
   gap: 6px;
 }
 
-#builderWizardSummary .builderWizardSummaryRows {
+#builderWizardSummary .builderWizardSummaryRows,
+#builderWizardPanel .builderChoicePreview .builderWizardSummaryRows {
   display: grid;
   gap: 7px;
 }
 
 #builderWizardSummary .builderSummaryRow,
-#builderWizardSummary .builderAbilityRow {
+#builderWizardSummary .builderAbilityRow,
+#builderWizardPanel .builderChoicePreview .builderSummaryRow {
   min-width: 0;
   padding: 7px 9px;
   border: 1px solid var(--hairline);
@@ -4114,12 +4143,14 @@ div.mutedSmall {
 
 #builderWizardSummary .builderSummaryLabel,
 #builderWizardSummary .builderAbilityLabel,
-#builderWizardSummary .builderSummarySubhead {
+#builderWizardSummary .builderSummarySubhead,
+#builderWizardPanel .builderChoicePreview .builderSummaryLabel {
   line-height: 1.25;
 }
 
 #builderWizardSummary .builderSummaryValue,
-#builderWizardSummary .builderAbilityValue {
+#builderWizardSummary .builderAbilityValue,
+#builderWizardPanel .builderChoicePreview .builderSummaryValue {
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -5025,7 +5056,8 @@ select.npcField:focus {
   }
 
   #builderWizardSummary .builderSummaryRow,
-  #builderWizardSummary .builderAbilityRow {
+  #builderWizardSummary .builderAbilityRow,
+  #builderWizardPanel .builderChoicePreview .builderSummaryRow {
     grid-template-columns: 1fr;
     gap: 3px;
   }
