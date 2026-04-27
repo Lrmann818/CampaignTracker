@@ -92,9 +92,9 @@ Lore Ledger is aiming for a production-grade, legally conservative, architectura
 
 For new builtin content, Lore Ledger should prefer **SRD 5.1** as the primary source.
 
-`SRD 5.1` may still be useful as a reference, but it should not be the casual default for new builtin builder data.
+SRD 5.2.1 is retired for this project and should not be used as the source for new builtin builder data.
 
-If a future builtin item depends specifically on SRD 5.1, that decision should be documented explicitly before implementation.
+If the project later changes source posture or adds another approved builtin source pack, document that decision explicitly before implementation.
 
 ---
 

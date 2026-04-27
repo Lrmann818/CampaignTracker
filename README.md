@@ -39,7 +39,7 @@ That direction is visible in the current structure:
 - Sectioned tracker collections with add/rename/delete controls, search inputs, and portrait/image support for cards
 - Combat Workspace with participant cards sourced from tracker entries, HP/temp HP actions, role/order controls, status effects, round timing, undo for turn advances, and embedded Vitals, Spells, Weapons / Attacks, Equipment, and Abilities / Skills panels that are live views of the canonical active character
 - Character page with multi-character selection, `...` actions for New/Rename/Delete Character, New Builder Character, Add to NPCs/Party, Export/Import Character, an empty-state "Create your first character" prompt, portrait, identity fields, vitals, resources, abilities and skills, proficiencies, weapons, spells, equipment, inventory tabs, money, and personality notes
-- Builder-mode foundation with a minimal builder-character creation path, an informational Builder Mode badge, and a display-only Builder Summary panel; the full builder wizard and rules automation are not shipped yet
+- Builder-mode foundation with a guided creation wizard through Identity, supported Race Choices, Ability Scores, and Summary; Dragonborn Draconic Ancestry currently derives and displays resistance, breath weapon details, save DC, and damage dice without persisting duplicate flat fields
 - Spell management with dynamic spell levels and per-spell notes
 - Character portability through `.ll-character.json` export/import, including portrait and spell-note bundling across campaigns
 - Map page with multiple maps, background image upload/removal, mouse/touch drawing, pan/zoom gestures, brush and eraser tools, brush size and color controls, and persisted drawings
@@ -90,7 +90,7 @@ Current character-specific architecture notes:
 - Combat embedded character panels are live alternate views of canonical active character data. They use active-character change events and panel invalidation/rebinding rather than duplicate character data or a sync store.
 - NPC and Party tracker-card linking is complete. Linked cards store `characterId` and use `js/domain/cardLinking.js` so shared fields read from and write to the canonical character entry; card notes remain card-only.
 - Character export/import portability is complete. `js/domain/characterPortability.js` validates files before state mutation, restores portrait and spell-note payloads into the destination campaign, and always assigns imported characters fresh IDs.
-- Step 3 character builder/rules engine work is in progress. The shipped scope is currently limited to schema v6 foundation, minimal builder-character creation, an informational badge, and a display-only Builder Summary; the full builder wizard and automation remain future work.
+- Step 3 character builder/rules engine work is in progress. Current builder scope includes schema v6 foundation, the builder wizard through Identity, supported Race Choices, Ability Scores, and Summary, plus Dragonborn ancestry derivation from `build.choicesByLevel`. Action tracking, rest recharge, combat automation, level-up flow, and broader content choices remain future work.
 
 ## 5.1 Type safety in vanilla JS
 

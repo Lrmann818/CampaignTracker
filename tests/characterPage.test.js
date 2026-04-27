@@ -1679,6 +1679,159 @@ describe("character page selector", () => {
     controller.destroy();
   });
 
+  it("shows Dragonborn race ability bonuses on the Ability Scores step", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardDraconicAncestry").value = "red";
+    document.getElementById("builderWizardDraconicAncestry").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    const banner = document.getElementById("builderWizardRaceAbilityBonusPreview");
+    expect(banner.hidden).toBe(false);
+    expect(banner.textContent).toBe("Race Ability Bonus: +2 STR, +1 CHA");
+
+    controller.destroy();
+  });
+
+  it("shows Dragonborn Manual base, race, and total ability previews", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardDraconicAncestry").value = "red";
+    document.getElementById("builderWizardDraconicAncestry").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    document.getElementById("builderWizardAbilityStr").value = "15";
+    document.getElementById("builderWizardAbilityStr").dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardAbilityCha").value = "8";
+    document.getElementById("builderWizardAbilityCha").dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
+
+    expect(document.getElementById("builderWizardManualAbilityStrPreview").textContent)
+      .toBe("STR: Base 15 + Race 2 = Total 17");
+    expect(document.getElementById("builderWizardManualAbilityChaPreview").textContent)
+      .toBe("CHA: Base 8 + Race 1 = Total 9");
+
+    controller.destroy();
+  });
+
+  it("updates Dragonborn Standard Array ability previews after assignment", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardDraconicAncestry").value = "red";
+    document.getElementById("builderWizardDraconicAncestry").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    chooseBuilderAbilityMethod("standard-array");
+    assignStandardArrayScores({ Str: 15, Cha: 8 });
+
+    expect(document.getElementById("builderWizardStandardArrayAbilityStrPreview").textContent)
+      .toBe("STR: Base 15 + Race 2 = Total 17");
+    expect(document.getElementById("builderWizardStandardArrayAbilityChaPreview").textContent)
+      .toBe("CHA: Base 8 + Race 1 = Total 9");
+
+    controller.destroy();
+  });
+
+  it("updates Dragonborn Point Buy ability previews after score changes", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardDraconicAncestry").value = "red";
+    document.getElementById("builderWizardDraconicAncestry").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    chooseBuilderAbilityMethod("point-buy");
+    clickPointBuy("Str", "increase", 2);
+
+    expect(document.getElementById("builderWizardPointBuyAbilityStrPreview").textContent)
+      .toBe("STR: Base 10 + Race 2 = Total 12");
+    expect(document.getElementById("builderWizardPointBuyAbilityChaPreview").textContent)
+      .toBe("CHA: Base 8 + Race 1 = Total 9");
+
+    controller.destroy();
+  });
+
+  it("updates Dragonborn Roll ability previews after assignment", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+    mockDiceRolls([
+      6, 6, 3, 3,
+      5, 5, 5, 1,
+      4, 4, 4, 1,
+      3, 3, 3, 1,
+      2, 2, 2, 1,
+      1, 1, 1, 1
+    ]);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "dragonborn" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardDraconicAncestry").value = "red";
+    document.getElementById("builderWizardDraconicAncestry").dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    chooseBuilderAbilityMethod("roll");
+    clickRollScores();
+    assignRollScoresByIndex(["Str"]);
+
+    expect(document.getElementById("builderWizardRollAbilityStrPreview").textContent)
+      .toBe("STR: Base 15 + Race 2 = Total 17");
+
+    controller.destroy();
+  });
+
+  it("shows Human race ability bonuses on the Ability Scores step", async () => {
+    const { document, actionMenuButton } = installCharacterSelectorDom();
+    installBuilderWizardDom(document);
+    const Popovers = createFakePopovers();
+    const deps = createCharacterPageDeps(Popovers);
+
+    const controller = initCharacterPageUI(deps);
+    actionMenuButton.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    document.getElementById("charActionNewBuilderBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    completeBuilderIdentity({ raceId: "race_human" });
+    document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+
+    expect(document.getElementById("builderWizardRaceAbilityBonusPreview").textContent)
+      .toBe("Race Ability Bonus: +1 STR, +1 DEX, +1 CON, +1 INT, +1 WIS, +1 CHA");
+
+    controller.destroy();
+  });
+
   it("enhances the Dragonborn ancestry select with the shared select dropdown", async () => {
     const { document, actionMenuButton } = installCharacterSelectorDom();
     installBuilderWizardDom(document);
@@ -1748,7 +1901,7 @@ describe("character page selector", () => {
       background: "Soldier"
     });
     expect(derived.proficiencyBonus).toBe(2);
-    expect(derived.abilities.str).toMatchObject({ base: 15, total: 15, modifier: 2 });
+    expect(derived.abilities.str).toMatchObject({ base: 15, total: 16, modifier: 3 });
 
     controller.destroy();
   });
@@ -1768,8 +1921,11 @@ describe("character page selector", () => {
     expect(created.build.choicesByLevel["1"]["dragonborn-ancestry"]).toBe("red");
     expect(created).not.toHaveProperty("breathWeapon");
     expect(created).not.toHaveProperty("damageResistance");
+    expect(created).not.toHaveProperty("raceAbilityBonuses");
     expect(created.build).not.toHaveProperty("breathWeapon");
     expect(created.build).not.toHaveProperty("damageResistance");
+    expect(created.build).not.toHaveProperty("raceAbilityBonuses");
+    expect(created.build).not.toHaveProperty("abilityTotals");
     expect(created.build).not.toHaveProperty("abilityMethod");
 
     controller.destroy();
@@ -2292,9 +2448,9 @@ describe("character page selector", () => {
     document.getElementById("builderWizardNext").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
 
     const summary = document.getElementById("builderWizardSummary").textContent;
-    expect(summary).toContain("STR18 (+4)");
-    expect(summary).toContain("DEX15 (+2)");
-    expect(summary).toContain("CHA3 (-4)");
+    expect(summary).toContain("STR19 (+4)");
+    expect(summary).toContain("DEX16 (+3)");
+    expect(summary).toContain("CHA4 (-3)");
 
     document.getElementById("builderWizardFinish").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
     await flushPromises();
@@ -2445,9 +2601,9 @@ describe("character page selector", () => {
 
     const summary = document.getElementById("builderWizardSummary").textContent;
     expect(summary).toContain("Point Mira");
-    expect(summary).toContain("STR10 (+0)");
-    expect(summary).toContain("DEX9 (-1)");
-    expect(summary).toContain("CHA8 (-1)");
+    expect(summary).toContain("STR11 (+0)");
+    expect(summary).toContain("DEX10 (+0)");
+    expect(summary).toContain("CHA9 (-1)");
 
     controller.destroy();
   });
@@ -2570,9 +2726,9 @@ describe("character page selector", () => {
 
     const summary = document.getElementById("builderWizardSummary").textContent;
     expect(summary).toContain("Array Mira");
-    expect(summary).toContain("STR15 (+2)");
-    expect(summary).toContain("DEX14 (+2)");
-    expect(summary).toContain("CHA8 (-1)");
+    expect(summary).toContain("STR16 (+3)");
+    expect(summary).toContain("DEX15 (+2)");
+    expect(summary).toContain("CHA9 (-1)");
 
     document.getElementById("builderWizardFinish").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
     await flushPromises();

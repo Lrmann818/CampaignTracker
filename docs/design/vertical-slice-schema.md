@@ -289,9 +289,9 @@ Each ancestry record:
   "damageType": "fire",
   "breathWeapon": {
     "shape": "cone",
-    "size": 15,
-    "save": "dex"
+    "size": 15
   },
+  "saveAbility": "dex",
   "description": "..."
 }
 ```
@@ -303,7 +303,7 @@ All ten ancestries (black, blue, brass, bronze, copper, gold, green, red, silver
 - `damageType`
 - `breathWeapon.shape` (`line` or `cone`)
 - `breathWeapon.size` (5 or 15)
-- `breathWeapon.save` (`dex` or `con`)
+- `saveAbility` (`dex` or `con`)
 - `category` (`chromatic` or `metallic`)
 
 **Not anchor-tested:**
@@ -321,7 +321,9 @@ When the user picks Dragonborn, the wizard:
 4. User picks `red`. Stored as `build.choicesByLevel["1"]["dragonborn-ancestry"] = "red"`.
 5. When rendering builder-derived ancestry mechanics, sees `derivedFrom: "dragonborn-ancestry"` on the ancestry-dependent traits, looks up the user's chosen value, and pulls the derived fields from the ancestry record and rules derivation. For Red ancestry, that yields fire damage resistance, a fire breath weapon, a 15-foot cone area, a Dexterity save, the SRD breath weapon save DC formula, and level-scaled damage dice.
 
-**Implementation status (as of April 27, 2026):** Steps 1–4 are complete (Phase 3A). Phase 3B now derives the selected Dragonborn ancestry mechanics from the stored ancestry ID plus registry/rules data and displays those mechanics in Builder Summary. The current temporary surface shows damage resistance, breath weapon damage type, breath weapon area/shape, save ability, save DC, and damage scaling. Normal character-sheet trait/panel display remains a later surfacing step; derived ancestry mechanics are not persisted into duplicated flat fields.
+**Implementation status (as of April 27, 2026):** Steps 1–5 are complete through Phase 3B. Phase 3B derives the selected Dragonborn ancestry mechanics from the stored ancestry ID plus registry/rules data and displays those mechanics in Builder Summary. The current temporary builder-specific surface shows damage resistance, breath weapon damage type, breath weapon area/shape, save ability, save DC, and damage scaling. Breath Weapon DC also appears in Vitals when derivable because it is a table-use combat DC. Derived ancestry mechanics are not persisted into duplicated flat fields. Action tracking, uses/rest tracking, rest recharge, and combat automation remain future work.
+
+The derived resources and derived combat stats pattern is now: table-use values should have a home in the normal character sheet panel where users need them, not only in Builder Summary. Builder-only panels are temporary scaffolding; before any such panel is retired, every useful value it shows needs a normal-panel home. Builder characters should populate normal panels through derivation and intentional overrides, while freeform characters continue using manual fields.
 
 Notice: the same `race.choices` iteration handles every choice, regardless of whether a trait is involved. Human's "extra language" choice flows through identical builder code; it just resolves to a language picker instead of an ancestry picker.
 
@@ -354,7 +356,7 @@ describe("SRD anchor — Draconic Ancestries (Red)", () => {
     expect(red.damageType).toBe("fire");
     expect(red.breathWeapon.shape).toBe("cone");
     expect(red.breathWeapon.size).toBe(15);
-    expect(red.breathWeapon.save).toBe("dex");
+    expect(red.saveAbility).toBe("dex");
     expect(red.category).toBe("chromatic");
   });
 });

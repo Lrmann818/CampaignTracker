@@ -217,6 +217,7 @@ function dragonbornBreathDamageDice(level) {
  *   level: number | null,
  *   proficiencyBonus: number | null,
  *   vitals: { speed: number | null, hitDieAmt: number | null, hitDieSize: number | null },
+ *   raceAbilityBonuses: Record<string, number>,
  *   abilities: Record<string, { base: number | null, override: number, total: number | null, modifier: number | null }>,
  *   saves: Record<string, { proficient: boolean, misc: number, total: number | null }>,
  *   skills: Record<string, { ability: string, level: string, misc: number, override: number, total: number | null }>,
@@ -263,12 +264,25 @@ export function deriveCharacter(character, registry = BUILTIN_CONTENT_REGISTRY) 
   if (build && !classId) warnings.push("Missing class content for hit dice");
   if (build && classEntry && builderHitDieSize == null) warnings.push(`Malformed class hit die content: ${classEntry.id}`);
 
+  /** @type {Record<string, number>} */
+  const raceAbilityBonuses = {};
+  for (const key of CHARACTER_ABILITY_KEYS) raceAbilityBonuses[key] = 0;
+  if (build && raceEntry && Array.isArray(raceEntry.data?.abilityScoreIncreases)) {
+    for (const entry of raceEntry.data.abilityScoreIncreases) {
+      if (!isPlainObject(entry)) continue;
+      const key = cleanString(entry.ability);
+      if (!CHARACTER_ABILITY_KEYS.includes(/** @type {typeof CHARACTER_ABILITY_KEYS[number]} */ (key))) continue;
+      raceAbilityBonuses[key] += finiteNumberOrZero(entry.bonus);
+    }
+  }
+
   /** @type {ReturnType<typeof deriveCharacter>["abilities"]} */
   const abilities = {};
   for (const key of CHARACTER_ABILITY_KEYS) {
     const base = getAbilityBase(source, key, build);
     const override = finiteNumberOrZero(overrides.abilities[key]);
-    const total = base == null ? null : base + override;
+    const raceBonus = build ? raceAbilityBonuses[key] || 0 : 0;
+    const total = base == null ? null : base + raceBonus + override;
     abilities[key] = {
       base,
       override,
@@ -393,6 +407,7 @@ export function deriveCharacter(character, registry = BUILTIN_CONTENT_REGISTRY) 
       hitDieAmt: build ? level : null,
       hitDieSize: build ? builderHitDieSize : null
     },
+    raceAbilityBonuses,
     abilities,
     saves,
     skills,

@@ -429,6 +429,14 @@ export function initBuilderWizard(deps = {}) {
   const pointBuyRemaining = /** @type {HTMLElement | null} */ (root.querySelector?.("#builderWizardPointBuyRemaining"));
   const abilityValidation = /** @type {HTMLElement | null} */ (root.querySelector?.("#builderWizardAbilityValidation"));
   const methodNote = /** @type {HTMLElement | null} */ (root.querySelector?.("#builderWizardAbilityMethodNote"));
+  let raceAbilityBonusPreview = /** @type {HTMLElement | null} */ (root.querySelector?.("#builderWizardRaceAbilityBonusPreview"));
+  if (!raceAbilityBonusPreview) {
+    raceAbilityBonusPreview = document.createElement("section");
+    raceAbilityBonusPreview.id = "builderWizardRaceAbilityBonusPreview";
+    raceAbilityBonusPreview.className = "builderAbilityBonusPreview";
+    raceAbilityBonusPreview.setAttribute("aria-live", "polite");
+    methodNote?.insertAdjacentElement?.("afterend", raceAbilityBonusPreview);
+  }
   /** @type {Record<string, HTMLSelectElement>} */
   const standardArraySelects = {};
   for (const key of CHARACTER_ABILITY_KEYS) {
@@ -490,6 +498,14 @@ export function initBuilderWizard(deps = {}) {
     name: DEFAULT_NAME,
     build: makeDefaultCharacterBuild()
   };
+
+  /**
+   * @param {unknown} value
+   * @returns {value is number}
+   */
+  function isFiniteNumber(value) {
+    return typeof value === "number" && Number.isFinite(value);
+  }
 
   function getDefaultAbilityBase() {
     /** @type {Record<string, number>} */
@@ -772,6 +788,145 @@ export function initBuilderWizard(deps = {}) {
     return true;
   }
 
+  /**
+   * @returns {Record<string, number | null>}
+   */
+  function getActiveAbilityPreviewBase() {
+    /** @type {Record<string, number | null>} */
+    const base = {};
+    if (abilityMethod === "standard-array") {
+      for (const key of CHARACTER_ABILITY_KEYS) {
+        const value = Number(standardArrayAssignments[key]);
+        base[key] = STANDARD_ARRAY_SCORES.includes(value) ? value : null;
+      }
+      return base;
+    }
+    if (abilityMethod === "point-buy") {
+      for (const key of CHARACTER_ABILITY_KEYS) {
+        const value = Number(pointBuyAbilityBase[key]);
+        base[key] = Number.isInteger(value) ? value : null;
+      }
+      return base;
+    }
+    if (abilityMethod === "roll") {
+      const scoresById = new Map(rollPool.map((score) => [score.id, score.value]));
+      for (const key of CHARACTER_ABILITY_KEYS) {
+        const id = rollAssignments[key];
+        const value = scoresById.get(id);
+        base[key] = id && Number.isInteger(value) ? value : null;
+      }
+      return base;
+    }
+    for (const key of CHARACTER_ABILITY_KEYS) {
+      base[key] = clampInteger(
+        abilityInputs[key]?.value,
+        MIN_ABILITY_SCORE,
+        MAX_ABILITY_SCORE,
+        Number(manualAbilityBase[key]) || 10
+      );
+    }
+    return base;
+  }
+
+  /**
+   * @returns {ReturnType<typeof deriveCharacter>}
+   */
+  function getAbilityPreviewDerivedCharacter() {
+    const previewBase = getActiveAbilityPreviewBase();
+    return deriveCharacter({
+      id: "builder_wizard_ability_preview",
+      name: draft.name,
+      build: {
+        ...draft.build,
+        abilities: {
+          base: previewBase
+        }
+      },
+      overrides: {
+        abilities: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+        saves: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+        skills: {},
+        initiative: 0
+      },
+      abilities: {},
+      skills: {}
+    });
+  }
+
+  /**
+   * @param {string} key
+   * @param {string} method
+   * @returns {HTMLElement | null}
+   */
+  function ensureAbilityPreviewEl(key, method) {
+    const suffix = ABILITY_META[key]?.suffix || key;
+    const id = `builderWizard${method}Ability${suffix}Preview`;
+    const existing = root.querySelector?.(`#${id}`);
+    if (existing && typeof existing === "object" && "appendChild" in existing) {
+      return /** @type {HTMLElement} */ (existing);
+    }
+    let parent = null;
+    if (method === "Manual") parent = abilityInputs[key]?.closest?.(".builderAbilitiesField") || abilityInputs[key]?.parentElement || null;
+    else if (method === "StandardArray") parent = standardArraySelects[key]?.closest?.(".builderAbilitiesField") || standardArraySelects[key]?.parentElement || null;
+    else if (method === "PointBuy") parent = pointBuyValues[key]?.closest?.(".builderPointBuyField") || null;
+    else if (method === "Roll") parent = rollAssignmentSelects[key]?.closest?.(".builderAbilitiesField") || rollAssignmentSelects[key]?.parentElement || null;
+    if (!parent || typeof parent !== "object" || !("appendChild" in parent)) return null;
+    const el = document.createElement("div");
+    el.id = id;
+    el.className = "builderAbilityTotalPreview";
+    parent.appendChild(el);
+    return el;
+  }
+
+  /**
+   * @param {string} key
+   * @param {ReturnType<typeof deriveCharacter>["abilities"][string] | undefined} ability
+   * @param {number} raceBonus
+   * @returns {string}
+   */
+  function formatAbilityPreviewText(key, ability, raceBonus) {
+    const label = ABILITY_META[key]?.label || key.toUpperCase();
+    if (!ability || !isFiniteNumber(ability.base) || !isFiniteNumber(ability.total)) {
+      return `${label}: choose a base score`;
+    }
+    if (raceBonus) {
+      const sign = raceBonus >= 0 ? "+" : "-";
+      return `${label}: Base ${ability.base} ${sign} Race ${Math.abs(raceBonus)} = Total ${ability.total}`;
+    }
+    return `${label}: Base ${ability.base} = Total ${ability.total}`;
+  }
+
+  function renderAbilityPreview() {
+    const derived = getAbilityPreviewDerivedCharacter();
+    const bonusParts = CHARACTER_ABILITY_KEYS
+      .map((key) => [key, derived.raceAbilityBonuses[key] || 0])
+      .filter(([, bonus]) => bonus !== 0)
+      .map(([key, bonus]) => `${signedNumber(/** @type {number} */ (bonus))} ${ABILITY_META[/** @type {string} */ (key)]?.label || String(key).toUpperCase()}`);
+    if (raceAbilityBonusPreview) {
+      raceAbilityBonusPreview.hidden = bonusParts.length === 0;
+      raceAbilityBonusPreview.textContent = bonusParts.length
+        ? `Race Ability Bonus: ${bonusParts.join(", ")}`
+        : "";
+    }
+
+    const methodMap = [
+      ["Manual", manualAbilityGrid],
+      ["StandardArray", standardArrayGrid],
+      ["PointBuy", pointBuyGrid],
+      ["Roll", rollAssignmentGrid]
+    ];
+    for (const [method, container] of methodMap) {
+      if (!container) continue;
+      for (const key of CHARACTER_ABILITY_KEYS) {
+        const el = ensureAbilityPreviewEl(key, /** @type {string} */ (method));
+        if (!el) continue;
+        const ability = derived.abilities[key];
+        const raceBonus = derived.raceAbilityBonuses[key] || 0;
+        el.textContent = formatAbilityPreviewText(key, ability, raceBonus);
+      }
+    }
+  }
+
   function renderAbilityControlsForMethod() {
     if (manualAbilityGrid) manualAbilityGrid.hidden = abilityMethod !== "manual";
     if (standardArrayGrid) standardArrayGrid.hidden = abilityMethod !== "standard-array";
@@ -784,6 +939,7 @@ export function initBuilderWizard(deps = {}) {
     renderStandardArraySelects();
     renderPointBuyControls();
     renderRollControls();
+    renderAbilityPreview();
     showAbilityValidation(getAbilityValidationMessage({ showIncomplete: abilityValidationAttempted }));
   }
 
@@ -805,6 +961,7 @@ export function initBuilderWizard(deps = {}) {
       if (pointBuyDecreaseButtons[key]) pointBuyDecreaseButtons[key].disabled = !canDecrease;
       if (pointBuyIncreaseButtons[key]) pointBuyIncreaseButtons[key].disabled = !canIncrease;
     }
+    renderAbilityPreview();
   }
 
   function renderStandardArraySelects() {
@@ -835,6 +992,7 @@ export function initBuilderWizard(deps = {}) {
       select.value = current;
     }
     syncEnhancedSelects();
+    renderAbilityPreview();
   }
 
   function renderRollControls() {
@@ -881,6 +1039,7 @@ export function initBuilderWizard(deps = {}) {
       select.value = current;
     }
     syncEnhancedSelects();
+    renderAbilityPreview();
   }
 
   function renderRaceChoices() {
@@ -971,6 +1130,7 @@ export function initBuilderWizard(deps = {}) {
     abilityMethod = nextMethod;
     syncAbilityBaseToDraft();
     renderAbilityControlsForMethod();
+    renderAbilityPreview();
     return true;
   }
 
@@ -1051,6 +1211,7 @@ export function initBuilderWizard(deps = {}) {
     renderRaceChoices();
     methodManualInput.checked = true;
     renderAbilityControlsForMethod();
+    renderAbilityPreview();
   }
 
   function syncEnhancedSelects() {
@@ -1086,7 +1247,7 @@ export function initBuilderWizard(deps = {}) {
       } else if (abilityMethod === "roll") {
         methodNote.textContent = "Roll six scores, then assign each rolled score to exactly one ability.";
       } else {
-        methodNote.textContent = "Enter final base scores manually.";
+        methodNote.textContent = "Enter base scores manually.";
       }
     }
   }
@@ -1134,6 +1295,7 @@ export function initBuilderWizard(deps = {}) {
     standardArrayAssignments[key] = nextValue;
     syncAbilityBaseToDraft();
     renderStandardArraySelects();
+    renderAbilityPreview();
     showAbilityValidation(getAbilityValidationMessage({ showIncomplete: abilityValidationAttempted }));
   }
 
@@ -1164,6 +1326,7 @@ export function initBuilderWizard(deps = {}) {
     pointBuyAbilityBase[key] = next;
     syncAbilityBaseToDraft();
     renderPointBuyControls();
+    renderAbilityPreview();
     showAbilityValidation(getAbilityValidationMessage({ showIncomplete: abilityValidationAttempted }));
   }
 
@@ -1184,6 +1347,7 @@ export function initBuilderWizard(deps = {}) {
     rollAssignments = {};
     abilityValidationAttempted = false;
     renderRollControls();
+    renderAbilityPreview();
     showAbilityValidation("");
   }
 
@@ -1222,7 +1386,19 @@ export function initBuilderWizard(deps = {}) {
     rollAssignments[key] = rollPool.some((score) => score.id === nextValue) ? nextValue : "";
     syncAbilityBaseToDraft();
     renderRollControls();
+    renderAbilityPreview();
     showAbilityValidation(getAbilityValidationMessage({ showIncomplete: abilityValidationAttempted }));
+  }
+
+  /**
+   * @param {Event} event
+   */
+  function handleManualAbilityInput(event) {
+    const target = event.target;
+    if (!Object.values(abilityInputs).includes(/** @type {HTMLInputElement} */ (target))) return;
+    syncManualDraftFromControls();
+    syncAbilityBaseToDraft();
+    renderAbilityPreview();
   }
 
   function renderSummary() {
@@ -1313,6 +1489,7 @@ export function initBuilderWizard(deps = {}) {
     nextBtn.hidden = currentStep === STEP_SUMMARY;
     finishBtn.hidden = currentStep !== STEP_SUMMARY;
     if (currentStep === STEP_RACE_CHOICES) renderRaceChoices();
+    if (currentStep === STEP_ABILITIES) renderAbilityPreview();
     if (currentStep === STEP_SUMMARY) renderSummary();
   }
 
@@ -1444,6 +1621,7 @@ export function initBuilderWizard(deps = {}) {
   panel.addEventListener("click", handleAbilityMethodActivation, { signal });
   panel.addEventListener("click", handlePointBuyClick, { signal });
   panel.addEventListener("change", handleAbilityMethodActivation, { signal });
+  panel.addEventListener("input", handleManualAbilityInput, { signal });
   rollButton?.addEventListener("click", handleRollButtonClick, { signal });
   rollModeSelect?.addEventListener("change", handleRollModeChange, { signal });
   for (const select of [raceSelect, classSelect, backgroundSelect]) {
@@ -1453,6 +1631,7 @@ export function initBuilderWizard(deps = {}) {
         raceChoicesValidationAttempted = false;
         showRaceChoicesValidation("");
         renderRaceChoices();
+        renderAbilityPreview();
       }
       if (!identityValidationAttempted) return;
       showIdentityValidation(getIdentityValidationMessage());
@@ -1461,6 +1640,7 @@ export function initBuilderWizard(deps = {}) {
   draconicAncestrySelect.addEventListener("change", () => {
     syncRaceChoicesFromControls();
     renderRaceChoicePreview();
+    renderAbilityPreview();
     showRaceChoicesValidation(getRaceChoicesValidationMessage({ showIncomplete: raceChoicesValidationAttempted }));
   }, { signal });
   for (const select of Object.values(standardArraySelects)) {

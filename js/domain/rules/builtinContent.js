@@ -50,6 +50,19 @@ function makeDragonbornEntries(source) {
 
 /**
  * @param {unknown} source
+ * @param {string} id
+ * @returns {Record<string, unknown>}
+ */
+function findGeneratedRaceData(source, id) {
+  if (!Array.isArray(source)) return {};
+  const race = source.find((entry) =>
+    isRecord(entry) && entry.id === id && entry.kind === "race"
+  );
+  return isRecord(race) ? { ...race } : {};
+}
+
+/**
+ * @param {unknown} source
  * @returns {BuiltinContentEntry[]}
  */
 function makeDraconicAncestryEntries(source) {
@@ -79,7 +92,7 @@ export const BUILTIN_CONTENT = Object.freeze([
     name: "Human",
     source: "builtin",
     ruleset: RULESET,
-    data: Object.freeze({ speed: 30 })
+    data: Object.freeze({ speed: 30, ...findGeneratedRaceData(races, "human") })
   }),
   Object.freeze({
     id: "race_dwarf",
@@ -87,7 +100,7 @@ export const BUILTIN_CONTENT = Object.freeze([
     name: "Dwarf",
     source: "builtin",
     ruleset: RULESET,
-    data: Object.freeze({ speed: 30 })
+    data: Object.freeze({ speed: 30, ...findGeneratedRaceData(races, "dwarf") })
   }),
   Object.freeze({
     id: "race_elf",
@@ -95,7 +108,7 @@ export const BUILTIN_CONTENT = Object.freeze([
     name: "Elf",
     source: "builtin",
     ruleset: RULESET,
-    data: Object.freeze({ speed: 30 })
+    data: Object.freeze({ speed: 30, ...findGeneratedRaceData(races, "elf") })
   }),
   Object.freeze({
     id: "class_fighter",

@@ -100,10 +100,11 @@ describe("rules derivation", () => {
     expect(derived.level).toBe(5);
     expect(derived.proficiencyBonus).toBe(3);
     expect(derived.vitals).toEqual({ speed: 30, hitDieAmt: 5, hitDieSize: 10 });
-    expect(derived.abilities.str).toEqual({ base: 15, override: 1, total: 16, modifier: 3 });
-    expect(derived.abilities.dex).toMatchObject({ total: 14, modifier: 2 });
+    expect(derived.raceAbilityBonuses).toEqual({ str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 });
+    expect(derived.abilities.str).toEqual({ base: 15, override: 1, total: 17, modifier: 3 });
+    expect(derived.abilities.dex).toMatchObject({ total: 15, modifier: 2 });
     expect(derived.saves.str).toEqual({ proficient: true, misc: 2, total: 8 });
-    expect(derived.saves.con).toEqual({ proficient: true, misc: 0, total: 4 });
+    expect(derived.saves.con).toEqual({ proficient: true, misc: 0, total: 5 });
     expect(derived.skills.athletics).toMatchObject({ ability: "str", level: "prof", misc: 1, override: 1, total: 8 });
     expect(derived.skills.stealth).toMatchObject({ ability: "dex", level: "half", misc: 0, override: 2, total: 5 });
     expect(derived.initiative).toBe(3);
@@ -138,6 +139,7 @@ describe("rules derivation", () => {
     const derived = deriveCharacter(character);
 
     expect(derived.mode).toBe("freeform");
+    expect(derived.raceAbilityBonuses).toEqual({ str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 });
     expect(derived.labels).toEqual({
       classLevel: "Rogue 2",
       race: "Halfling",
@@ -302,6 +304,48 @@ describe("rules derivation", () => {
     expect(character).toEqual(before);
   });
 
+  it("derives Dragonborn race ability bonuses from local registry data", () => {
+    const character = {
+      build: {
+        version: 1,
+        ruleset: "srd-5.1",
+        raceId: "dragonborn",
+        classId: "class_fighter",
+        backgroundId: "background_soldier",
+        level: 1,
+        abilities: { base: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 } },
+        choicesByLevel: {}
+      }
+    };
+
+    const derived = deriveCharacter(character);
+
+    expect(derived.raceAbilityBonuses).toEqual({ str: 2, dex: 0, con: 0, int: 0, wis: 0, cha: 1 });
+    expect(derived.abilities.str).toMatchObject({ base: 15, total: 17, modifier: 3 });
+    expect(derived.abilities.cha).toMatchObject({ base: 8, total: 9, modifier: -1 });
+    expect(character.build.abilities.base).toEqual({ str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 });
+  });
+
+  it("derives Human race ability bonuses from local registry data", () => {
+    const derived = deriveCharacter({
+      build: {
+        version: 1,
+        ruleset: "srd-5.1",
+        raceId: "race_human",
+        classId: "class_fighter",
+        backgroundId: "background_soldier",
+        level: 1,
+        abilities: { base: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 } },
+        choicesByLevel: {}
+      }
+    });
+
+    expect(derived.raceAbilityBonuses).toEqual({ str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 });
+    for (const key of ["str", "dex", "con", "int", "wis", "cha"]) {
+      expect(derived.abilities[key]).toMatchObject({ base: 10, total: 11, modifier: 0 });
+    }
+  });
+
   it("reflects builder identity changes in derived values without mutating the character", () => {
     const character = {
       build: {
@@ -373,8 +417,8 @@ describe("rules derivation", () => {
       proficiency: 2,
       initiative: 2
     });
-    expect(materialized.abilities.str).toMatchObject({ score: 16, mod: 3, save: 5 });
-    expect(materialized.abilities.dex).toMatchObject({ score: 14, mod: 2, save: 2 });
+    expect(materialized.abilities.str).toMatchObject({ score: 17, mod: 3, save: 5 });
+    expect(materialized.abilities.dex).toMatchObject({ score: 15, mod: 2, save: 2 });
   });
 
   it("exposes basic math helpers", () => {

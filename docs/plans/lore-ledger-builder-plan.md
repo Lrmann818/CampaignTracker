@@ -181,6 +181,7 @@ Phase 2B ability-score method scope:
 - Point Buy starts all scores at 8, shows remaining points clearly, and disables invalid increases/decreases.
 - Roll supports `3d6` and `4d6 drop lowest`, generates a rolled pool, and assigns rolled values to abilities.
 - Kept method-specific intermediate values in wizard-local draft state; persist only the final ability base scores used by builder derivation.
+- Ability-score methods collect base scores only. The Ability Scores step previews race bonuses and final derived totals from local rules data when available; race bonuses are derived and are not materialized into `build.abilities.base`.
 - Added tests for validation, disabled states, assignment uniqueness, point-buy cost rules, and roll-pool assignment before widening the UI.
 
 Summary review scope:
@@ -193,7 +194,8 @@ Summary review scope:
 Choice preview rule:
 
 - Builder choice steps should show a read-only selected-option preview before Continue when the selected option has meaningful explanation or mechanical impact available from local SRD/generated data.
-- The preview is explanatory UI only. It must derive from registry records plus domain derivation logic, and must not duplicate derived values into persisted flat character fields or create a second source of truth.
+- The preview is explanatory UI only. It should come from canonical rules data and domain derivation where possible, and must not duplicate mechanics calculations in UI-only code.
+- The preview must not duplicate derived values into persisted flat character fields or create a second source of truth.
 - Stored choices remain normalized IDs in `build.choicesByLevel`; preview labels and mechanics are resolved from those IDs at render time.
 - Dragonborn Draconic Ancestry is the first concrete example of this pattern, not a Dragonborn-only rule.
 
@@ -204,6 +206,7 @@ Completed:
 - Identity now requires race, class, and background before progression.
 - Builder-created characters are fixed at level 1 for this phase.
 - Ability-score methods remain wizard-local draft state and persist only final `build.abilities.base` scores.
+- The Ability Scores step previews race ability bonuses and derived totals, while keeping `build.abilities.base` as base scores only.
 - Roll supports duplicate numeric results by tracking rolled score instances rather than score values alone.
 - The final wizard order places ability scores after identity and supported race/class/background choices. As of Phase 3A, Dragonborn characters route through Race Choices between Identity and Ability Scores; non-Dragonborn characters proceed directly from Identity to Ability Scores until their race choices are implemented.
 
@@ -227,7 +230,7 @@ Completed April 27, 2026.
 - The registry bridge preserves existing saved builder ID compatibility and does not broadly convert saved IDs.
 - No schema migration, adapter regeneration, or generated JSON edits were introduced.
 
-Deferred from Phase 3A to Phase 3B:
+Completed by Phase 3B:
 
 - Breath Weapon derivation from the chosen ancestry
 - Damage Resistance derivation from the chosen ancestry
@@ -243,13 +246,33 @@ Completed April 27, 2026.
 - Breath Weapon save DC is derived as `8 + Constitution modifier + proficiency bonus`.
 - Breath Weapon damage dice scale by builder level: `2d6` before level 6, `3d6` from level 6, `4d6` from level 11, and `5d6` from level 16.
 - Builder Summary displays the selected ancestry mechanics as the current temporary builder-specific surface for this vertical slice.
+- Derived table-use values should also surface in the practical panel where players need them, not only in Builder Summary. Dragonborn Breath Weapon DC appears in Vitals when derivable; future class-derived resources, such as Sorcery Points, should follow the same derived/read-only pattern until editable tracking is intentionally implemented.
 - The persisted builder record still stores only the normalized ancestry choice ID. Derived ancestry mechanics are not copied into flat character fields or persisted as duplicate builder fields.
 - Freeform characters remain unchanged.
 - Derivation and Summary rendering tests cover the Dragonborn vertical slice before expanding the same pattern to other races or traits.
 
 Still deferred beyond Phase 3B:
 
-- Surfacing derived ancestry mechanics through the normal character sheet trait/panel experience rather than only through builder-specific Summary UI.
+- Action tracking, uses/rest tracking, rest recharge, and combat automation for Breath Weapon.
+- Broader normal-sheet surfacing for derived ancestry mechanics beyond the current Vitals display of Breath Weapon DC.
+
+### Derived Resources and Derived Combat Stats Pattern
+
+Derived table-use values should appear in the normal character sheet panel where users need them during play. Builder Summary can collect and explain builder-derived mechanics, but it must not be the only place users can find values they need at the table.
+
+Current example:
+
+- Dragonborn Breath Weapon DC is derivable from ancestry, Constitution modifier, and proficiency bonus, so Vitals is the appropriate normal-sheet home for that combat DC.
+
+Future examples may include class-derived resources such as Sorcery Points or similar level/class features. These values should be derived and read-only first. Do not persist them into flat/freeform fields unless a later explicit tracking or editing slice intentionally adds that behavior.
+
+### Temporary Builder-Only Panel Retirement Direction
+
+Builder-only panels are temporary scaffolding, not the long-term sheet model. Over time, builder and freeform characters should use the same visible character sheet panels:
+
+- Builder characters populate normal panels through derivation and intentional overrides.
+- Freeform characters continue using manual fields.
+- Before any builder-only panel is removed, every useful piece of information it shows must already have a clear home in the normal panel structure.
 
 ### Remaining Phase 3 Work Items
 
@@ -261,7 +284,7 @@ Applicable to future choice expansion beyond Dragonborn:
 - Avoid materializing derived fields into persisted character fields unless a later phase
   explicitly requires it.
 - Add tests for derivation behavior before widening the content set.
-- Add race ability bonus previews to the Ability Scores step once racial modifiers are derived.
+- Expand race ability bonus previews as additional race/subrace choice data becomes supported.
 
 Examples of likely future choice areas:
 

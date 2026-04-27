@@ -3949,6 +3949,23 @@ div.mutedSmall {
   line-height: 1.35;
 }
 
+#builderWizardPanel .builderAbilityBonusPreview {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-3) 58%, transparent);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+#builderWizardPanel .builderAbilityBonusPreview[hidden] {
+  display: none;
+}
+
 #builderWizardPanel .builderWizardValidation,
 #builderWizardPanel .builderAbilityValidation {
   margin: -4px 0 0;
@@ -3965,6 +3982,15 @@ div.mutedSmall {
   border: 1px solid var(--hairline);
   border-radius: 10px;
   background: color-mix(in srgb, var(--surface-3) 70%, transparent);
+}
+
+#builderWizardPanel .builderAbilityTotalPreview {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 #builderWizardPanel .builderWizardAbilityGrid input[type="number"] {
@@ -5156,6 +5182,18 @@ select.npcField:focus {
   font-weight: 700;
   font-size: 15px;
   margin-left: 2px;
+}
+
+.builderDerivedVitalValue {
+  align-self: flex-start;
+  min-width: 30px;
+  padding: 5px;
+  border-radius: 10px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface), var(--card) 45%);
+  border: 1px solid var(--hairline);
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .charHpRow {

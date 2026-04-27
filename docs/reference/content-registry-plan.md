@@ -630,12 +630,13 @@ Choice storage remains normalized. The persisted value is the selected option's 
 not a copied label, description, or mechanical summary.
 
 When a choice option has meaningful explanation or mechanical impact available in
-registry data, the wizard may render a read-only selected-option preview before
-the user continues. Content records should expose enough displayable, structured
-data for that preview when the data is already part of the approved SRD-backed
-model. The preview is derived UI, not persisted character data: labels,
-descriptions, and mechanics are resolved from the stored choice ID, registry
-records, and domain derivation logic at render time.
+registry data, the wizard should render a read-only selected-option preview
+before the user continues. Content records should expose enough displayable,
+structured data for that preview when the data is already part of the approved
+SRD-backed model. The preview is derived UI, not persisted character data:
+labels, descriptions, and mechanics are resolved from the stored choice ID,
+registry records, and domain derivation logic at render time. Do not duplicate
+mechanics calculations in UI-only code.
 
 Dragonborn Draconic Ancestry is the first concrete example. The stored value is a
 bare ancestry ID such as `"red"`; the selected ancestry record supplies the
@@ -647,6 +648,25 @@ proficiency bonus`), and level-scaled damage dice. These values are derived from
 the stored choice ID and registry/rules data for preview and builder display;
 they are not duplicated into flat persisted character fields by default. Choices
 without meaningful displayable data are not required to invent preview content.
+
+### Derived Table-Use Values
+
+Builder Summary may collect and explain derived mechanics, but table-use values
+should also appear in the normal character sheet panel where users need them.
+For combat DCs and similar at-the-table stats, that practical panel is usually
+Vitals or the relevant normal sheet panel, not a temporary builder-only surface.
+
+Current example: Dragonborn Breath Weapon DC is derived from the stored ancestry
+choice, Constitution modifier, and proficiency bonus, so Vitals is the
+appropriate normal-sheet home when the value is derivable. Future class-derived
+resources, such as Sorcery Points, should follow the same read-only derivation
+pattern before any intentional tracking or editing slice is added.
+
+These derived values are not registry records and are not flat stored character
+fields by default. Race bonuses, derived combat stats, damage resistance, breath
+weapon area, save DC, damage dice, and future derived resources should be
+computed from persisted choices and rules data unless a later explicit slice
+adds tracked or editable storage.
 
 ### Choice `from` Types
 

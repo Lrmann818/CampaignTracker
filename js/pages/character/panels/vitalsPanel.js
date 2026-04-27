@@ -23,6 +23,7 @@ function isFiniteNumber(value) {
 }
 
 const BUILDER_OWNED_VITAL_NUMBER_IDS = new Set(["hitDieAmt", "hitDieSize", "charSpeed", "charProf"]);
+const BREATH_WEAPON_DC_VITAL_KEY = "breathWeaponDC";
 
 function setupVitalsTileReorder({ state, SaveManager, panelEl, gridEl, actions = null }) {
   const panel = panelEl || document.getElementById("charVitalsPanel");
@@ -195,7 +196,10 @@ export function initVitalsPanel(deps = {}) {
         speed: isFiniteNumber(derived?.vitals?.speed) ? derived.vitals.speed : null,
         hitDieAmt: isFiniteNumber(derived?.vitals?.hitDieAmt) ? derived.vitals.hitDieAmt : null,
         hitDieSize: isFiniteNumber(derived?.vitals?.hitDieSize) ? derived.vitals.hitDieSize : null,
-        proficiency: isFiniteNumber(derived?.proficiencyBonus) ? derived.proficiencyBonus : null
+        proficiency: isFiniteNumber(derived?.proficiencyBonus) ? derived.proficiencyBonus : null,
+        breathWeaponDC: isFiniteNumber(derived?.dragonbornAncestry?.breathWeapon?.saveDC)
+          ? derived.dragonbornAncestry.breathWeapon.saveDC
+          : null
       };
     } catch (err) {
       console.warn("Vitals panel builder derivation failed:", err);
@@ -204,7 +208,7 @@ export function initVitalsPanel(deps = {}) {
   }
 
   /**
-   * @param {"speed" | "hitDieAmt" | "hitDieSize" | "proficiency"} key
+   * @param {"speed" | "hitDieAmt" | "hitDieSize" | "proficiency" | "breathWeaponDC"} key
    * @returns {number | null}
    */
   function getBuilderDerivedVitalValue(key) {
@@ -287,6 +291,42 @@ export function initVitalsPanel(deps = {}) {
     refreshVitalNumberField("charProf", getProficiencyDisplayValue);
   }
 
+  function getBreathWeaponDCValue() {
+    const value = getBuilderDerivedVitalValue("breathWeaponDC");
+    return isFiniteNumber(value) ? value : null;
+  }
+
+  function renderBreathWeaponDCTile() {
+    const existing = wrap.querySelector(`.charTile[data-vital-key="${BREATH_WEAPON_DC_VITAL_KEY}"]`);
+    const saveDC = getBreathWeaponDCValue();
+
+    if (saveDC == null) {
+      existing?.remove();
+      return;
+    }
+
+    const tile = existing || document.createElement("div");
+    if (!existing) {
+      tile.className = "charTile builderDerivedVitalTile";
+      tile.dataset.vitalKey = BREATH_WEAPON_DC_VITAL_KEY;
+
+      const label = document.createElement("div");
+      label.className = "charTileLabel";
+      label.textContent = "Breath Weapon DC";
+      tile.appendChild(label);
+
+      const value = document.createElement("div");
+      value.className = "builderDerivedVitalValue";
+      value.setAttribute("aria-readonly", "true");
+      tile.appendChild(value);
+
+      wrap.appendChild(tile);
+    }
+
+    const valueEl = tile.querySelector(".builderDerivedVitalValue");
+    if (valueEl) valueEl.textContent = String(saveDC);
+  }
+
   function refreshBuilderOwnedVitalNumberFields() {
     const shouldRefreshBuilderOwnedVitals = isBuilderCharacter(getCurrentCharacter()) ||
       guard.els.hitDieAmt?.dataset.builderOwned === "true" ||
@@ -304,6 +344,7 @@ export function initVitalsPanel(deps = {}) {
     vitalNumberFields.forEach(({ id, getValue }) => {
       refreshVitalNumberField(id, getValue);
     });
+    renderBreathWeaponDCTile();
   }
 
   function bindVitalsNumbers() {
@@ -450,6 +491,7 @@ export function initVitalsPanel(deps = {}) {
     if (!currentCharacter) return;
 
     Array.from(wrap.querySelectorAll('.charTile[data-vital-key^="res:"]')).forEach((el) => el.remove());
+    renderBreathWeaponDCTile();
 
     const resources = Array.isArray(currentCharacter.resources) ? currentCharacter.resources : [];
     resources.forEach((r, idx) => {
@@ -654,6 +696,14 @@ export function initVitalsPanel(deps = {}) {
   addDestroy(subscribePanelDataChanged("character-fields", (detail) => {
     if (destroyed || detail.source === panelInstance) return;
     refreshBuilderOwnedVitalNumberFields();
+    renderBreathWeaponDCTile();
+    setupVitalsTileReorder({
+      state,
+      SaveManager,
+      panelEl,
+      gridEl: wrap,
+      actions: { updateCharacterField, mutateCharacter }
+    });
     refreshStatusField();
   }));
 

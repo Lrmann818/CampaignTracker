@@ -24,6 +24,7 @@ import {
   renderWeaponsEmbeddedContent
 } from "../js/pages/combat/combatEmbeddedPanels.js";
 import { notifyActiveCharacterChanged } from "../js/domain/characterEvents.js";
+import { deriveCharacter } from "../js/domain/rules/deriveCharacter.js";
 import { notifyPanelDataChanged } from "../js/ui/panelInvalidation.js";
 
 events.defaultMaxListeners = 100;
@@ -1334,6 +1335,92 @@ describe("character panels active character resolution", () => {
     expect(prof.getAttribute("aria-readonly")).toBe("true");
     expect(builder.proficiency).toBe(9);
     expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    api.destroy();
+  });
+
+  it("displays Dragonborn Breath Weapon DC in Vitals from derived ancestry mechanics", () => {
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 14, int: 10, wis: 10, cha: 10 });
+    builder.build.raceId = "dragonborn";
+    builder.build.classId = "class_fighter";
+    builder.build.level = 5;
+    builder.build.choicesByLevel = { "1": { "dragonborn-ancestry": "red" } };
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+    const derived = deriveCharacter(builder);
+    const tile = document.querySelector('.charTile[data-vital-key="breathWeaponDC"]');
+
+    expect(tile).not.toBeNull();
+    expect(tile.textContent).toContain("Breath Weapon DC");
+    expect(tile.querySelector(".builderDerivedVitalValue").textContent)
+      .toBe(String(derived.dragonbornAncestry.breathWeapon.saveDC));
+    expect(derived.dragonbornAncestry.breathWeapon.saveDC).toBe(13);
+    expect(builder).not.toHaveProperty("breathWeaponDC");
+    expect(builder).not.toHaveProperty("breathWeapon");
+    expect(builder.build).not.toHaveProperty("breathWeaponDC");
+    expect(builder.build).not.toHaveProperty("breathWeapon");
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    api.destroy();
+  });
+
+  it("keeps the Dragonborn Breath Weapon DC Vitals item read-only", () => {
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 14, int: 10, wis: 10, cha: 10 });
+    builder.build.raceId = "dragonborn";
+    builder.build.choicesByLevel = { "1": { "dragonborn-ancestry": "red" } };
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+    const tile = document.querySelector('.charTile[data-vital-key="breathWeaponDC"]');
+
+    expect(tile.querySelector("input")).toBeNull();
+    expect(tile.querySelector(".builderDerivedVitalValue").getAttribute("aria-readonly")).toBe("true");
+    expect(tile.querySelector(".resourceDeleteBtn")).toBeNull();
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    api.destroy();
+  });
+
+  it("does not show Breath Weapon DC in Vitals for non-Dragonborn builder characters", () => {
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 14, int: 10, wis: 10, cha: 10 });
+    builder.build.raceId = "race_human";
+    builder.build.choicesByLevel = { "1": { "dragonborn-ancestry": "red" } };
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+
+    expect(document.querySelector('.charTile[data-vital-key="breathWeaponDC"]')).toBeNull();
+
+    api.destroy();
+  });
+
+  it("does not show Breath Weapon DC in Vitals for freeform characters", () => {
+    const freeform = makeCharacter("char_free", "Freeform", { build: null, con: 14 });
+    const state = { characters: { activeId: "char_free", entries: [freeform] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+
+    expect(document.querySelector('.charTile[data-vital-key="breathWeaponDC"]')).toBeNull();
+
+    api.destroy();
+  });
+
+  it("does not show Breath Weapon DC in Vitals for Dragonborn builders without ancestry", () => {
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 14, int: 10, wis: 10, cha: 10 });
+    builder.build.raceId = "dragonborn";
+    builder.build.choicesByLevel = {};
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+
+    expect(deriveCharacter(builder).dragonbornAncestry).toBeNull();
+    expect(document.querySelector('.charTile[data-vital-key="breathWeaponDC"]')).toBeNull();
 
     api.destroy();
   });

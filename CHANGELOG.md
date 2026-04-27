@@ -17,10 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accessible informational Builder Mode badge for builder characters.
 - Display-only Builder Summary panel for builder characters, shown after Basics and before Vitals, with derived class/level, race, background, level, proficiency bonus, and ability totals/modifiers.
 - Dragonborn Draconic Ancestry derivation and Builder Summary display for damage resistance, breath weapon type/area, save ability, save DC, and level-scaled damage dice, while persisting only the selected ancestry ID.
+- Dragonborn Race Choices wizard preview for Draconic Ancestry, sourced from local registry/rules derivation rather than UI-only mechanics lookup.
+- Vitals display for derived Dragonborn Breath Weapon DC when applicable, keeping the value read-only and derived.
 
 ### Not Shipped Yet
 
-- The full builder wizard, content pickers, level-up flow, field locking/override UI, and HP/AC/saves/skills/spells/combat or linked-card automation are still future Step 3 work. Phase 3A summary values are not persisted back into character fields.
+- Class/background choice pickers, equipment, level-up flow, field locking/override UI, action tracking, rest recharge, combat automation, and broader HP/AC/saves/skills/spells or linked-card automation are still future Step 3 work. Derived builder values are not persisted back into flat character fields by default.
 
 ## [v0.5.0] - 2026-04-16
 
