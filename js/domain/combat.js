@@ -31,6 +31,7 @@
  *   source: CombatParticipantSourceRef,
  *   hpCurrent: number | null,
  *   hpMax: number | null,
+ *   ac: number | null,
  *   tempHp: number,
  *   statusEffects: CombatStatusEffect[],
  *   [key: string]: unknown
@@ -492,6 +493,15 @@ export function getCombatHpFromSource(source) {
 }
 
 /**
+ * @param {Record<string, unknown> | null | undefined} source
+ * @returns {number | null}
+ */
+export function getCombatAcFromSource(source) {
+  const src = isPlainObject(source) ? source : {};
+  return nonNegativeNumberOrNull(src.ac);
+}
+
+/**
  * @param {{ hpCurrent?: unknown, hpMax?: unknown, tempHp?: unknown }} hp
  * @param {unknown} amount
  * @returns {{
@@ -605,6 +615,7 @@ export function createCombatParticipantFromSource(source, options = {}) {
   const src = isPlainObject(source) ? source : {};
   const sourceType = normalizeCombatSourceType(options.sourceType ?? src.sourceType ?? src.type, src) || "npc";
   const hp = getCombatHpFromSource(src);
+  const ac = getCombatAcFromSource(src);
 
   return {
     id: cleanString(options.id) || makeCombatId("cmb"),
@@ -617,6 +628,7 @@ export function createCombatParticipantFromSource(source, options = {}) {
     source: createCombatSourceRef(src, sourceType),
     hpCurrent: hp.hpCurrent,
     hpMax: hp.hpMax,
+    ac,
     tempHp: hp.tempHp,
     statusEffects: normalizeStatusEffects(options.statusEffects ?? src.statusEffects, {
       fallbackStatusText: src.status
@@ -648,6 +660,7 @@ function normalizeCombatParticipant(participant) {
       : createCombatSourceRef(undefined, "npc"),
     hpCurrent: nonNegativeNumberOrNull(participant.hpCurrent),
     hpMax: nonNegativeNumberOrNull(participant.hpMax),
+    ac: nonNegativeNumberOrNull(participant.ac),
     tempHp: nonNegativeNumber(participant.tempHp),
     statusEffects: normalizeStatusEffects(participant.statusEffects)
   };

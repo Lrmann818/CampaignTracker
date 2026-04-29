@@ -131,6 +131,7 @@ describe("tracker add-to-combat actions", () => {
           classLevel: "Wizard 5",
           hpCur: 14,
           hpMax: 20,
+          ac: 18,
           status: "Blessed",
           imgBlobId: "char-portrait"
         }]
@@ -142,6 +143,7 @@ describe("tracker add-to-combat actions", () => {
           name: "Fallback",
           hpCurrent: 1,
           hpMax: 2,
+          ac: 9,
           status: "Fallback",
           sectionId: "sec_foe"
         }],
@@ -161,6 +163,7 @@ describe("tracker add-to-combat actions", () => {
       name: "Arlen",
       hpCurrent: 14,
       hpMax: 20,
+      ac: 18,
       statusEffects: [expect.objectContaining({ label: "Blessed" })],
       source: { type: "npc", id: "npc_1", sectionId: "sec_foe", group: "" }
     });

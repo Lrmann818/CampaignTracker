@@ -260,7 +260,7 @@ Goal: add the normal character-page home for special rule-backed abilities and f
 
 Completed April 27, 2026.
 
-Phase 3C foundation complete: derived Dragonborn Breath Weapon now renders as the first display-only Abilities & Features card. Phase 3F later added manual/freeform feature cards. Visual polish beyond the first manual/custom-card pathway, use tracking, partial regain behavior, spell slots, broader rest/resource automation, and broader feature coverage remain future work.
+Phase 3C foundation complete: derived Dragonborn Breath Weapon now renders as the first display-only Abilities & Features card. Phase 3F later added the manual/freeform feature-card foundation and first polish pass. Use tracking, partial regain behavior, spell slots, broader rest/resource automation, and broader feature coverage remain future work.
 
 Shipped foundation scope:
 
@@ -269,14 +269,14 @@ Shipped foundation scope:
 - The card is derived from existing builder/rules data and the persisted ancestry choice ID.
 - Breath Weapon is not persisted into Weapons, Spells, Equipment, or flat character fields.
 - Vitals still shows Breath Weapon DC as a derived combat stat when derivable.
-- Freeform characters remain unchanged for this slice.
-- No use tracking, manual feature editor, custom feature cards, or broader class-feature system shipped in this foundation slice.
+- Freeform characters remained unchanged in this slice; Phase 3F later added manual/freeform cards.
+- No use tracking, resource-linked feature cards, custom SRD feature imports, or broader class-feature system shipped in this foundation slice.
 
 Long-term model:
 
 - Builder characters can receive derived feature cards from rules/build choices.
-- Freeform characters should eventually be able to create manual feature cards.
-- Builder-derived and freeform/manual cards should render through the same Abilities & Features panel UI.
+- Freeform characters can create manual feature cards after Phase 3F.
+- Builder-derived and freeform/manual cards render through the same Abilities & Features panel UI.
 - Builder-derived cards should not be duplicated into manual/freeform card state unless a later explicit copy, customize, or override behavior is designed.
 
 Surface ownership:
@@ -297,9 +297,8 @@ Resource ownership:
 
 Future Abilities & Features work:
 
-- Visual/card polish for Abilities & Features cards.
-- Freeform/manual Abilities & Features cards.
-- User-created/custom feature cards.
+- Fuller accessibility pass for menu keyboard navigation.
+- Possible cleanup of overlapping legacy `damageEffect` and newer `effectText` fields.
 - Use tracking for limited-use features.
 - Partial regain behavior, if a later rules slice needs it.
 - Rest/recovery rules across feature uses and broader character systems.
@@ -370,8 +369,8 @@ Still out of scope after this foundation slice:
 - Combat-wide rest actions or all-character rest actions.
 - Linked combat character rest behavior.
 - Breath Weapon use tracking.
-- Abilities & Features visual polish.
-- Manual/freeform feature-card editing.
+- Abilities & Features use tracking and resource-linked behavior.
+- Manual/freeform feature-card editing is handled by Phase 3F, but it does not add resource automation.
 
 ### Phase 3E: Resource Recovery Settings Dialog — FOUNDATION COMPLETE
 
@@ -448,7 +447,7 @@ Goal: prove the manual/custom feature-card pathway safely, especially for freefo
 
 Completed April 29, 2026.
 
-Phase 3F foundation complete: freeform and builder characters can create, edit, delete, persist, and render manual/custom Abilities & Features cards in the same panel as derived cards. Builder-derived cards remain derived/read-only and are not copied into manual persisted state. This is a foundation slice for user-created feature cards, not a resource-spending, class-feature automation, or spell-slot automation slice.
+Phase 3F foundation and first polish pass complete: freeform and builder characters can create, edit, delete, reorder, collapse, persist, and render manual/custom Abilities & Features cards in the same panel as derived cards. Builder-derived cards remain derived/read-only and are not copied into manual persisted state. This is a foundation slice for user-created feature cards, not a resource-spending, attack/damage calculation, class-feature automation, or spell-slot automation slice.
 
 Shipped foundation scope:
 
@@ -457,7 +456,10 @@ Shipped foundation scope:
 - Builder-derived cards remain derived/read-only and must not be copied into manual persisted state.
 - Manual/custom cards are persisted separately from derived cards in a character-owned `manualFeatureCards[]` collection.
 - Derived cards and manual cards render in the same Abilities & Features panel.
-- Manual cards are editable and deletable by the user.
+- The `+ Feature` action lives in the Abilities & Features panel header action area.
+- Manual card management actions live behind a gear/settings menu.
+- Manual cards are editable, deletable, reorderable with move up/down controls, and collapsible by header click.
+- Manual card notes/description content can be collapsed independently for readability.
 - Derived cards are read-only unless a later override/customization system explicitly defines otherwise.
 
 First slice manual card fields shipped:
@@ -467,8 +469,12 @@ First slice manual card fields shipped:
 - Activation.
 - Range/area.
 - Save/DC text.
-- Damage/effect text.
+- Attack roll text.
+- Damage roll text.
+- Effect text.
 - Description/notes.
+- Legacy `damageEffect` remains preserved/backward-compatible; possible cleanup of overlapping `damageEffect` / `effectText` remains future work.
+- These fields are plain text only. Phase 3F does not calculate attack rolls, damage, DCs, costs, or resource spending from them.
 
 Out of scope for Phase 3F:
 
@@ -480,6 +486,8 @@ Out of scope for Phase 3F:
 - Broad class-feature automation.
 - New SRD data coverage or class-feature imports.
 - A final override/customization system for derived cards.
+- A fuller accessibility pass for menu keyboard navigation.
+- Cleanup or migration for overlapping `damageEffect` / `effectText`.
 
 Resource ownership remains unchanged:
 
@@ -496,6 +504,25 @@ Completed foundation tests:
 - Derived cards are not persisted into manual card state.
 - Manual cards do not create duplicate resource counters.
 - Existing Resource Settings / rest recovery behavior remains unchanged.
+
+### Combat Card Vitals Polish — POLISH COMPLETE
+
+Completed April 29, 2026.
+
+Phase 3F polish also completed a narrow combat-card vitals cleanup:
+
+- Combat participant cards now show compact HP and AC controls beside each other.
+- HP no longer stretches unnecessarily wide.
+- AC is manually editable and follows the existing linked-card source pattern:
+  - linked tracker card with `characterId`: AC reads/writes `character.ac`;
+  - standalone tracker-sourced combatant: AC writes the tracker card fallback `ac`;
+  - source-less/manual encounter participant: AC stays on the encounter participant.
+- This did not add AC derivation, armor/equipment automation, builder AC automation, or broader character AC system work.
+
+Future combat/AC work:
+
+- Possible future AC derivation or equipment-based AC automation.
+- Broader HP/AC automation beyond the current manual linked-card source pattern.
 
 ### Derived Resources and Derived Combat Stats Pattern
 

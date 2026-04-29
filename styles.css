@@ -2983,11 +2983,20 @@ button.panelSelectBtn:hover {
   flex: 0 0 auto;
 }
 
+.combatVitalsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 /* HP area — single clickable button */
 .combatHpBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex: 0 0 auto;
   cursor: pointer;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -3022,6 +3031,39 @@ button.panelSelectBtn:hover {
   color: var(--danger);
 }
 
+.combatAcField {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  padding: 4px 8px;
+}
+
+.combatAcLabel {
+  color: var(--muted);
+  font-size: var(--small-font-size);
+}
+
+.combatAcInput {
+  width: 4ch;
+  min-width: 3ch;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  padding: 0;
+}
+
+.combatAcInput:focus-visible {
+  outline: 2px solid var(--accent, currentColor);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .combatTempHpBadge {
   border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--border));
   border-radius: 8px;
@@ -3054,21 +3096,37 @@ button.panelSelectBtn:hover {
   text-decoration: line-through;
 }
 
-.combatStatusGearBtn {
-  font-size: 0.85rem;
-  padding: 2px 5px;
-  opacity: 0.6;
-  flex-shrink: 0;
-  /* Override .moveBtn bordered pill appearance */
+.iconGearBtn {
+  font-size: 0.95rem;
+  padding: 0;
+  opacity: 0.75;
   border: none;
   background: transparent;
-  width: auto;
-  height: auto;
+  width: 30px;
+  min-height: var(--panel-control-h);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+  line-height: 1;
 }
 
-.combatStatusGearBtn:hover {
+.iconGearBtn:hover {
   opacity: 1;
+  color: var(--text);
   background: transparent;
+}
+
+.iconGearBtn:focus-visible {
+  outline: 2px solid var(--accent, currentColor);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.combatStatusGearBtn {
+  flex-shrink: 0;
+  height: var(--panel-control-h);
 }
 
 .combatStatusNameBox {
@@ -5791,11 +5849,18 @@ select.npcField:focus {
 
 .featureCardDialogPanel {
   max-width: 520px;
+  max-height: calc(100dvh - 36px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
 }
 
 .featureCardDialogBody {
   display: grid;
   gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .featureCardDialogField {
@@ -5840,6 +5905,19 @@ select.npcField:focus {
 }
 
 /* Collapsible notes area inside feature card body */
+.featureCardNotesHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.featureCardNotesLabel {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .featureCardNotesArea {
   color: var(--muted);
   font-size: 13px;
@@ -5857,9 +5935,9 @@ select.npcField:focus {
   color: var(--muted);
   font-size: 12px;
   cursor: pointer;
-  padding: 2px 0;
-  margin-top: 4px;
-  display: block;
+  padding: 2px 4px;
+  border-radius: 6px;
+  line-height: 1;
 }
 
 .featureCardNotesToggleBtn:hover {
@@ -5874,26 +5952,7 @@ select.npcField:focus {
 }
 
 .featureCardGearBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--muted);
-  opacity: 0.7;
-  padding: 2px 4px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  line-height: 1;
-}
-
-.featureCardGearBtn:hover {
-  opacity: 1;
-  color: var(--text);
-}
-
-.featureCardGearBtn:focus-visible {
-  outline: 2px solid var(--accent, currentColor);
-  outline-offset: 2px;
-  opacity: 1;
+  flex-shrink: 0;
 }
 
 /* Settings popup menu */

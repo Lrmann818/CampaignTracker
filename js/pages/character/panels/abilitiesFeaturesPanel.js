@@ -147,22 +147,62 @@ function appendMoveButton(parent, direction, disabled, featureId) {
 }
 
 /**
+ * @param {HTMLElement} parent
+ * @param {string} featureId
+ * @param {string} description
+ * @param {boolean} isNotesCollapsed
+ */
+function appendFeatureNotes(parent, featureId, description, isNotesCollapsed) {
+  const notesHeader = appendDiv(parent, "featureCardNotesHeader");
+  appendDiv(notesHeader, "featureCardNotesLabel", "Notes");
+
+  const notesToggle = document.createElement("button");
+  notesToggle.type = "button";
+  notesToggle.className = "featureCardNotesToggleBtn";
+  notesToggle.dataset.featureAction = "notes-toggle";
+  notesToggle.dataset.featureId = featureId;
+  notesToggle.textContent = isNotesCollapsed ? "▸" : "▾";
+  notesToggle.setAttribute("aria-expanded", isNotesCollapsed ? "false" : "true");
+  notesToggle.setAttribute("aria-label", isNotesCollapsed ? "Show notes" : "Hide notes");
+  notesHeader.appendChild(notesToggle);
+
+  const notesArea = appendDiv(parent, "featureCardNotesArea");
+  notesArea.dataset.featureNotesArea = featureId;
+  notesArea.textContent = description;
+}
+
+/**
  * @param {HTMLElement} list
  * @param {import("../../../domain/rules/deriveCharacter.js").DerivedFeatureAction} feature
+ * @param {Set<string>} collapsedCards
+ * @param {Set<string>} collapsedNotes
  */
-function renderDerivedFeatureCard(list, feature) {
+function renderDerivedFeatureCard(list, feature, collapsedCards, collapsedNotes) {
+  const isCollapsed = collapsedCards.has(feature.id);
+  const isNotesCollapsed = collapsedNotes.has(feature.id);
+
   const card = appendDiv(list, "featureActionCard");
   card.dataset.featureId = feature.id;
   card.dataset.featureKind = "derived";
+  card.dataset.featureCollapsed = isCollapsed ? "true" : "false";
+  card.dataset.notesCollapsed = isNotesCollapsed ? "true" : "false";
 
-  const header = appendDiv(card, "featureActionHeader");
+  const header = appendDiv(card, "featureActionHeader panelHeaderClickable");
+  header.dataset.featureCollapseHeader = feature.id;
+  header.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
   const titleWrap = appendDiv(header, "featureActionTitleWrap");
   appendDiv(titleWrap, "featureActionTitle", feature.name);
   const sourceText = [feature.source, feature.sourceDetail].filter(Boolean).join(" / ");
   if (sourceText) appendDiv(titleWrap, "featureActionSource", sourceText);
-  appendDiv(header, "featureActionActivation", feature.activation);
 
-  const details = appendDiv(card, "featureActionDetails");
+  const headerActions = appendDiv(header, "featureActionHeaderActions");
+  if (feature.activation) appendDiv(headerActions, "featureActionActivation", feature.activation);
+  appendMoveButton(headerActions, -1, true, feature.id);
+  appendMoveButton(headerActions, +1, true, feature.id);
+
+  const body = appendDiv(card, "featureCardBody");
+
+  const details = appendDiv(body, "featureActionDetails");
   const saveLabel = ABILITY_SAVE_LABELS[/** @type {keyof typeof ABILITY_SAVE_LABELS} */ (feature.saveAbility)] || cleanString(feature.saveAbility);
   const saveText = saveLabel
     ? `${saveLabel}${feature.saveDc == null ? "" : ` DC ${feature.saveDc}`}`
@@ -180,7 +220,7 @@ function renderDerivedFeatureCard(list, feature) {
     appendDiv(row, "featureActionDetailValue", value);
   }
 
-  if (feature.description) appendDiv(card, "featureActionDescription", feature.description);
+  if (feature.description) appendFeatureNotes(body, feature.id, feature.description, isNotesCollapsed);
 }
 
 /**
@@ -196,6 +236,7 @@ function renderManualFeatureCard(list, feature, index, total, collapsedCards, co
   const isNotesCollapsed = collapsedNotes.has(feature.id);
 
   const card = appendDiv(list, "featureActionCard manualFeatureCard");
+  card.dataset.featureId = feature.id;
   card.dataset.manualFeatureId = feature.id;
   card.dataset.featureKind = "manual";
   card.dataset.featureCollapsed = isCollapsed ? "true" : "false";
@@ -214,16 +255,13 @@ function renderManualFeatureCard(list, feature, index, total, collapsedCards, co
   const headerActions = appendDiv(header, "featureActionHeaderActions");
   if (feature.activation) appendDiv(headerActions, "featureActionActivation", feature.activation);
 
-  appendMoveButton(headerActions, -1, index === 0, feature.id);
-  appendMoveButton(headerActions, +1, index >= total - 1, feature.id);
-
   // Gear button + inline settings menu
   const gearWrap = appendDiv(headerActions, "featureCardGearWrap");
   gearWrap.dataset.featureSettingsWrap = feature.id;
 
   const gearBtn = document.createElement("button");
   gearBtn.type = "button";
-  gearBtn.className = "featureCardGearBtn";
+  gearBtn.className = "iconGearBtn featureCardGearBtn";
   gearBtn.dataset.featureAction = "gear";
   gearBtn.dataset.featureId = feature.id;
   gearBtn.textContent = "⚙";
@@ -258,6 +296,9 @@ function renderManualFeatureCard(list, feature, index, total, collapsedCards, co
 
   gearWrap.appendChild(menu);
 
+  appendMoveButton(headerActions, -1, index === 0, feature.id);
+  appendMoveButton(headerActions, +1, index >= total - 1, feature.id);
+
   // Card body — hidden when card is collapsed
   const body = appendDiv(card, "featureCardBody");
 
@@ -282,18 +323,7 @@ function renderManualFeatureCard(list, feature, index, total, collapsedCards, co
 
   // Collapsible notes/description
   if (feature.description) {
-    const notesToggle = document.createElement("button");
-    notesToggle.type = "button";
-    notesToggle.className = "featureCardNotesToggleBtn";
-    notesToggle.dataset.featureAction = "notes-toggle";
-    notesToggle.dataset.featureId = feature.id;
-    notesToggle.textContent = isNotesCollapsed ? "▸" : "▾";
-    notesToggle.setAttribute("aria-expanded", isNotesCollapsed ? "false" : "true");
-    body.appendChild(notesToggle);
-
-    const notesArea = appendDiv(body, "featureCardNotesArea");
-    notesArea.dataset.featureNotesArea = feature.id;
-    notesArea.textContent = feature.description;
+    appendFeatureNotes(body, feature.id, feature.description, isNotesCollapsed);
   }
 }
 
@@ -567,7 +597,7 @@ export function initAbilitiesFeaturesPanel(deps = {}) {
     const manualFeatures = character ? normalizeManualFeatureCards(character.manualFeatureCards) : [];
     addButton.disabled = !character;
     empty.hidden = derivedFeatures.length + manualFeatures.length > 0;
-    for (const feature of derivedFeatures) renderDerivedFeatureCard(list, feature);
+    for (const feature of derivedFeatures) renderDerivedFeatureCard(list, feature, collapsedCards, collapsedNotes);
     for (let i = 0; i < manualFeatures.length; i++) {
       renderManualFeatureCard(list, manualFeatures[i], i, manualFeatures.length, collapsedCards, collapsedNotes);
     }
@@ -587,7 +617,7 @@ export function initAbilitiesFeaturesPanel(deps = {}) {
         if (collapsedCards.has(featureId)) collapsedCards.delete(featureId);
         else collapsedCards.add(featureId);
         const isNowCollapsed = collapsedCards.has(featureId);
-        const cardEl = list.querySelector(`[data-manual-feature-id="${featureId}"]`);
+        const cardEl = list.querySelector(`[data-feature-id="${featureId}"]`);
         if (cardEl instanceof HTMLElement) {
           cardEl.dataset.featureCollapsed = isNowCollapsed ? "true" : "false";
         }
@@ -607,12 +637,13 @@ export function initAbilitiesFeaturesPanel(deps = {}) {
       if (collapsedNotes.has(featureId)) collapsedNotes.delete(featureId);
       else collapsedNotes.add(featureId);
       const isNowCollapsed = collapsedNotes.has(featureId);
-      const cardEl = list.querySelector(`[data-manual-feature-id="${featureId}"]`);
+      const cardEl = list.querySelector(`[data-feature-id="${featureId}"]`);
       if (cardEl instanceof HTMLElement) {
         cardEl.dataset.notesCollapsed = isNowCollapsed ? "true" : "false";
       }
-      button.textContent = isNowCollapsed ? "▸ Notes" : "▾ Notes";
+      button.textContent = isNowCollapsed ? "▸" : "▾";
       button.setAttribute("aria-expanded", isNowCollapsed ? "false" : "true");
+      button.setAttribute("aria-label", isNowCollapsed ? "Show notes" : "Hide notes");
       return;
     }
 

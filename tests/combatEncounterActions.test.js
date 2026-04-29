@@ -8,6 +8,7 @@ import {
   moveCombatParticipant,
   removeCombatParticipantStatusEffect,
   removeCombatParticipant,
+  setCombatParticipantAc,
   setCombatParticipantRole,
   updateCombatParticipantStatusEffect,
   undoCombatTurn
@@ -25,6 +26,7 @@ function makeState() {
     group: "foe",
     hpCurrent: 10,
     hpMax: 12,
+    ac: 13,
     tempHp: 3,
     status: "Poisoned",
     notes: "canonical notes stay put"
@@ -56,6 +58,7 @@ function makeState() {
             source: { type: "npc", id: "npc_1", sectionId: "sec_enemy", group: "foe" },
             hpCurrent: 10,
             hpMax: 12,
+            ac: 13,
             tempHp: 3,
             statusEffects: [
               makeStatusEffect({ id: "s_time", label: "Haste", durationMode: "time", remaining: 12 })
@@ -68,6 +71,7 @@ function makeState() {
             source: { type: "npc", id: "npc_1", sectionId: "sec_enemy", group: "foe" },
             hpCurrent: 10,
             hpMax: 12,
+            ac: 13,
             tempHp: 3,
             statusEffects: []
           }
@@ -118,6 +122,7 @@ describe("combat encounter actions", () => {
         name: "Arlen",
         hpCur: 10,
         hpMax: 12,
+        ac: 14,
         status: "Poisoned",
         imgBlobId: "char-portrait"
       }]
@@ -145,6 +150,62 @@ describe("combat encounter actions", () => {
       tempHp: 0,
       status: "Fallback"
     });
+  });
+
+  it("writes combat AC through linked tracker cards to the canonical character field", () => {
+    const state = makeState();
+    state.characters = {
+      activeId: "char_a",
+      entries: [{
+        id: "char_a",
+        name: "Arlen",
+        hpCur: 10,
+        hpMax: 12,
+        ac: 14,
+        status: "",
+        imgBlobId: null
+      }]
+    };
+    state.tracker.npcs[0].characterId = "char_a";
+    state.tracker.npcs[0].ac = 10;
+
+    const result = setCombatParticipantAc(state, "cmb_1", 17, {
+      now: "2026-04-11T12:01:00.000Z"
+    });
+
+    expect(result.changed).toBe(true);
+    expect(result.wroteCanonical).toBe(true);
+    expect(state.combat.encounter.participants[0]).toMatchObject({ ac: 17 });
+    expect(state.characters.entries[0].ac).toBe(17);
+    expect(state.tracker.npcs[0].ac).toBe(10);
+    expect(state.combat.encounter.updatedAt).toBe("2026-04-11T12:01:00.000Z");
+  });
+
+  it("stores combat AC on standalone source cards or encounter participants using the HP source rules", () => {
+    const state = makeState();
+
+    const sourced = setCombatParticipantAc(state, "cmb_1", 16);
+    state.combat.encounter.participants.push({
+      id: "cmb_local",
+      name: "Summon",
+      role: "npc",
+      source: { type: "npc", id: "missing", sectionId: "", group: "" },
+      hpCurrent: null,
+      hpMax: null,
+      ac: null,
+      tempHp: 0,
+      statusEffects: []
+    });
+    const local = setCombatParticipantAc(state, "cmb_local", 12);
+
+    expect(sourced.changed).toBe(true);
+    expect(sourced.wroteCanonical).toBe(true);
+    expect(state.tracker.npcs[0].ac).toBe(16);
+    expect(state.combat.encounter.participants[0].ac).toBe(16);
+
+    expect(local.changed).toBe(true);
+    expect(local.wroteCanonical).toBe(false);
+    expect(state.combat.encounter.participants[2].ac).toBe(12);
   });
 
   it("adds, edits, and removes participant statuses while writing back only canonical status text", () => {

@@ -1676,6 +1676,53 @@ describe("character panels active character resolution", () => {
     api.destroy();
   });
 
+  it("derived Dragonborn Breath Weapon card supports card and notes collapse without persistence", () => {
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 14, int: 10, wis: 10, cha: 10 });
+    builder.build.raceId = "dragonborn";
+    builder.build.classId = "class_fighter";
+    builder.build.level = 5;
+    builder.build.choicesByLevel = { "1": { "dragonborn-ancestry": "blue" } };
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initAbilitiesFeaturesPanel(deps);
+    const list = document.getElementById("charAbilitiesFeaturesList");
+    const card = list.querySelector('[data-feature-id="dragonborn-breath-weapon"]');
+    const header = card.querySelector("[data-feature-collapse-header]");
+    const titleEl = card.querySelector(".featureActionTitle");
+    const notesLabel = card.querySelector(".featureCardNotesLabel");
+    const notesToggle = card.querySelector("[data-feature-action='notes-toggle']");
+    const notesArea = card.querySelector("[data-feature-notes-area]");
+
+    expect(card.dataset.featureCollapsed).toBe("false");
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    expect(notesLabel.textContent).toBe("Notes");
+    expect(notesToggle.textContent).toBe("▾");
+    expect(notesToggle.textContent).not.toContain("Notes");
+    expect(notesToggle.getAttribute("aria-label")).toBe("Hide notes");
+    expect(notesArea.textContent).toContain("successful save takes half");
+
+    dispatchTargetedEvent(list, "click", titleEl);
+    expect(card.dataset.featureCollapsed).toBe("true");
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+
+    dispatchTargetedEvent(list, "click", titleEl);
+    expect(card.dataset.featureCollapsed).toBe("false");
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+
+    dispatchTargetedEvent(list, "click", notesToggle);
+    expect(card.dataset.notesCollapsed).toBe("true");
+    expect(notesToggle.textContent).toBe("▸");
+    expect(notesToggle.textContent).not.toContain("Notes");
+    expect(notesToggle.getAttribute("aria-label")).toBe("Show notes");
+
+    expect(builder).not.toHaveProperty("derivedFeatureActions");
+    expect(builder.build).not.toHaveProperty("derivedFeatureActions");
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    api.destroy();
+  });
+
   it("does not render Dragonborn Breath Weapon in Abilities & Features for non-Dragonborn builders", () => {
     const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 14, int: 10, wis: 10, cha: 10 });
     builder.build.raceId = "race_human";
@@ -1775,10 +1822,12 @@ describe("character panels active character resolution", () => {
 
     expect(derived).not.toBeNull();
     expect(manual).not.toBeNull();
-    // Derived cards have no management controls
+    // Derived cards have no settings/edit/delete controls.
     expect(derived.querySelector("[data-feature-action='gear']")).toBeNull();
     expect(derived.querySelector("[data-feature-action='edit']")).toBeNull();
     expect(derived.querySelector("[data-feature-action='delete']")).toBeNull();
+    expect(derived.querySelector("[data-feature-action='move-up']")).not.toBeNull();
+    expect(derived.querySelector("[data-feature-action='move-down']")).not.toBeNull();
     // Manual cards have gear button + edit/delete inside the settings menu
     expect(manual.querySelector("[data-feature-action='gear']")).not.toBeNull();
     expect(manual.querySelector("[data-feature-action='edit']")).not.toBeNull();
@@ -1875,6 +1924,51 @@ describe("character panels active character resolution", () => {
     // Click gear again — menu closes
     dispatchTargetedEvent(list, "click", gearBtn);
     expect(menu.hidden).toBe(true);
+
+    api.destroy();
+  });
+
+  it("manual feature card header controls place gear between activation and move buttons", () => {
+    const freeform = makeCharacter("char_free", "Free", {
+      build: null,
+      manualFeatureCards: [
+        { id: "feat_order_a", name: "Alpha", sourceType: "Skill", activation: "Action", rangeArea: "", saveDc: "", damageEffect: "", description: "" },
+        { id: "feat_order_b", name: "Beta", sourceType: "Skill", activation: "Reaction", rangeArea: "", saveDc: "", damageEffect: "", description: "" }
+      ]
+    });
+    const state = { characters: { activeId: "char_free", entries: [freeform] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+    const api = initAbilitiesFeaturesPanel(deps);
+
+    const card = document.querySelector('[data-manual-feature-id="feat_order_a"]');
+    const actions = card.querySelector(".featureActionHeaderActions");
+    const childKinds = actions.children.map((child) => {
+      if (child.classList.contains("featureActionActivation")) return "activation";
+      if (child.classList.contains("featureCardGearWrap")) return "gear";
+      return child.dataset.featureAction || "";
+    });
+
+    expect(childKinds).toEqual(["activation", "gear", "move-up", "move-down"]);
+
+    api.destroy();
+  });
+
+  it("feature-card gear buttons are keyboard-focusable and accessibly named", () => {
+    const freeform = makeCharacter("char_free", "Free", {
+      build: null,
+      manualFeatureCards: [{ id: "feat_focus", name: "Focused Feature", sourceType: "Skill", activation: "Action", rangeArea: "", saveDc: "", damageEffect: "", description: "" }]
+    });
+    const state = { characters: { activeId: "char_free", entries: [freeform] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+    const api = initAbilitiesFeaturesPanel(deps);
+
+    const gearBtn = document.querySelector('[data-manual-feature-id="feat_focus"] [data-feature-action="gear"]');
+    gearBtn.focus();
+
+    expect(document.activeElement).toBe(gearBtn);
+    expect(gearBtn.classList.contains("iconGearBtn")).toBe(true);
+    expect(gearBtn.getAttribute("aria-label")).toBe("Feature settings: Focused Feature");
+    expect(gearBtn.getAttribute("aria-haspopup")).toBe("true");
 
     api.destroy();
   });
@@ -1991,20 +2085,25 @@ describe("character panels active character resolution", () => {
     // Notes area exists and starts expanded
     expect(notesArea).not.toBeNull();
     expect(notesArea.textContent).toContain("Long description text");
+    expect(card.querySelector(".featureCardNotesLabel").textContent).toBe("Notes");
     expect(card.dataset.notesCollapsed).toBe("false");
     expect(notesToggle.getAttribute("aria-expanded")).toBe("true");
-    expect(notesToggle.textContent).toContain("▾");
+    expect(notesToggle.getAttribute("aria-label")).toBe("Hide notes");
+    expect(notesToggle.textContent).toBe("▾");
+    expect(notesToggle.textContent).not.toContain("Notes");
 
     // Toggle notes collapse
     dispatchTargetedEvent(list, "click", notesToggle);
     expect(card.dataset.notesCollapsed).toBe("true");
     expect(notesToggle.getAttribute("aria-expanded")).toBe("false");
-    expect(notesToggle.textContent).toContain("▸");
+    expect(notesToggle.getAttribute("aria-label")).toBe("Show notes");
+    expect(notesToggle.textContent).toBe("▸");
+    expect(notesToggle.textContent).not.toContain("Notes");
 
     // Toggle notes expand
     dispatchTargetedEvent(list, "click", notesToggle);
     expect(card.dataset.notesCollapsed).toBe("false");
-    expect(notesToggle.textContent).toContain("▾");
+    expect(notesToggle.textContent).toBe("▾");
 
     api.destroy();
   });
@@ -2116,6 +2215,66 @@ describe("character panels active character resolution", () => {
     expect(builder.build).not.toHaveProperty("derivedFeatureActions");
     // Derived card still renders after re-render
     expect(list.querySelector('[data-feature-id="dragonborn-breath-weapon"]')).not.toBeNull();
+
+    api.destroy();
+  });
+
+  it("derived card move buttons are disabled and do not mutate manual or derived state", () => {
+    const builder = makeBuilder("char_builder", { str: 10, dex: 10, con: 14, int: 10, wis: 10, cha: 10 });
+    builder.build.raceId = "dragonborn";
+    builder.build.level = 5;
+    builder.build.choicesByLevel = { "1": { "dragonborn-ancestry": "blue" } };
+    builder.manualFeatureCards = [
+      { id: "manual_a", name: "Alpha", sourceType: "", activation: "", rangeArea: "", saveDc: "", damageEffect: "", description: "" }
+    ];
+    const state = { characters: { activeId: "char_builder", entries: [builder] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+    const api = initAbilitiesFeaturesPanel(deps);
+    const list = document.getElementById("charAbilitiesFeaturesList");
+    const derived = list.querySelector('[data-feature-id="dragonborn-breath-weapon"]');
+    const moveUp = derived.querySelector("[data-feature-action='move-up']");
+    const moveDown = derived.querySelector("[data-feature-action='move-down']");
+    const beforeManual = JSON.stringify(builder.manualFeatureCards);
+    const beforeDerived = JSON.stringify(deriveCharacter(builder).derivedFeatureActions);
+
+    expect(moveUp.disabled).toBe(true);
+    expect(moveDown.disabled).toBe(true);
+
+    dispatchTargetedEvent(list, "click", moveUp);
+    dispatchTargetedEvent(list, "click", moveDown);
+
+    expect(JSON.stringify(builder.manualFeatureCards)).toBe(beforeManual);
+    expect(JSON.stringify(deriveCharacter(builder).derivedFeatureActions)).toBe(beforeDerived);
+    expect(builder).not.toHaveProperty("derivedFeatureActions");
+    expect(builder.build).not.toHaveProperty("derivedFeatureActions");
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    api.destroy();
+  });
+
+  it("feature dialog uses internal scrolling structure for the expanded field set", () => {
+    const freeform = makeCharacter("char_free", "Free", { build: null });
+    const state = { characters: { activeId: "char_free", entries: [freeform] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+    const api = initAbilitiesFeaturesPanel(deps);
+
+    document.getElementById("addFeatureCardBtn").dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    const overlay = document.getElementById("featureCardDialogOverlay");
+    const panel = overlay.querySelector(".featureCardDialogPanel");
+    const body = overlay.querySelector(".featureCardDialogBody");
+    const footer = overlay.querySelector(".uiDialogFooter");
+    const css = readFileSync(resolve(process.cwd(), "styles.css"), "utf8");
+
+    expect(overlay.hidden).toBe(false);
+    expect(panel.getAttribute("role")).toBe("dialog");
+    expect(panel.getAttribute("aria-modal")).toBe("true");
+    expect(body.querySelectorAll("[data-feature-field]").length).toBe(10);
+    expect(footer.querySelector("[data-feature-dialog-cancel]")).not.toBeNull();
+    expect(footer.querySelector("[data-feature-dialog-save]")).not.toBeNull();
+    expect(css).toMatch(/\.featureCardDialogPanel\s*\{[\s\S]*max-height:\s*calc\(100dvh - 36px\);[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\) auto;[\s\S]*overflow:\s*hidden;/);
+    expect(css).toMatch(/\.featureCardDialogBody\s*\{[\s\S]*overflow-y:\s*auto;/);
+    expect(css).toMatch(/\.iconGearBtn\s*\{[\s\S]*border:\s*none;[\s\S]*background:\s*transparent;[\s\S]*width:\s*30px;[\s\S]*min-height:\s*var\(--panel-control-h\);/);
+    expect(css).toMatch(/\.combatStatusGearBtn\s*\{[\s\S]*height:\s*var\(--panel-control-h\);/);
 
     api.destroy();
   });

@@ -134,6 +134,23 @@ function writeParticipantHpToCanonicalSource(state, participant) {
 }
 
 /**
+ * Direct combat-card AC edits follow the same source routing as combat HP:
+ * linked tracker cards write through to the character field, standalone source
+ * cards keep their own fallback value, and source-less participants stay local.
+ *
+ * @param {State | Record<string, unknown>} state
+ * @param {CombatParticipant} participant
+ * @returns {boolean}
+ */
+function writeParticipantAcToCanonicalSource(state, participant) {
+  const tracker = isPlainObject(state.tracker) ? state.tracker : null;
+  const source = findCombatSource(tracker, participant.source);
+  if (!source) return false;
+
+  return writeCardLinkedField(source.card, "ac", participant.ac, state, { queueSave: false }).written;
+}
+
+/**
  * This is the Slice 6 canonical status writeback path.
  *
  * Combat status effects are structured on encounter participants. The current
@@ -355,6 +372,46 @@ export function applyCombatParticipantHpAction(state, participantId, mode, amoun
 
     updatedParticipant = participant;
     wroteCanonical = writeParticipantHpToCanonicalSource(state, participant);
+    const participants = encounter.participants.map((entry, i) => (i === index ? participant : entry));
+    return touchEncounter({ ...encounter, participants }, options.now);
+  });
+
+  return { ...result, participant: updatedParticipant, wroteCanonical };
+}
+
+/**
+ * @param {State | Record<string, unknown>} state
+ * @param {string} participantId
+ * @param {unknown} value
+ * @param {{ now?: string | null }} [options]
+ * @returns {{ changed: boolean, encounter: CombatEncounter, participant: CombatParticipant | null, wroteCanonical: boolean }}
+ */
+export function setCombatParticipantAc(state, participantId, value, options = {}) {
+  let updatedParticipant = /** @type {CombatParticipant | null} */ (null);
+  let wroteCanonical = false;
+  const nextAc = nonNegativeNumberOrNull(value);
+  const result = mutateEncounter(state, (encounter) => {
+    const index = findParticipantIndex(encounter, participantId);
+    if (index < 0) return false;
+    const current = encounter.participants[index];
+    let currentAc = current.ac ?? null;
+    const tracker = isPlainObject(state.tracker) ? state.tracker : null;
+    const source = findCombatSource(tracker, current.source);
+    if (source) {
+      const sourceDisplay = resolveCardDisplayData(
+        source.card,
+        /** @type {Record<string, unknown>} */ (state)
+      );
+      currentAc = nonNegativeNumberOrNull(sourceDisplay.ac);
+    }
+    if (currentAc === nextAc) return false;
+
+    const participant = {
+      ...current,
+      ac: nextAc
+    };
+    updatedParticipant = participant;
+    wroteCanonical = writeParticipantAcToCanonicalSource(state, participant);
     const participants = encounter.participants.map((entry, i) => (i === index ? participant : entry));
     return touchEncounter({ ...encounter, participants }, options.now);
   });

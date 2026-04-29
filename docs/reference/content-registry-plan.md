@@ -679,9 +679,9 @@ Weapons unless they are actually normal weapon/equipment attacks. Phase 3C
 foundation complete: Dragonborn Breath Weapon now renders as the first derived,
 display-only Abilities & Features card, while its derived save DC may also
 appear in Vitals as a compact combat stat. This is the foundation slice only;
-visual/card polish beyond the first manual/custom-card pathway, use tracking,
-partial regain behavior, spell slots, broader rest/resource automation, and
-broader feature coverage remain future work.
+Phase 3F later completed the manual/freeform card foundation and first polish
+pass. Use tracking, partial regain behavior, spell slots, broader rest/resource
+automation, and broader feature coverage remain future work.
 
 Resource state must have one canonical counter. Feature cards may reference,
 spend, restore, or explain that resource, but they must not duplicate the
@@ -718,14 +718,21 @@ entries referenced by feature cards, not as duplicate counters owned by the
 Abilities & Features panel.
 
 Long term, builder characters can receive derived feature cards from rules/build
-choices, and freeform characters should be able to create manual feature cards.
+choices, and freeform characters can create manual feature cards after Phase 3F.
 Phase 3F foundation complete: freeform characters and builder characters can
-create user-owned manual cards while builder-derived/rules-backed cards remain
-derived and read-only. Both sources render through the same Abilities & Features
-panel UI, but they remain separate data sources: manual/custom cards are
-character-owned user content in `manualFeatureCards[]`, not SRD registry records,
-and builder-derived cards must not be duplicated into manual/freeform card state
-unless a later explicit copy, customize, or override behavior is designed.
+create, edit, delete, reorder, collapse, and persist user-owned manual cards
+while builder-derived/rules-backed cards remain derived and read-only. Both
+sources render through the same Abilities & Features panel UI, but they remain
+separate data sources: manual/custom cards are character-owned user content in
+`manualFeatureCards[]`, not SRD registry records, and builder-derived cards must
+not be duplicated into manual/freeform card state unless a later explicit copy,
+customize, or override behavior is designed. Manual-card management actions live
+behind a gear/settings menu, card headers can collapse cards, and manual-card
+notes/descriptions can collapse independently for readability. Manual cards may
+store optional plain-text attack, damage, and effect fields; the older
+`damageEffect` field remains backward-compatible. These text fields are not
+registry mechanics and do not imply attack/damage calculation, resource
+automation, or AC derivation.
 Specialized resource-linked feature cards, such as Sorcery Points, Metamagic,
 and Flexible Casting, may need dedicated renderers later, but they must still
 use the single canonical resource counter.

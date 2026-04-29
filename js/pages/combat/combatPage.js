@@ -17,6 +17,7 @@ import {
   removeCombatParticipantStatusEffect,
   removeCombatParticipant,
   setActiveCombatParticipant,
+  setCombatParticipantAc,
   setCombatParticipantRole,
   setCombatSecondsPerTurn,
   updateCombatParticipantStatusEffect,
@@ -26,6 +27,7 @@ import {
   COMBAT_ROLES,
   STATUS_DURATION_MODES,
   findCombatSource,
+  getCombatAcFromSource,
   getCombatHpFromSource,
   normalizeCombatEncounter
 } from "../../domain/combat.js";
@@ -85,6 +87,7 @@ import { DEV_MODE } from "../../utils/dev.js";
  *   hpCurrentLabel: string,
  *   hpMaxLabel: string,
  *   hpDisplayLabel: string,
+ *   acLabel: string,
  *   tempHp: number,
  *   hasTempHp: boolean,
  *   hpState: "normal" | "temp" | "zero",
@@ -287,6 +290,9 @@ export function getCombatCardViewModels(state) {
     const hpMax = canonicalMax == null ? "--" : String(canonicalMax);
     const hpDisplay = displayHp == null ? "--" : String(displayHp);
     const hpState = tempHp > 0 ? "temp" : displayHp === 0 ? "zero" : "normal";
+    const sourceAc = sourceDisplay ? getCombatAcFromSource(sourceDisplay) : null;
+    const ac = sourceAc ?? participant.ac;
+    const acLabel = ac == null ? "--" : String(ac);
 
     return {
       id: participant.id,
@@ -299,6 +305,7 @@ export function getCombatCardViewModels(state) {
       hpCurrentLabel: hpCurrent,
       hpMaxLabel: hpMax,
       hpDisplayLabel: hpDisplay,
+      acLabel,
       tempHp,
       hasTempHp: tempHp > 0,
       hpState,
@@ -484,7 +491,7 @@ function renderCompactStatusEffect(effect) {
 
   const gearBtn = document.createElement("button");
   gearBtn.type = "button";
-  gearBtn.className = "moveBtn combatStatusGearBtn";
+  gearBtn.className = "iconGearBtn combatStatusGearBtn";
   gearBtn.dataset.combatAction = "status-modal-open-edit";
   gearBtn.title = `Edit ${effect.label}`;
   gearBtn.setAttribute("aria-label", `Edit status: ${effect.label}`);
@@ -602,6 +609,9 @@ function renderCombatCard(card, blobIdToObjectUrl, Popovers) {
     preferRight: true
   });
 
+  const vitalsRow = document.createElement("div");
+  vitalsRow.className = "combatVitalsRow";
+
   // HP area: single clickable button — opens HP modal
   const hpBtn = document.createElement("button");
   hpBtn.type = "button";
@@ -618,6 +628,24 @@ function renderCombatCard(card, blobIdToObjectUrl, Popovers) {
   hpValue.textContent = card.hpDisplayLabel;
   hpBtn.appendChild(hpLabel);
   hpBtn.appendChild(hpValue);
+  vitalsRow.appendChild(hpBtn);
+
+  const acField = document.createElement("label");
+  acField.className = "combatAcField";
+  const acLabel = document.createElement("span");
+  acLabel.className = "combatAcLabel";
+  acLabel.textContent = "AC";
+  const acInput = document.createElement("input");
+  acInput.className = "combatAcInput";
+  acInput.type = "number";
+  acInput.inputMode = "numeric";
+  acInput.placeholder = "AC";
+  acInput.dataset.combatAcInput = "true";
+  acInput.value = card.acLabel === "--" ? "" : card.acLabel;
+  acInput.setAttribute("aria-label", `Armor Class for ${card.name}`);
+  acField.appendChild(acLabel);
+  acField.appendChild(acInput);
+  vitalsRow.appendChild(acField);
 
   // Status row: compact chips with gear buttons + add button
   const statusRow = document.createElement("div");
@@ -680,7 +708,7 @@ function renderCombatCard(card, blobIdToObjectUrl, Popovers) {
   );
 
   content.appendChild(header);
-  content.appendChild(hpBtn);
+  content.appendChild(vitalsRow);
   content.appendChild(statusRow);
   content.appendChild(controlRow);
   article.appendChild(content);
@@ -1197,6 +1225,17 @@ export function initCombatPage(deps = {}) {
   };
 
   /**
+   * @param {HTMLInputElement} input
+   * @returns {number | null}
+   */
+  const getAcInputValue = (input) => {
+    if (input.value.trim() === "") return null;
+    const value = Number(input.value);
+    if (!Number.isFinite(value)) return null;
+    return Math.max(0, Math.trunc(value));
+  };
+
+  /**
    * Reads and validates the status modal's fields.
    * @returns {{ input: { label: string, durationMode: string, duration: number | null, remaining: number | null } | null, error: string }}
    */
@@ -1307,6 +1346,23 @@ export function initCombatPage(deps = {}) {
     const participantId = cleanIdOrNull(cardEl.dataset.combatParticipantId);
     if (!participantId) return;
     commitCombatResult(setCombatParticipantRole(state, participantId, target.value), "Combat role updated.");
+  };
+
+  /**
+   * Handles compact AC edits on combat cards.
+   * @param {Event} event
+   * @returns {void}
+   */
+  const handleCombatAcChange = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || target.dataset.combatAcInput !== "true") return;
+    const cardEl = target.closest("[data-combat-participant-id]");
+    if (!(cardEl instanceof HTMLElement)) return;
+    const participantId = cleanIdOrNull(cardEl.dataset.combatParticipantId);
+    if (!participantId) return;
+    const result = setCombatParticipantAc(state, participantId, getAcInputValue(target));
+    if (!commitCombatResult(result)) return;
+    if (result.wroteCanonical) notifyPanelDataChanged("vitals", { source: "combat-page" });
   };
 
   /**
@@ -1495,6 +1551,7 @@ export function initCombatPage(deps = {}) {
 
   cardsShell.addEventListener("click", handleCombatCardClick, { signal });
   cardsShell.addEventListener("change", handleCombatRoleChange, { signal });
+  cardsShell.addEventListener("change", handleCombatAcChange, { signal });
 
   turnSecondsButton.addEventListener("click", openTurnSecondsModal, { signal });
 

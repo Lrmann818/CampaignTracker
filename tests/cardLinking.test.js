@@ -20,6 +20,7 @@ function makeState() {
           classLevel: "Wizard 5",
           hpCur: 7,
           hpMax: 20,
+          ac: 15,
           status: "Poisoned",
           imgBlobId: "char-portrait"
         }
@@ -36,6 +37,7 @@ function makeState() {
           className: "Fallback Role",
           hpCurrent: 1,
           hpMax: 2,
+          ac: 11,
           status: "Fallback Status",
           imgBlobId: "fallback-portrait",
           notes: "Card notes",
@@ -52,6 +54,7 @@ function makeState() {
           className: "Fallback Class",
           hpCurrent: 3,
           hpMax: 4,
+          ac: 12,
           status: "Fallback Party Status",
           imgBlobId: "fallback-party-portrait",
           notes: "Party notes",
@@ -70,6 +73,7 @@ describe("cardLinking", () => {
       className: "classLevel",
       hpCurrent: "hpCur",
       hpMax: "hpMax",
+      ac: "ac",
       status: "status",
       imgBlobId: "imgBlobId"
     });
@@ -88,6 +92,7 @@ describe("cardLinking", () => {
       className: "Wizard 5",
       hpCurrent: 7,
       hpMax: 20,
+      ac: 15,
       status: "Poisoned",
       imgBlobId: "char-portrait",
       isLinked: true,
@@ -106,6 +111,7 @@ describe("cardLinking", () => {
       className: "Fallback Role",
       hpCurrent: 1,
       hpMax: 2,
+      ac: 11,
       status: "Fallback Status",
       imgBlobId: "fallback-portrait",
       isLinked: false,
@@ -138,6 +144,25 @@ describe("cardLinking", () => {
     expect(SaveManager.markDirty).toHaveBeenCalledTimes(2);
   });
 
+  it("writes linked AC through to the character and standalone AC to the card", () => {
+    const state = makeState();
+    const linked = state.tracker.npcs[0];
+    const standalone = { ...state.tracker.party[0], characterId: null };
+
+    expect(writeCardLinkedField(linked, "ac", 18, state)).toEqual({
+      target: "character",
+      written: true
+    });
+    expect(writeCardLinkedField(standalone, "ac", 13, state)).toEqual({
+      target: "card",
+      written: true
+    });
+
+    expect(state.characters.entries[0].ac).toBe(18);
+    expect(linked.ac).toBe(11);
+    expect(standalone.ac).toBe(13);
+  });
+
   it("writes standalone and orphaned linked fields to the card", () => {
     const state = makeState();
     const standalone = { ...state.tracker.npcs[0], characterId: null };
@@ -168,6 +193,7 @@ describe("cardLinking", () => {
       className: "Wizard 5",
       hpCurrent: 7,
       hpMax: 20,
+      ac: 15,
       status: "Poisoned",
       imgBlobId: "char-portrait",
       notes: "Card notes"

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import {
   COMBAT_CORE_PANEL_IDS,
@@ -66,6 +68,32 @@ describe("combat page shell helpers", () => {
   it("uses shared app select classes for Combat dropdowns", () => {
     expect(COMBAT_ROLE_SELECT_CLASSES.split(" ")).toEqual(expect.arrayContaining(["panelSelect", "combatRoleSelect"]));
     expect(COMBAT_STATUS_MODE_SELECT_CLASSES.split(" ")).toEqual(expect.arrayContaining(["settingsSelect", "combatStatusModalModeSelect"]));
+  });
+
+  it("uses compact icon-button styling for Combat status gears without the move button border pattern", () => {
+    const source = readFileSync(resolve(process.cwd(), "js/pages/combat/combatPage.js"), "utf8");
+    const css = readFileSync(resolve(process.cwd(), "styles.css"), "utf8");
+
+    expect(source).toContain('gearBtn.className = "iconGearBtn combatStatusGearBtn"');
+    expect(source).not.toContain('gearBtn.className = "moveBtn combatStatusGearBtn"');
+    expect(source).toContain('gearBtn.dataset.combatAction = "status-modal-open-edit"');
+    expect(source).toContain('if (action === "status-modal-open-edit")');
+    expect(source).toContain("openStatusModal(participantId, effectId, effect);");
+    expect(css).toMatch(/\.iconGearBtn\s*\{[\s\S]*border:\s*none;[\s\S]*background:\s*transparent;[\s\S]*width:\s*30px;[\s\S]*min-height:\s*var\(--panel-control-h\);/);
+    expect(css).toMatch(/\.combatStatusGearBtn\s*\{[\s\S]*height:\s*var\(--panel-control-h\);/);
+  });
+
+  it("defines compact combat HP and AC vitals layout without a full-width HP control", () => {
+    const source = readFileSync(resolve(process.cwd(), "js/pages/combat/combatPage.js"), "utf8");
+    const css = readFileSync(resolve(process.cwd(), "styles.css"), "utf8");
+    const hpBlock = css.match(/\.combatHpBtn\s*\{[^}]*\}/)?.[0] || "";
+
+    expect(source).toContain('vitalsRow.className = "combatVitalsRow"');
+    expect(source.indexOf('hpBtn.className = "combatHpBtn"')).toBeLessThan(source.indexOf('acField.className = "combatAcField"'));
+    expect(css).toMatch(/\.combatVitalsRow\s*\{[\s\S]*display:\s*flex;[\s\S]*flex-wrap:\s*wrap;/);
+    expect(hpBlock).toContain("flex: 0 0 auto;");
+    expect(css).toMatch(/\.combatAcInput\s*\{[\s\S]*width:\s*4ch;/);
+    expect(hpBlock).not.toContain("width: 100%");
   });
 
   it("formats status time remaining as seconds, mm:ss, and hh:mm", () => {
@@ -139,6 +167,7 @@ describe("combat page shell helpers", () => {
             name: "Arlen",
             hpCurrent: 7,
             hpMax: 10,
+            ac: 16,
             tempHp: 0,
             imgBlobId: "blob_arlen",
             status: ""
@@ -150,6 +179,7 @@ describe("combat page shell helpers", () => {
             name: "Bandit",
             hpCurrent: 5,
             hpMax: 11,
+            ac: 12,
             tempHp: 4,
             imgBlobId: null,
             status: "Haste, Bless"
@@ -167,6 +197,7 @@ describe("combat page shell helpers", () => {
               source: { type: "party", id: "party_1", sectionId: "", group: "" },
               hpCurrent: 7,
               hpMax: 10,
+              ac: 9,
               tempHp: 0,
               statusEffects: []
             },
@@ -177,6 +208,7 @@ describe("combat page shell helpers", () => {
               source: { type: "npc", id: "npc_1", sectionId: "", group: "" },
               hpCurrent: 5,
               hpMax: 11,
+              ac: 12,
               tempHp: 4,
               statusEffects: [
                 {
@@ -224,6 +256,7 @@ describe("combat page shell helpers", () => {
         hpCurrentLabel: "7",
         hpMaxLabel: "10",
         hpDisplayLabel: "7",
+        acLabel: "16",
         hasTempHp: false,
         portraitBlobId: "blob_arlen",
         statusEffects: []
@@ -238,6 +271,7 @@ describe("combat page shell helpers", () => {
         hpCurrentLabel: "5",
         hpMaxLabel: "11",
         hpDisplayLabel: "9",
+        acLabel: "12",
         tempHp: 4,
         hasTempHp: true,
         portraitBlobId: null,
@@ -298,6 +332,7 @@ describe("combat page shell helpers", () => {
           name: "Arlen",
           hpCur: 14,
           hpMax: 20,
+          ac: 18,
           status: "",
           imgBlobId: "char-portrait"
         }]
@@ -309,6 +344,7 @@ describe("combat page shell helpers", () => {
           name: "Fallback",
           hpCurrent: 1,
           hpMax: 2,
+          ac: 9,
           imgBlobId: "fallback-portrait"
         }]
       },
@@ -321,6 +357,7 @@ describe("combat page shell helpers", () => {
             source: { type: "npc", id: "npc_1", sectionId: "", group: "" },
             hpCurrent: 14,
             hpMax: 2,
+            ac: 9,
             tempHp: 0,
             statusEffects: []
           }]
@@ -331,8 +368,45 @@ describe("combat page shell helpers", () => {
     expect(cards[0]).toMatchObject({
       portraitBlobId: "char-portrait",
       hpMaxLabel: "20",
-      hpCurrentLabel: "14"
+      hpCurrentLabel: "14",
+      acLabel: "18"
     });
+  });
+
+  it("falls back to encounter AC for unlinked combat cards and blank AC for missing values", () => {
+    const cards = getCombatCardViewModels({
+      combat: {
+        encounter: {
+          participants: [
+            {
+              id: "cmb_ac",
+              name: "Guard",
+              role: "npc",
+              source: { type: "npc", id: "missing", sectionId: "", group: "" },
+              hpCurrent: 8,
+              hpMax: 8,
+              ac: 14,
+              tempHp: 0,
+              statusEffects: []
+            },
+            {
+              id: "cmb_no_ac",
+              name: "Mystery",
+              role: "npc",
+              source: { type: "npc", id: "missing", sectionId: "", group: "" },
+              hpCurrent: null,
+              hpMax: null,
+              ac: null,
+              tempHp: 0,
+              statusEffects: []
+            }
+          ]
+        }
+      }
+    });
+
+    expect(cards[0].acLabel).toBe("14");
+    expect(cards[1].acLabel).toBe("--");
   });
 
   it("uses a single combat-card HP display value of current plus temp HP and tracks temp HP as color state only", () => {
