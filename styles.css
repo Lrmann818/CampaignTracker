@@ -5285,6 +5285,43 @@ select.npcField:focus {
   padding-right: var(--numWrapPadRight);
 }
 
+.resourceTile[tabindex="0"]:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent), white 20%);
+  outline-offset: 3px;
+}
+
+.vitalsResourceTip {
+  flex-basis: 100%;
+  margin-top: 6px;
+}
+
+.resourceRecoveryDialogPanel {
+  max-width: 380px;
+}
+
+.resourceRecoveryDialogBody {
+  display: grid;
+  gap: 12px;
+}
+
+.resourceRecoveryField {
+  display: grid;
+  gap: 6px;
+}
+
+.resourceRecoveryName {
+  min-height: 32px;
+  padding: 7px 9px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface), var(--card) 45%);
+  color: var(--ink);
+}
+
+.resourceRecoverySelect {
+  width: 100%;
+}
+
 .charTile input[id="charStatus"] {
   width: 100%;
   box-sizing: border-box;

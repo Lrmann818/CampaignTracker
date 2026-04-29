@@ -260,7 +260,7 @@ Goal: add the normal character-page home for special rule-backed abilities and f
 
 Completed April 27, 2026.
 
-Phase 3C foundation complete: derived Dragonborn Breath Weapon now renders as the first display-only Abilities & Features card. Visual polish, manual/freeform feature cards, use tracking, broader rest/resource recovery, and broader feature coverage remain future work.
+Phase 3C foundation complete: derived Dragonborn Breath Weapon now renders as the first display-only Abilities & Features card. Visual polish, manual/freeform feature cards, use tracking, partial regain behavior, spell slots, broader rest/resource automation, and broader feature coverage remain future work.
 
 Shipped foundation scope:
 
@@ -301,7 +301,7 @@ Future Abilities & Features work:
 - Freeform/manual Abilities & Features cards.
 - User-created/custom feature cards.
 - Use tracking for limited-use features.
-- Manual recovery metadata UI for Vitals resource trackers.
+- Partial regain behavior, if a later rules slice needs it.
 - Rest/recovery rules across feature uses and broader character systems.
 - Breath Weapon use tracking through canonical resource/use entries.
 - Spell slot recovery later.
@@ -314,7 +314,7 @@ Goal: add the first character-level Short Rest / Long Rest action path while pre
 
 Completed April 29, 2026.
 
-Phase 3D foundation complete: Character page Short Rest / Long Rest toolbar controls now route through a central active-character recovery helper for explicitly tagged `character.resources[]` counters. Manual recovery metadata UI, feature-use tracking, spell slot recovery, and broader class-feature automation remain future work.
+Phase 3D foundation complete: Character page Short Rest / Long Rest toolbar controls now route through a central active-character recovery helper for explicitly tagged `character.resources[]` counters. Phase 3E adds the first resource recovery settings UI for assigning that metadata; feature-use tracking, spell slot recovery, partial regain behavior, and broader class-feature automation remain future work.
 
 Recovery vocabulary:
 
@@ -345,7 +345,7 @@ Manual resource tracker policy:
 
 - Existing user-created resource trackers must not be reset by Short Rest or Long Rest unless they have explicit recovery metadata.
 - Untagged/manual resources should be left unchanged so old saves and freeform characters do not lose user-entered values.
-- Manual recovery settings on user-created resources are a future UI slice. Until that exists, rest recovery should be opt-in through explicit data, not inferred from resource names.
+- Phase 3E provides the first manual recovery settings UI for user-created resources. Rest recovery remains opt-in through explicit metadata, not inferred from resource names.
 
 Shipped foundation scope:
 
@@ -373,25 +373,30 @@ Still out of scope after this foundation slice:
 - Abilities & Features visual polish.
 - Manual/freeform feature-card editing.
 
-### Phase 3E: Resource Recovery Settings Dialog — PLANNED
+### Phase 3E: Resource Recovery Settings Dialog — FOUNDATION COMPLETE
 
 Goal: let users assign rest-recovery metadata to existing Vitals resource trackers without cluttering the compact resource tiles.
 
-Phase 3E is a planned UX and architecture slice. Do not mark it implemented until the Resource Settings dialog, activation behavior, Vitals tip, persistence path, and focused tests ship.
+Completed April 29, 2026.
+
+Phase 3E foundation complete: Vitals resource recovery metadata can now be configured from resource tiles through press-and-hold or keyboard activation, without adding visible tile settings buttons. The dialog writes only `resource.recovery`; partial regain, feature-use tracking, Breath Weapon use tracking, spell slots, combat/linked-character rest behavior, and broader automation remain future work.
 
 Interaction contract:
 
-- Do not add another visible button, gear, or ellipsis to Vitals resource tiles. The tiles are already small and visually crowded.
-- Pointer and touch users open Resource Settings by pressing and holding the resource tile.
+- No visible button, gear, or ellipsis was added to Vitals resource tiles.
+- Pointer and touch users open Resource Settings by pressing and holding the resource tile body.
+- Quick click/tap does not open settings.
+- Long-press is canceled on meaningful pointer movement, pointer end, pointer cancel, or pointer leave.
+- Long-press handling does not trigger when the gesture starts on interactive controls inside the tile, such as current/max inputs, increment/decrement buttons, or delete/stepper-style buttons.
 - Keyboard users open Resource Settings by focusing the resource tile and pressing Enter or Space.
-- Long-press handling must not trigger when the gesture starts on interactive controls inside the tile, such as current/max inputs, increment/decrement buttons, or delete buttons.
-- Add a small Vitals panel tip, matching the existing Spells panel tip pattern: "Tip: press and hold a resource tile to choose how it recovers on rests."
+- Vitals includes this tip: "Tip: press and hold a resource tile to choose how it recovers on rests."
 - The long-press gesture is a convenience path, not the only path. Keyboard activation is required for accessibility.
 
 First dialog scope:
 
-- Show the resource name. It may be read-only or reuse the current editable-name behavior, but Phase 3E should not redesign resource editing.
+- Show the resource name read-only.
 - Let the user choose one recovery setting: Manual, Short Rest, Long Rest, Short or Long Rest, or Does not recover on rest.
+- Missing recovery metadata displays as Manual.
 - Provide Cancel and Save actions.
 - Save writes only the selected resource entry's existing `recovery` field.
 - Save must preserve the selected resource's existing current/max values and unrelated fields.
@@ -406,32 +411,35 @@ Recovery metadata storage:
 Accessibility requirements:
 
 - Any resource tile that opens settings needs a keyboard-reachable focus target.
+- Resource tiles expose an accessible action label for opening Resource Settings.
 - Enter and Space must open the Resource Settings dialog from that focus target.
-- The dialog needs an accessible title/name.
+- The dialog uses the existing modal styling/classes and needs an accessible title/name.
 - Recovery choices need proper labels.
 - Escape and Cancel should close without saving.
 - Save should preserve existing current/max values and only change the selected resource's recovery metadata.
 
-First implementation slice:
+Shipped foundation scope:
 
-- Add long-press handling to Vitals resource tiles only.
-- Add keyboard activation for focused resource tiles.
-- Add the Resource Settings dialog with recovery setting only.
-- Add the Vitals panel tip.
-- Save only the selected resource's recovery metadata.
-- Verify Short Rest and Long Rest buttons recover newly tagged resources.
-- Add focused tests for long-press guards, keyboard activation, dialog save/cancel behavior, and rest recovery of newly tagged resources.
+- Added long-press handling to Vitals resource tile bodies only.
+- Added keyboard activation for focused resource tiles.
+- Added the Resource Settings dialog with recovery setting only.
+- Added the Vitals panel tip.
+- Save writes only the selected resource's recovery metadata and preserves `cur`, `max`, `name`, and unrelated fields.
+- Cancel and Escape close without mutation.
+- Short Rest and Long Rest buttons recover newly tagged resources through the Phase 3D helper.
 
-Still out of scope for Phase 3E:
+Still out of scope after this foundation slice:
 
 - Extra visible settings buttons on resource tiles.
 - Partial regain amount fields.
 - "Regain short" or "regain long" numeric fields.
 - Spendable vs Static toggles unless the current resource code already has that concept.
+- Limited-use feature tracking.
 - Breath Weapon use tracking.
 - Manual Abilities & Features card editing.
 - Sorcery Points, Metamagic, or Flexible Casting automation.
 - Spell slot automation.
+- Combat/linked-character rest behavior validation or automation.
 - A broad class-feature system.
 
 ### Derived Resources and Derived Combat Stats Pattern

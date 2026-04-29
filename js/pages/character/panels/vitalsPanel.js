@@ -24,6 +24,27 @@ function isFiniteNumber(value) {
 
 const BUILDER_OWNED_VITAL_NUMBER_IDS = new Set(["hitDieAmt", "hitDieSize", "charSpeed", "charProf"]);
 const BREATH_WEAPON_DC_VITAL_KEY = "breathWeaponDC";
+const RESOURCE_RECOVERY_OPTIONS = Object.freeze([
+  { value: "manual", label: "Manual" },
+  { value: "shortRest", label: "Short Rest" },
+  { value: "longRest", label: "Long Rest" },
+  { value: "shortOrLongRest", label: "Short or Long Rest" },
+  { value: "none", label: "Does not recover on rest" }
+]);
+const RESOURCE_RECOVERY_VALUES = new Set(RESOURCE_RECOVERY_OPTIONS.map((option) => option.value));
+const RESOURCE_LONG_PRESS_MS = 550;
+const RESOURCE_LONG_PRESS_MOVE_TOLERANCE_PX = 10;
+const RESOURCE_INTERACTIVE_SELECTOR = [
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "a[href]",
+  "[contenteditable='true']",
+  "[role='button']",
+  "[role='textbox']",
+  "[tabindex]:not([tabindex='-1'])"
+].join(",");
 
 function setupVitalsTileReorder({ state, SaveManager, panelEl, gridEl, actions = null }) {
   const panel = panelEl || document.getElementById("charVitalsPanel");
@@ -160,6 +181,8 @@ export function initVitalsPanel(deps = {}) {
 
   let destroyed = false;
   const panelInstance = {};
+  let resourceSettingsOverlay = null;
+  let pendingResourceLongPress = null;
 
   const addListener = (target, type, handler, options) => {
     if (!target || typeof target.addEventListener !== "function") return;
@@ -413,6 +436,244 @@ export function initVitalsPanel(deps = {}) {
     };
   }
 
+  function getResourceIndex(resourceId, fallbackIndex) {
+    const resources = getCurrentCharacter()?.resources;
+    if (!Array.isArray(resources)) return -1;
+    if (resourceId) {
+      const byId = resources.findIndex((item) => item?.id === resourceId);
+      if (byId !== -1) return byId;
+    }
+    return Number.isInteger(fallbackIndex) && fallbackIndex >= 0 && fallbackIndex < resources.length
+      ? fallbackIndex
+      : -1;
+  }
+
+  function getResourceLabel(resource, fallbackIndex) {
+    const name = String(resource?.name ?? "").trim();
+    return name || `Resource ${fallbackIndex + 1}`;
+  }
+
+  function normalizeRecoveryValue(value) {
+    return RESOURCE_RECOVERY_VALUES.has(value) ? value : "manual";
+  }
+
+  function isInteractiveResourceTarget(target, tile) {
+    if (!(target instanceof HTMLElement)) return false;
+    const interactive = target.closest(RESOURCE_INTERACTIVE_SELECTOR);
+    return !!interactive && interactive !== tile;
+  }
+
+  function ensureResourceSettingsDialog() {
+    if (resourceSettingsOverlay && document.contains(resourceSettingsOverlay)) return resourceSettingsOverlay;
+
+    const overlay = document.createElement("div");
+    overlay.id = "resourceRecoveryDialogOverlay";
+    overlay.className = "modalOverlay resourceRecoveryDialogOverlay";
+    overlay.hidden = true;
+    overlay.setAttribute("aria-hidden", "true");
+
+    const panel = document.createElement("div");
+    panel.className = "modalPanel resourceRecoveryDialogPanel";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-labelledby", "resourceRecoveryDialogTitle");
+    panel.setAttribute("tabindex", "-1");
+
+    const header = document.createElement("div");
+    header.className = "uiDialogHeader";
+
+    const title = document.createElement("div");
+    title.className = "modalTitle";
+    title.id = "resourceRecoveryDialogTitle";
+    title.textContent = "Resource Settings";
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "npcSmallBtn";
+    close.dataset.resourceRecoveryCancel = "true";
+    close.setAttribute("aria-label", "Close Resource Settings");
+    close.textContent = "X";
+
+    header.appendChild(title);
+    header.appendChild(close);
+
+    const body = document.createElement("div");
+    body.className = "uiDialogBody resourceRecoveryDialogBody";
+
+    const nameField = document.createElement("div");
+    nameField.className = "resourceRecoveryField";
+
+    const nameLabel = document.createElement("div");
+    nameLabel.className = "modalLabel";
+    nameLabel.textContent = "Resource";
+
+    const nameValue = document.createElement("div");
+    nameValue.className = "resourceRecoveryName";
+    nameValue.dataset.resourceRecoveryName = "true";
+
+    nameField.appendChild(nameLabel);
+    nameField.appendChild(nameValue);
+
+    const recoveryField = document.createElement("label");
+    recoveryField.className = "resourceRecoveryField";
+    recoveryField.setAttribute("for", "resourceRecoverySelect");
+
+    const recoveryLabel = document.createElement("span");
+    recoveryLabel.className = "modalLabel";
+    recoveryLabel.textContent = "Recovery";
+
+    const select = document.createElement("select");
+    select.id = "resourceRecoverySelect";
+    select.className = "settingsSelect resourceRecoverySelect";
+    RESOURCE_RECOVERY_OPTIONS.forEach((option) => {
+      const el = document.createElement("option");
+      el.value = option.value;
+      el.textContent = option.label;
+      select.appendChild(el);
+    });
+
+    recoveryField.appendChild(recoveryLabel);
+    recoveryField.appendChild(select);
+
+    body.appendChild(nameField);
+    body.appendChild(recoveryField);
+
+    const footer = document.createElement("div");
+    footer.className = "uiDialogFooter";
+
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "npcSmallBtn";
+    cancel.dataset.resourceRecoveryCancel = "true";
+    cancel.textContent = "Cancel";
+
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "npcSmallBtn";
+    save.dataset.resourceRecoverySave = "true";
+    save.textContent = "Save";
+
+    footer.appendChild(cancel);
+    footer.appendChild(save);
+
+    panel.appendChild(header);
+    panel.appendChild(body);
+    panel.appendChild(footer);
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    resourceSettingsOverlay = overlay;
+    return overlay;
+  }
+
+  function closeResourceSettingsDialog({ restoreFocus = true } = {}) {
+    const overlay = resourceSettingsOverlay;
+    if (!overlay || overlay.hidden) return;
+    const openerResourceId = overlay.dataset.resourceId || "";
+    const openerResourceIndex = Number(overlay.dataset.resourceIndex);
+    overlay.hidden = true;
+    overlay.setAttribute("aria-hidden", "true");
+    delete overlay.dataset.resourceId;
+    delete overlay.dataset.resourceIndex;
+    if (!restoreFocus) return;
+    requestAnimationFrame(() => {
+      if (destroyed) return;
+      const opener = Array.from(wrap.querySelectorAll(".resourceTile")).find((tile) => {
+        if (!(tile instanceof HTMLElement)) return false;
+        if (openerResourceId) return tile.dataset.resourceId === openerResourceId;
+        return Number(tile.dataset.resourceIndex) === openerResourceIndex;
+      });
+      try { opener?.focus?.({ preventScroll: true }); } catch { opener?.focus?.(); }
+    });
+  }
+
+  function openResourceSettingsDialog(resourceId, fallbackIndex, opener = null) {
+    if (destroyed) return;
+    const index = getResourceIndex(resourceId, fallbackIndex);
+    const resource = getCurrentCharacter()?.resources?.[index];
+    if (!resource) return;
+
+    const overlay = ensureResourceSettingsDialog();
+    const nameEl = overlay.querySelector("[data-resource-recovery-name]");
+    const select = overlay.querySelector("#resourceRecoverySelect");
+    if (!(select instanceof HTMLSelectElement)) return;
+
+    overlay.dataset.resourceId = resource?.id ? String(resource.id) : "";
+    overlay.dataset.resourceIndex = String(index);
+    if (nameEl) nameEl.textContent = getResourceLabel(resource, index);
+    select.value = normalizeRecoveryValue(resource.recovery);
+
+    overlay.hidden = false;
+    overlay.setAttribute("aria-hidden", "false");
+    try { select.focus({ preventScroll: true }); } catch { select.focus(); }
+  }
+
+  function saveResourceSettingsDialog() {
+    const overlay = resourceSettingsOverlay;
+    if (!overlay || overlay.hidden) return;
+    const select = overlay.querySelector("#resourceRecoverySelect");
+    if (!(select instanceof HTMLSelectElement)) return;
+    const resourceId = overlay.dataset.resourceId || "";
+    const fallbackIndex = Number(overlay.dataset.resourceIndex);
+    const nextRecovery = normalizeRecoveryValue(select.value);
+    const updated = mutateCharacter((character) => {
+      const resources = Array.isArray(character.resources) ? character.resources : [];
+      let index = -1;
+      if (resourceId) index = resources.findIndex((item) => item?.id === resourceId);
+      if (index === -1 && Number.isInteger(fallbackIndex)) index = fallbackIndex;
+      const resource = resources[index];
+      if (!resource) return false;
+      if (resource.recovery === nextRecovery) return false;
+      resource.recovery = nextRecovery;
+      return true;
+    }, { queueSave: false });
+    if (updated) markVitalsChanged();
+    closeResourceSettingsDialog();
+  }
+
+  function cancelPendingResourceLongPress() {
+    if (!pendingResourceLongPress) return;
+    clearTimeout(pendingResourceLongPress.timer);
+    pendingResourceLongPress = null;
+  }
+
+  function startResourceLongPress(event, tile) {
+    cancelPendingResourceLongPress();
+    const pointerEvent = /** @type {PointerEvent} */ (event);
+    const startX = Number.isFinite(pointerEvent.clientX) ? pointerEvent.clientX : 0;
+    const startY = Number.isFinite(pointerEvent.clientY) ? pointerEvent.clientY : 0;
+    const resourceId = tile.dataset.resourceId || "";
+    const resourceIndex = Number(tile.dataset.resourceIndex);
+    pendingResourceLongPress = {
+      tile,
+      resourceId,
+      resourceIndex,
+      startX,
+      startY,
+      timer: setTimeout(() => {
+        pendingResourceLongPress = null;
+        openResourceSettingsDialog(resourceId, resourceIndex, tile);
+      }, RESOURCE_LONG_PRESS_MS)
+    };
+  }
+
+  function handleResourcePointerMove(event) {
+    if (!pendingResourceLongPress) return;
+    const pointerEvent = /** @type {PointerEvent} */ (event);
+    const x = Number.isFinite(pointerEvent.clientX) ? pointerEvent.clientX : pendingResourceLongPress.startX;
+    const y = Number.isFinite(pointerEvent.clientY) ? pointerEvent.clientY : pendingResourceLongPress.startY;
+    const moved = Math.hypot(x - pendingResourceLongPress.startX, y - pendingResourceLongPress.startY);
+    if (moved > RESOURCE_LONG_PRESS_MOVE_TOLERANCE_PX) cancelPendingResourceLongPress();
+  }
+
+  function ensureVitalsTip() {
+    if (panelEl.querySelector(".vitalsResourceTip")) return;
+    const tip = document.createElement("div");
+    tip.className = "mutedSmall vitalsResourceTip";
+    tip.textContent = "Tip: press and hold a resource tile to choose how it recovers on rests.";
+    wrap.insertAdjacentElement?.("afterend", tip) || panelEl.appendChild(tip);
+  }
+
   function ensureResourceArray() {
     mutateCharacter((character) => {
       if (!Array.isArray(character.resources)) character.resources = [];
@@ -497,8 +758,13 @@ export function initVitalsPanel(deps = {}) {
     resources.forEach((r, idx) => {
       const tile = document.createElement("div");
       tile.className = "charTile resourceTile";
-      tile.dataset.resourceId = r.id;
-      tile.dataset.vitalKey = `res:${r.id}`;
+      if (r.id) tile.dataset.resourceId = r.id;
+      tile.dataset.resourceIndex = String(idx);
+      tile.dataset.vitalKey = `res:${r.id || idx}`;
+      tile.tabIndex = 0;
+      tile.setAttribute("tabindex", "0");
+      tile.setAttribute("role", "button");
+      tile.setAttribute("aria-label", `Open recovery settings for ${getResourceLabel(r, idx)}`);
 
       const header = document.createElement("div");
       header.className = "resourceHeader";
@@ -638,6 +904,7 @@ export function initVitalsPanel(deps = {}) {
     });
 
     enhanceNumberSteppers?.(wrap);
+    ensureVitalsTip();
     setupVitalsTileReorder({
       state,
       SaveManager,
@@ -678,6 +945,55 @@ export function initVitalsPanel(deps = {}) {
     moveVital(key, dir, moveBtn);
   });
 
+  addListener(wrap, "keydown", (event) => {
+    if (destroyed) return;
+    const e = /** @type {KeyboardEvent} */ (event);
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const tile = target.closest(".resourceTile");
+    if (!(tile instanceof HTMLElement) || target !== tile) return;
+    e.preventDefault();
+    openResourceSettingsDialog(tile.dataset.resourceId || "", Number(tile.dataset.resourceIndex), tile);
+  });
+
+  addListener(wrap, "pointerdown", (event) => {
+    if (destroyed) return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const tile = target.closest(".resourceTile");
+    if (!(tile instanceof HTMLElement)) return;
+    if (isInteractiveResourceTarget(target, tile)) return;
+    startResourceLongPress(event, tile);
+  });
+  addListener(wrap, "pointermove", handleResourcePointerMove);
+  addListener(wrap, "pointerup", cancelPendingResourceLongPress);
+  addListener(wrap, "pointercancel", cancelPendingResourceLongPress);
+  addListener(wrap, "pointerleave", cancelPendingResourceLongPress);
+
+  addListener(document, "keydown", (event) => {
+    const e = /** @type {KeyboardEvent} */ (event);
+    if (e.key !== "Escape") return;
+    if (!resourceSettingsOverlay || resourceSettingsOverlay.hidden) return;
+    e.preventDefault();
+    closeResourceSettingsDialog();
+  });
+
+  addListener(document, "click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (!resourceSettingsOverlay || resourceSettingsOverlay.hidden) return;
+    if (target.closest("[data-resource-recovery-cancel]")) {
+      event.preventDefault();
+      closeResourceSettingsDialog();
+      return;
+    }
+    if (target.closest("[data-resource-recovery-save]")) {
+      event.preventDefault();
+      saveResourceSettingsDialog();
+    }
+  });
+
   setupVitalsTileReorder({
     state,
     SaveManager,
@@ -714,6 +1030,9 @@ export function initVitalsPanel(deps = {}) {
       for (let i = destroyFns.length - 1; i >= 0; i--) {
         destroyFns[i]?.();
       }
+      cancelPendingResourceLongPress();
+      resourceSettingsOverlay?.remove?.();
+      resourceSettingsOverlay = null;
     }
   };
 }

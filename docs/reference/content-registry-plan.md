@@ -680,8 +680,8 @@ foundation complete: Dragonborn Breath Weapon now renders as the first derived,
 display-only Abilities & Features card, while its derived save DC may also
 appear in Vitals as a compact combat stat. This is the foundation slice only;
 visual/card polish, manual/freeform feature cards, user-created/custom feature
-cards, use tracking, broader rest/resource recovery, and broader feature
-coverage remain future work.
+cards, use tracking, partial regain behavior, spell slots, broader
+rest/resource automation, and broader feature coverage remain future work.
 
 Resource state must have one canonical counter. Feature cards may reference,
 spend, restore, or explain that resource, but they must not duplicate the
@@ -701,13 +701,18 @@ Missing, `manual`, `none`, unknown recovery metadata, already-full counters,
 malformed counters, unrelated fields, and existing manual resource trackers
 without recovery metadata are intentionally left unchanged.
 
-Phase 3E is planned as the Resource Recovery Settings Dialog slice. That UI
-should write the selected Vitals resource tracker's existing `recovery` field
-using the same vocabulary above. It should not add a new schema, duplicate
-settings store, panel-owned recovery map, or bulk migration for existing
-untagged resources. Missing recovery metadata may be displayed as "Manual" in
-the dialog for user understanding, but saving must be explicit and scoped to
-the selected resource only.
+Phase 3E foundation complete: Vitals resource recovery metadata can now be
+configured from resource tiles through press-and-hold on the tile body or
+Enter/Space keyboard activation on a focused tile, without adding visible tile
+settings buttons, gears, or ellipses. The Resource Settings dialog writes only
+the selected Vitals resource tracker's existing `recovery` field using the same
+vocabulary above. It does not add a new schema, duplicate settings store,
+panel-owned recovery map, or bulk migration for existing untagged resources.
+Missing recovery metadata displays as "Manual" in the dialog for user
+understanding, but saving is explicit and scoped to the selected resource only.
+Save preserves `cur`, `max`, `name`, and unrelated fields; Cancel and Escape
+close without mutation. Existing untagged/manual resources remain intentionally
+untouched until the user assigns recovery metadata.
 Limited-use feature usage should be modeled as character-owned resource/use
 entries referenced by feature cards, not as duplicate counters owned by the
 Abilities & Features panel.

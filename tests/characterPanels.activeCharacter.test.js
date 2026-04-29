@@ -789,6 +789,35 @@ function dispatchChange(target) {
   target.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
 }
 
+function dispatchTargetedEvent(dispatchTarget, type, target, props = {}) {
+  class TargetedEvent extends Event {
+    get target() {
+      return target;
+    }
+  }
+  const event = new TargetedEvent(type, { bubbles: true, cancelable: true });
+  for (const [key, value] of Object.entries(props)) {
+    Object.defineProperty(event, key, { configurable: true, value });
+  }
+  dispatchTarget.dispatchEvent(event);
+  return event;
+}
+
+function getResourceTileByName(name) {
+  return Array.from(document.querySelectorAll(".resourceTile"))
+    .find((tile) => tile.querySelector(".resourceTitle")?.textContent === name);
+}
+
+function openResourceSettingsWithKey(tile, key = "Enter") {
+  dispatchTargetedEvent(document.getElementById("charVitalsTiles"), "keydown", tile, { key });
+  return document.getElementById("resourceRecoveryDialogOverlay");
+}
+
+function clickDialogButton(selector) {
+  const button = document.querySelector(selector);
+  dispatchTargetedEvent(document, "click", button);
+}
+
 describe("character panels active character resolution", () => {
   let document;
 
@@ -1319,6 +1348,244 @@ describe("character panels active character resolution", () => {
     expect(document.getElementById("hitDieAmt").value).toBe("5");
     expect(document.getElementById("hitDieSize").value).toBe("10");
     expect(deps.SaveManager.markDirty).toHaveBeenCalledTimes(3);
+
+    api.destroy();
+  });
+
+  it("renders the Vitals resource recovery tip and keyboard-reachable resource settings target without a visible settings button", () => {
+    const character = makeCharacter("char_a", "Ada", {
+      resources: [{ id: "ki", name: "Ki", cur: 1, max: 3 }]
+    });
+    const state = { characters: { activeId: "char_a", entries: [character] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+    const tile = getResourceTileByName("Ki");
+
+    expect(document.querySelector(".vitalsResourceTip")?.textContent)
+      .toBe("Tip: press and hold a resource tile to choose how it recovers on rests.");
+    expect(tile.getAttribute("tabindex")).toBe("0");
+    expect(tile.getAttribute("role")).toBe("button");
+    expect(tile.getAttribute("aria-label")).toBe("Open recovery settings for Ki");
+    expect(tile.querySelector("[data-resource-recovery-open]")).toBeNull();
+    expect(tile.querySelector(".resourceSettingsBtn")).toBeNull();
+
+    api.destroy();
+  });
+
+  it("opens Resource Settings with Enter and displays missing recovery metadata as Manual", () => {
+    const character = makeCharacter("char_a", "Ada", {
+      resources: [{ id: "ki", name: "Ki", cur: 1, max: 3 }]
+    });
+    const state = { characters: { activeId: "char_a", entries: [character] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+    const tile = getResourceTileByName("Ki");
+    tile.focus();
+    const overlay = openResourceSettingsWithKey(tile, "Enter");
+
+    expect(overlay.hidden).toBe(false);
+    expect(document.getElementById("resourceRecoveryDialogTitle").textContent).toBe("Resource Settings");
+    expect(document.querySelector("[data-resource-recovery-name]").textContent).toBe("Ki");
+    expect(document.getElementById("resourceRecoverySelect").value).toBe("manual");
+
+    api.destroy();
+  });
+
+  it("opens Resource Settings with Space from the focused resource tile", () => {
+    const character = makeCharacter("char_a", "Ada", {
+      resources: [{ id: "ki", name: "Ki", cur: 1, max: 3 }]
+    });
+    const state = { characters: { activeId: "char_a", entries: [character] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+    const tile = getResourceTileByName("Ki");
+    tile.focus();
+    const overlay = openResourceSettingsWithKey(tile, " ");
+
+    expect(overlay.hidden).toBe(false);
+
+    api.destroy();
+  });
+
+  it("opens Resource Settings after press-and-hold on the resource tile body but not after a quick tap", () => {
+    vi.useFakeTimers();
+    const character = makeCharacter("char_a", "Ada", {
+      resources: [{ id: "ki", name: "Ki", cur: 1, max: 3 }]
+    });
+    const state = { characters: { activeId: "char_a", entries: [character] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    try {
+      const api = initVitalsPanel(deps);
+      const wrap = document.getElementById("charVitalsTiles");
+      const tile = getResourceTileByName("Ki");
+
+      dispatchTargetedEvent(wrap, "pointerdown", tile, { clientX: 10, clientY: 10 });
+      dispatchTargetedEvent(wrap, "pointerup", tile, { clientX: 10, clientY: 10 });
+      vi.advanceTimersByTime(600);
+      expect(document.getElementById("resourceRecoveryDialogOverlay")).toBeNull();
+
+      dispatchTargetedEvent(wrap, "pointerdown", tile, { clientX: 10, clientY: 10 });
+      vi.advanceTimersByTime(550);
+      expect(document.getElementById("resourceRecoveryDialogOverlay").hidden).toBe(false);
+
+      api.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("cancels pending resource long-press when the pointer moves meaningfully", () => {
+    vi.useFakeTimers();
+    const character = makeCharacter("char_a", "Ada", {
+      resources: [{ id: "ki", name: "Ki", cur: 1, max: 3 }]
+    });
+    const state = { characters: { activeId: "char_a", entries: [character] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    try {
+      const api = initVitalsPanel(deps);
+      const wrap = document.getElementById("charVitalsTiles");
+      const tile = getResourceTileByName("Ki");
+
+      dispatchTargetedEvent(wrap, "pointerdown", tile, { clientX: 10, clientY: 10 });
+      dispatchTargetedEvent(wrap, "pointermove", tile, { clientX: 40, clientY: 10 });
+      vi.advanceTimersByTime(600);
+
+      expect(document.getElementById("resourceRecoveryDialogOverlay")).toBeNull();
+
+      api.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not open Resource Settings when long-press starts on resource inputs or buttons", () => {
+    vi.useFakeTimers();
+    const character = makeCharacter("char_a", "Ada", {
+      resources: [{ id: "ki", name: "Ki", cur: 1, max: 3 }]
+    });
+    const state = { characters: { activeId: "char_a", entries: [character] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    try {
+      const api = initVitalsPanel(deps);
+      const wrap = document.getElementById("charVitalsTiles");
+      const tile = getResourceTileByName("Ki");
+      const [cur, max] = tile.querySelectorAll("input");
+      const del = tile.querySelector(".resourceDeleteBtn");
+      const step = document.createElement("button");
+      step.type = "button";
+      step.className = "numStepBtn";
+      tile.appendChild(step);
+
+      [cur, max, del, step].forEach((target) => {
+        dispatchTargetedEvent(wrap, "pointerdown", target, { clientX: 10, clientY: 10 });
+        vi.advanceTimersByTime(600);
+        expect(document.getElementById("resourceRecoveryDialogOverlay")).toBeNull();
+      });
+
+      api.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("closes Resource Settings on Cancel without mutating the resource", () => {
+    const character = makeCharacter("char_a", "Ada", {
+      resources: [{ id: "ki", name: "Ki", cur: 1, max: 3 }]
+    });
+    const state = { characters: { activeId: "char_a", entries: [character] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+    const tile = getResourceTileByName("Ki");
+    const overlay = openResourceSettingsWithKey(tile);
+    document.getElementById("resourceRecoverySelect").value = "shortRest";
+
+    clickDialogButton("[data-resource-recovery-cancel]");
+
+    expect(overlay.hidden).toBe(true);
+    expect(character.resources[0].recovery).toBeUndefined();
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    api.destroy();
+  });
+
+  it("closes Resource Settings on Escape without mutating the resource", () => {
+    const character = makeCharacter("char_a", "Ada", {
+      resources: [{ id: "ki", name: "Ki", cur: 1, max: 3 }]
+    });
+    const state = { characters: { activeId: "char_a", entries: [character] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+    const tile = getResourceTileByName("Ki");
+    const overlay = openResourceSettingsWithKey(tile);
+    document.getElementById("resourceRecoverySelect").value = "shortRest";
+
+    dispatchTargetedEvent(document, "keydown", document, { key: "Escape" });
+
+    expect(overlay.hidden).toBe(true);
+    expect(character.resources[0].recovery).toBeUndefined();
+    expect(deps.SaveManager.markDirty).not.toHaveBeenCalled();
+
+    api.destroy();
+  });
+
+  it("saves only the selected resource recovery metadata and preserves existing resource fields", () => {
+    const character = makeCharacter("char_a", "Ada", {
+      resources: [
+        { id: "ki", name: "Ki", cur: 1, max: 3, note: "discipline" },
+        { id: "rage", name: "Rage", cur: 0, max: 2, recovery: "manual" }
+      ]
+    });
+    const state = { characters: { activeId: "char_a", entries: [character] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+    const tile = getResourceTileByName("Ki");
+    openResourceSettingsWithKey(tile);
+    document.getElementById("resourceRecoverySelect").value = "shortRest";
+
+    clickDialogButton("[data-resource-recovery-save]");
+
+    expect(character.resources).toEqual([
+      { id: "ki", name: "Ki", cur: 1, max: 3, note: "discipline", recovery: "shortRest" },
+      { id: "rage", name: "Rage", cur: 0, max: 2, recovery: "manual" }
+    ]);
+    expect(deps.SaveManager.markDirty).toHaveBeenCalledTimes(1);
+
+    api.destroy();
+  });
+
+  it("keeps existing resource input and delete interactions working", async () => {
+    const character = makeCharacter("char_a", "Ada", {
+      resources: [
+        { id: "ki", name: "Ki", cur: 1, max: 3 },
+        { id: "rage", name: "Rage", cur: 0, max: 2 }
+      ]
+    });
+    const state = { characters: { activeId: "char_a", entries: [character] }, combat: { workspace: {} } };
+    const deps = makeDeps(state);
+
+    const api = initVitalsPanel(deps);
+    const kiTile = getResourceTileByName("Ki");
+    const [cur, max] = kiTile.querySelectorAll("input");
+    cur.value = "2";
+    dispatchInput(cur);
+    max.value = "4";
+    dispatchInput(max);
+    expect(character.resources[0]).toMatchObject({ name: "Ki", cur: 2, max: 4 });
+
+    const del = getResourceTileByName("Rage").querySelector(".resourceDeleteBtn");
+    del.dispatchEvent(new Event("click", { bubbles: true, cancelable: true }));
+    for (let i = 0; i < 5; i += 1) await Promise.resolve();
+
+    expect(character.resources.map((resource) => resource.name)).toEqual(["Ki"]);
 
     api.destroy();
   });
