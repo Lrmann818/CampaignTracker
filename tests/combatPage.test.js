@@ -373,6 +373,40 @@ describe("combat page shell helpers", () => {
     });
   });
 
+  it("resolves unlinked tracker-sourced combat AC from the current source card", () => {
+    const state = {
+      tracker: {
+        npcs: [{
+          id: "npc_1",
+          name: "Guard",
+          hpCurrent: 8,
+          hpMax: 8,
+          ac: 15
+        }]
+      },
+      combat: {
+        encounter: {
+          participants: [{
+            id: "cmb_1",
+            name: "Guard",
+            role: "npc",
+            source: { type: "npc", id: "npc_1", sectionId: "", group: "" },
+            hpCurrent: 8,
+            hpMax: 8,
+            ac: 9,
+            tempHp: 0,
+            statusEffects: []
+          }]
+        }
+      }
+    };
+
+    expect(getCombatCardViewModels(state)[0].acLabel).toBe("15");
+
+    state.tracker.npcs[0].ac = 17;
+    expect(getCombatCardViewModels(state)[0].acLabel).toBe("17");
+  });
+
   it("falls back to encounter AC for unlinked combat cards and blank AC for missing values", () => {
     const cards = getCombatCardViewModels({
       combat: {

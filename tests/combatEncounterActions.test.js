@@ -208,6 +208,27 @@ describe("combat encounter actions", () => {
     expect(state.combat.encounter.participants[2].ac).toBe(12);
   });
 
+  it("keeps AC local for manual combat participants without a source object", () => {
+    const state = makeState();
+    state.combat.encounter.participants.push({
+      id: "cmb_manual",
+      name: "Summon",
+      role: "npc",
+      hpCurrent: null,
+      hpMax: null,
+      ac: null,
+      tempHp: 0,
+      statusEffects: []
+    });
+
+    const result = setCombatParticipantAc(state, "cmb_manual", 19);
+
+    expect(result.changed).toBe(true);
+    expect(result.wroteCanonical).toBe(false);
+    expect(state.tracker.npcs[0].ac).toBe(13);
+    expect(state.combat.encounter.participants[2]).toMatchObject({ ac: 19 });
+  });
+
   it("adds, edits, and removes participant statuses while writing back only canonical status text", () => {
     const state = makeState();
 

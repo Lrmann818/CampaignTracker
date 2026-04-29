@@ -447,14 +447,14 @@ Goal: prove the manual/custom feature-card pathway safely, especially for freefo
 
 Completed April 29, 2026.
 
-Phase 3F foundation and first polish pass complete: freeform and builder characters can create, edit, delete, reorder, collapse, persist, and render manual/custom Abilities & Features cards in the same panel as derived cards. Builder-derived cards remain derived/read-only and are not copied into manual persisted state. This is a foundation slice for user-created feature cards, not a resource-spending, attack/damage calculation, class-feature automation, or spell-slot automation slice.
+Phase 3F foundation and first polish pass complete: freeform and builder characters can create, edit, delete, reorder, collapse, persist, and render character-owned manual/custom Abilities & Features cards in the same panel as derived cards. Builder-derived cards remain derived/read-only and are not copied into manual persisted state. This is a foundation slice for user-created feature cards, not a resource-spending, attack/damage calculation, class-feature automation, or spell-slot automation slice.
 
 Shipped foundation scope:
 
 - Freeform characters may add manual/custom cards to Abilities & Features.
 - Builder characters may also add manual/custom cards.
 - Builder-derived cards remain derived/read-only and must not be copied into manual persisted state.
-- Manual/custom cards are persisted separately from derived cards in a character-owned `manualFeatureCards[]` collection.
+- Manual/custom cards are character-owned user content persisted separately from derived cards in `manualFeatureCards[]`.
 - Derived cards and manual cards render in the same Abilities & Features panel.
 - The `+ Feature` action lives in the Abilities & Features panel header action area.
 - Manual card management actions live behind a gear/settings menu.

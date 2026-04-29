@@ -197,7 +197,7 @@ function createPartyCardsController(deps = {}) {
     const result = writeCardLinkedField(member, field, value, state, { SaveManager, queueSave: false });
     if (!result.written) return;
     SaveManager.markDirty();
-    if (result.target === "character" && (field === "hpCurrent" || field === "hpMax")) {
+    if (result.target === "character" && (field === "hpCurrent" || field === "hpMax" || field === "ac")) {
       notifyPanelDataChanged("vitals", { source: partyControllerSource });
     }
     if (result.target === "character" && (field === "name" || field === "className" || field === "status")) {
@@ -230,7 +230,7 @@ function createPartyCardsController(deps = {}) {
     });
   }
 
-  function patchLinkedCardHpInputs() {
+  function patchLinkedCardVitalsInputs() {
     if (!cardsEl) return;
     Array.from(cardsEl.querySelectorAll(".trackerCard")).forEach((cardEl) => {
       const cardId = cardEl.dataset.cardId;
@@ -241,11 +241,15 @@ function createPartyCardsController(deps = {}) {
       if (!display.isLinked) return;
       const hpCurEl = cardEl.querySelector("[data-linked-field='hpCurrent']");
       const hpMaxEl = cardEl.querySelector("[data-linked-field='hpMax']");
+      const acEl = cardEl.querySelector("[data-linked-field='ac']");
       if (hpCurEl instanceof HTMLInputElement && document.activeElement !== hpCurEl) {
         hpCurEl.value = display.hpCurrent != null ? String(display.hpCurrent) : "";
       }
       if (hpMaxEl instanceof HTMLInputElement && document.activeElement !== hpMaxEl) {
         hpMaxEl.value = display.hpMax != null ? String(display.hpMax) : "";
+      }
+      if (acEl instanceof HTMLInputElement && document.activeElement !== acEl) {
+        acEl.value = display.ac != null ? String(display.ac) : "";
       }
     });
   }
@@ -523,6 +527,30 @@ function createPartyCardsController(deps = {}) {
     hpRow.appendChild(hpLabel);
     hpRow.appendChild(hpWrap);
 
+    const acRow = document.createElement("div");
+    acRow.className = "npcRowBlock";
+
+    const acLabel = document.createElement("div");
+    acLabel.className = "npcMiniLabel";
+    acLabel.textContent = "AC";
+
+    const acInput = document.createElement("input");
+    acInput.className = "npcField npcHpInput";
+    acInput.classList.add("num-lg");
+    acInput.classList.add("autosize");
+    acInput.type = "number";
+    acInput.placeholder = "AC";
+    acInput.dataset.linkedField = "ac";
+    acInput.value = display.ac != null ? String(display.ac) : "";
+    autoSizeInput(acInput, { min: 30, max: 70 });
+    acInput.addEventListener("input", () => {
+      autoSizeInput(acInput, { min: 30, max: 70 });
+      updatePartyLinkedField(member, "ac", parseNumberOrNull(acInput.value), false);
+    });
+
+    acRow.appendChild(acLabel);
+    acRow.appendChild(acInput);
+
     const statusRow = document.createElement("div");
     statusRow.className = "npcRowBlock";
 
@@ -566,6 +594,7 @@ function createPartyCardsController(deps = {}) {
 
     collapsible.appendChild(classRow);
     collapsible.appendChild(hpRow);
+    collapsible.appendChild(acRow);
     collapsible.appendChild(statusRow);
     collapsible.appendChild(notesBlock);
 
@@ -701,7 +730,7 @@ function createPartyCardsController(deps = {}) {
 
     addDestroy(subscribePanelDataChanged("vitals", (detail) => {
       if (detail.source === partyControllerSource) return;
-      patchLinkedCardHpInputs();
+      patchLinkedCardVitalsInputs();
     }));
 
     addDestroy(subscribePanelDataChanged("character-fields", (detail) => {
